@@ -49,9 +49,16 @@ older sketch of the plan map.
 
 ## Prerequisites this plan does not resolve
 
-**Task 5 needs a real Steam account and a small owned game.** Everything before it
-is offline. Pick the game before starting Task 5 — Morrowind (appid 22320, 3.1 GB
-public) is the smallest in the catalog and the obvious candidate.
+**RESOLVED 2026-08-15.** The account is logged in (`clojure -M:cli status` reports
+online, 548 licenses) and owns 11 of the catalog's 13 games. Everything in this
+plan is now unblocked.
+
+**The live gate target is Stardew Valley (appid 413150).** It is the smallest
+entry at 0.5 GB *and* the only small owned game with non-public branches
+(`legacy_1.5.6`, `legacy_1.6.8`, `previous_version`, `compatibility`), so it
+exercises historical branch resolution — which Morrowind, at one public version,
+cannot test at all. Morrowind (22320, 3.1 GB) remains the fallback if Stardew's
+tiny depots turn out to hide a bug that only appears at scale.
 
 ---
 
@@ -483,16 +490,17 @@ git commit -m "Run the plan: preallocate, fetch in parallel, write at offset, re
 
 ---
 
-### Task 4: `cli.clj` — a face for the engine
+### Task 4: `cli.clj` — the `download` command
 
-Without this the engine cannot be exercised against real Steam, because there is
-no way to log in. `qr/terminal-string` survived the copy, so a terminal QR login
-costs almost nothing.
+**Partially built ahead of schedule.** `login`, `status`, `list` and `logout`
+already exist and are committed (6 tests), because logging in needed a human and
+blocked everything else. What remains here is the `download` command and its
+resume path.
 
 **Files:**
-- Create: `src/reliquary/cli.clj`
-- Modify: `deps.edn` — add a `:cli` alias
-- Create: `test/reliquary/cli_test.clj`
+- Modify: `src/reliquary/cli.clj` *(exists — add `download`)*
+- Modify: `test/reliquary/cli_test.clj` *(exists — 6 tests passing)*
+- `deps.edn`'s `:cli` alias already exists
 
 **Interfaces:**
 - Produces: `reliquary login`, `reliquary download <appid> <version-id> <dest>`,
