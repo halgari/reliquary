@@ -58,46 +58,126 @@
 
 (defn- directory? [e] (pos? (bit-and (long (or (:flags e) 0)) flag-directory)))
 
+(def ^:private zero-sha
+  "Steam's sentinel for \"this entry carries no content hash\" -- 40 hex
+   zeros. Confirmed on a real depot: a Stardew Valley (appid 413150) manifest
+   sends this exact string, with size 0 and no chunks, on the DIRECTORY entry
+   Content/Characters. It is never a real SHA-1 -- a genuine digest landing on
+   all-zero bytes is a 2^-160 event, and Steam always emits this literal
+   string for absence -- so it must be treated as absent everywhere presence
+   of a content hash is tested, exactly like the empty string already is:
+   classification, and copy/dedup. Two entries that both merely lack a hash
+   must never become copies of one another because they happen to share this
+   sentinel."
+  "0000000000000000000000000000000000000000")
+
+(defn- real-sha
+  "`sha`, or nil if it carries no real content hash -- absent, empty, or
+   Steam's all-zero sentinel."
+  [sha]
+  (when (and (seq sha) (not= sha zero-sha)) sha))
+
+(defn- regular-file?
+  "Structural classification, NOT flags: manifest.clj deliberately refuses to
+   define EDepotFileFlag constants beyond flag-directory (see its docstring),
+   so a symlink's bits cannot be pinned. An entry with chunks, or a REAL
+   content SHA (see `real-sha`), is content the engine has to fetch or copy --
+   a file. An entry with neither is nothing the engine can serve;
+   flag-directory only decides whether that entry becomes a directory or is
+   silently skipped."
+  [e]
+  (boolean (or (seq (:chunks e)) (real-sha (:sha-content e)))))
+
 (defn- norm-chunks [chunks]
   (into []
         (map-indexed (fn [i c]
-                       {:index       i
-                        :id          (:id c)
-                        :offset      (->long (:offset c) :offset)
-                        :cb-original (->long (:cb-original c) :cb-original)}))
+                       {:index         i
+                        :id            (:id c)
+                        :offset        (->long (:offset c) :offset)
+                        :cb-original   (->long (:cb-original c) :cb-original)
+                        :cb-compressed (->long (:cb-compressed c) :cb-compressed)}))
         (sort-by #(->long (:offset %) :offset) chunks)))
+
+(defn- validate-tiling!
+  "Chunks (already normalized: sorted by offset, offset/cb-original as longs)
+   must tile `size` exactly -- start at 0, each chunk's end must be the next
+   chunk's start, and the last chunk must end exactly at size. A gap leaves a
+   hole in the preallocated file that nothing downstream would catch; an
+   overlap writes one region twice and loses another; a chunk running past
+   size breaks preallocation entirely. A file with no chunks and size 0 is a
+   legitimate empty file."
+  [path size chunks]
+  (if (empty? chunks)
+    (when-not (zero? size)
+      (error/raise :incorrect
+                   (str "file " path " declares size " size " but has no chunks to fill it")
+                   {:path path :offset 0}))
+    (do
+      (when-not (zero? (:offset (first chunks)))
+        (error/raise :incorrect
+                     (str "file " path " chunks do not start at offset 0, at offset "
+                          (:offset (first chunks)))
+                     {:path path :offset (:offset (first chunks))}))
+      (doseq [[a b] (partition 2 1 chunks)]
+        (let [end-a (+ (:offset a) (:cb-original a))]
+          (when (not= end-a (:offset b))
+            (error/raise :incorrect
+                         (str "file " path " chunks do not tile at offset " (:offset b)
+                              " -- the previous chunk ends at " end-a)
+                         {:path path :offset (:offset b)}))))
+      (let [last-c (last chunks)
+            end    (+ (:offset last-c) (:cb-original last-c))]
+        (when (not= end size)
+          (error/raise :incorrect
+                       (str "file " path " chunks end at offset " end
+                            " but the manifest declares size " size)
+                       {:path path :offset end}))))))
 
 (defn build
   "Depot manifests -> a work plan.
 
    `depot-manifests` is a vector of {:depot-id long :key-hex string :files
    [entry]}, where each entry is what reliquary.steam.manifest/parse produced.
-   The depot key travels with each file because the chunk fetcher needs it and
-   the engine should not have to look it up again.
+   The depot key is deliberately NOT threaded into the returned plan -- see
+   `keys-by-depot`.
 
    Files sharing a content SHA-1 are fetched once; the rest become :copies.
    Steam depots do repeat content, and a copy is free next to a download. An
-   empty sha-content is treated as absent -- never as a match -- so a
-   manifest missing the field doesn't collapse unrelated files together. Two
+   empty sha-content, or Steam's all-zero sentinel (see `zero-sha`), is treated
+   as absent -- never as a match -- so a manifest missing the field, or naming
+   a directory that carries the sentinel instead of a real digest, doesn't
+   collapse unrelated files together. Two
    entries sharing a sha-content but declaring different sizes cannot be the
    same content, so a size conflict means this is NOT a copy: the entry is
    planned as its own file rather than aborting the whole download over a
    remote-controlled input like a sentinel/all-zero digest. A manifest that
-   lists the very same path twice under the same sha and size would, read
-   naively, produce a copy of a path onto itself -- and the engine's
-   Files/copy with REPLACE_EXISTING would truncate that path before reading
-   it -- so that case is rejected outright instead."
+   lists the same destination path twice -- whether under the same sha, a
+   different sha, or no sha at all -- is rejected outright: read naively it
+   would produce a copy of a path onto itself, and the engine's Files/copy
+   with REPLACE_EXISTING would truncate that path before reading it.
+
+   Every planned file's chunks must tile its declared size exactly (see
+   `validate-tiling!`) -- a gap or overlap here produces plausible bytes at
+   the wrong place, and the only thing downstream that would catch it is a
+   chunk SHA-1 failure blaming the depot key instead of the manifest.
+
+   An entry with no chunks and no content SHA is not a regular file (a
+   symlink, most likely, since manifest.clj refuses to pin the flag bit that
+   would say so for certain) -- flag-directory decides whether it becomes a
+   directory or is silently skipped and counted in :skipped."
   [depot-manifests]
-  (let [entries (for [{:keys [depot-id key-hex files]} depot-manifests
+  (let [entries (for [{:keys [depot-id files]} depot-manifests
                       e files]
-                  (assoc e :depot-id depot-id :key-hex key-hex))
+                  (assoc e :depot-id depot-id))
+        {file-es true not-file-es false} (group-by regular-file? entries)
         dirs    (into [] (comp (filter directory?)
                                (map #(safe-path (:name %)))
                                (distinct))
-                      entries)
-        plain   (remove directory? entries)]
-    (loop [remaining (seq plain)
+                      not-file-es)
+        skipped (- (count not-file-es) (count (filter directory? not-file-es)))]
+    (loop [remaining (seq file-es)
            seen      {}                       ; sha-content -> {:path :size} already planned
+           paths     #{}                      ; every destination path already claimed
            files     []
            copies    []
            dl-bytes  0
@@ -109,21 +189,27 @@
          :total-chunks   chunks
          :dirs           (vec (sort dirs))
          :files          files
-         :copies         copies}
-        (let [e        (first remaining)
-              path     (safe-path (:name e))
+         :copies         copies
+         :skipped        skipped}
+        (let [e    (first remaining)
+              path (safe-path (:name e))
+              _    (when (contains? paths path)
+                     (error/raise :incorrect
+                                  (str "manifest lists the same path twice: " path)
+                                  {:path path}))
               size     (->long (:size e) :size)
-              sha      (:sha-content e)
-              has-sha? (seq sha)
+              sha      (real-sha (:sha-content e))
+              has-sha? (some? sha)
               src      (when has-sha? (get seen sha))
               as-file  (fn [seen']
                          (let [cs (norm-chunks (:chunks e))]
+                           (validate-tiling! path size cs)
                            [(next remaining)
                             seen'
+                            (conj paths path)
                             (conj files {:path        path
                                          :size        size
                                          :depot-id    (:depot-id e)
-                                         :key-hex     (:key-hex e)
                                          :sha-content sha
                                          :chunks      cs})
                             copies
@@ -131,24 +217,28 @@
                             (+ disk size)
                             (+ chunks (count cs))]))]
           (cond
-            (and has-sha? src (= path (:path src)))
-            (error/raise :incorrect
-                         (str "manifest lists the same path twice: " path)
-                         {:path path})
-
             (and has-sha? src (not= (:size src) size))
-            (let [[rem seen' files' copies' dl' disk' chunks'] (as-file seen)]
-              (recur rem seen' files' copies' dl' disk' chunks'))
+            (let [[rem seen' paths' files' copies' dl' disk' chunks'] (as-file seen)]
+              (recur rem seen' paths' files' copies' dl' disk' chunks'))
 
             (and has-sha? src)
-            (recur (next remaining) seen files
+            (recur (next remaining) seen (conj paths path) files
                    (conj copies {:path path :source (:path src) :size (:size src)})
                    dl-bytes (+ disk size) chunks)
 
             :else
-            (let [[rem seen' files' copies' dl' disk' chunks']
+            (let [[rem seen' paths' files' copies' dl' disk' chunks']
                   (as-file (if has-sha? (assoc seen sha {:path path :size size}) seen))]
-              (recur rem seen' files' copies' dl' disk' chunks'))))))))
+              (recur rem seen' paths' files' copies' dl' disk' chunks'))))))))
+
+(defn keys-by-depot
+  "{depot-id -> key-hex} for the manifests in this plan.
+
+   Kept OUT of the plan map deliberately: the plan is what the engine serializes
+   into progress files and error snapshots, and a depot key is a secret under the
+   spec's §9 rule. The engine threads this map alongside the plan instead."
+  [depot-manifests]
+  (into {} (map (juxt :depot-id :key-hex)) depot-manifests))
 
 (defn chunk-count ^long [plan]
   (reduce + 0 (map (comp count :chunks) (:files plan))))

@@ -26,7 +26,7 @@
     (is (= "a.bsa" (:path f)))
     (is (= 4096 (:size f)))
     (is (= 221 (:depot-id f)))
-    (is (= "deadbeef" (:key-hex f)) "the chunk fetcher needs the key with the chunk")
+    (is (nil? (:key-hex f)) "the key is a secret; it travels via keys-by-depot, not the plan")
     (is (= [0 1] (mapv :index (:chunks f))) "the index is what the resume file records")
     (is (= [0 2048] (mapv :offset (:chunks f))) "offsets are longs, not strings")))
 
@@ -37,10 +37,13 @@
     (is (= ["Data/a.bsa"] (mapv :path (:files p))))))
 
 (deftest an-empty-file-is-created-not-skipped
-  (let [p (plan/build (manifest (entry "empty.txt" 0 nil [])))]
-    (is (= ["empty.txt"] (mapv :path (:files p))))
-    (is (= [] (-> p :files first :chunks)))
-    (is (= 0 (:total-chunks p)))))
+  (testing "a real Steam manifest entry for an empty file still carries a content sha;
+            a no-chunk no-sha entry is what a symlink/junk entry looks like structurally,
+            and must NOT be conflated with a genuine empty file (see the symlink test below)"
+    (let [p (plan/build (manifest (entry "empty.txt" 0 "sha-empty" [])))]
+      (is (= ["empty.txt"] (mapv :path (:files p))))
+      (is (= [] (-> p :files first :chunks)))
+      (is (= 0 (:total-chunks p))))))
 
 (deftest identical-content-is-fetched-once-and-copied
   (let [p (plan/build (manifest (entry "a.bsa" 4096 "same" [["c0" 0 4096]])
@@ -52,10 +55,12 @@
     (is (= 1 (:total-chunks p)))))
 
 (deftest depots-merge-and-carry-their-own-keys
-  (let [p (plan/build [{:depot-id 221 :key-hex "k1" :files [(entry "a" 10 "sa" [["c0" 0 10]])]}
-                       {:depot-id 222 :key-hex "k2" :files [(entry "b" 20 "sb" [["c1" 0 20]])]}])]
+  (let [manifests [{:depot-id 221 :key-hex "k1" :files [(entry "a" 10 "sa" [["c0" 0 10]])]}
+                   {:depot-id 222 :key-hex "k2" :files [(entry "b" 20 "sb" [["c1" 0 20]])]}]
+        p (plan/build manifests)]
     (is (= #{"a" "b"} (set (mapv :path (:files p)))))
-    (is (= #{"k1" "k2"} (set (mapv :key-hex (:files p)))))
+    (is (every? nil? (mapv :key-hex (:files p))) "keys never ride in the plan")
+    (is (= {221 "k1" 222 "k2"} (plan/keys-by-depot manifests)) "keys travel via keys-by-depot instead")
     (is (= 30 (:download-bytes p)))))
 
 (deftest paths-are-relative-and-never-escape-the-destination
@@ -141,6 +146,96 @@
                   (catch clojure.lang.ExceptionInfo e e))]
       (is (= :incorrect (:reliquary/error (ex-data ex))))
       (is (= "a.bsa" (:path (ex-data ex)))))))
+
+;; --- carried findings from the foundation review -------------------------
+
+(deftest chunks-that-do-not-tile-are-rejected
+  (testing "a gap leaves a hole in the file that nothing downstream would catch"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "a" 100 "sha-a" [["c0" 0 10] ["c1" 90 10]]))))))
+  (testing "an overlap writes one region twice and loses the other"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "a" 20 "sha-a" [["c0" 0 15] ["c1" 10 10]]))))))
+  (testing "a chunk running past the declared size breaks preallocation"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "a" 5 "sha-a" [["c0" 0 100]])))))))
+
+(deftest a-symlink-entry-is-not-planned-as-an-empty-file
+  (testing "manifest.clj refuses to define flag constants; classify structurally"
+    (let [p (plan/build (manifest (entry "link" 0 nil [] :flags 512)
+                                  (entry "real.bsa" 10 "sha-r" [["c0" 0 10]])))]
+      (is (= ["real.bsa"] (mapv :path (:files p)))
+          "a no-chunk no-sha entry is not a zero-byte regular file")
+      (is (not (contains? (set (:dirs p)) "link"))
+          "a symlink misclassified as a directory is just as wrong as one misclassified
+           as an empty file -- the brief's :files assertion alone would pass either way"))))
+
+(deftest an-empty-regular-file-is-still-planned
+  (let [p (plan/build (manifest (entry "empty.txt" 0 "sha-e" [])))]
+    (is (= ["empty.txt"] (mapv :path (:files p))))))
+
+(deftest the-plan-carries-no-depot-keys
+  (let [p (plan/build (manifest (entry "a" 10 "sha-a" [["c0" 0 10]])))]
+    (is (not (re-find #"deadbeef" (pr-str p)))
+        "the plan is serialized into progress files; a depot key must not ride along")
+    (is (nil? (:key-hex (first (:files p)))))))
+
+(deftest keys-travel-separately
+  (is (= {221 "deadbeef"}
+         (plan/keys-by-depot (manifest (entry "a" 10 "sha-a" [["c0" 0 10]]))))))
+
+(deftest compressed-sizes-are-retained
+  (testing "the fetcher reports wire bytes; without this the progress bar cannot close"
+    (let [p (plan/build (manifest (entry "a" 10 "sha-a" [["c0" 0 10]])))]
+      (is (= 10 (:cb-compressed (first (:chunks (first (:files p))))))))))
+
+(deftest two-entries-may-not-claim-one-path
+  (testing "different shas, same destination -- Fix 3 keyed off sha and missed this"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "a" 10 "sha-1" [["c0" 0 10]])
+                                       (entry "a" 20 "sha-2" [["c1" 0 20]])))))))
+
+;; --- live-gate findings ---------------------------------------------------
+
+(deftest an-all-zero-sha-is-a-directory-sentinel-not-a-content-hash
+  (testing "the literal value from a real Stardew Valley (413150) manifest: Steam's
+            directory entry Content/Characters carries this exact sha, size 0, no chunks
+            -- classifying it as a regular file plans a zero-byte FILE where the engine's
+            own children later need a DIRECTORY, and the real download crashed exactly
+            this way (\"cannot create Content/Characters (FileNotFoundException)\")"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha []
+                                         :flags plan/flag-directory)
+                                  (entry "Content/Characters/Haley.xnb" 10 "sha-h"
+                                         [["c0" 0 10]])))]
+      (is (= ["Content/Characters"] (:dirs p))
+          "the all-zero-sha entry must land in :dirs, not be treated as content")
+      (is (not (contains? (set (mapv :path (:files p))) "Content/Characters"))
+          "and must never appear in :files")
+      (is (= ["Content/Characters/Haley.xnb"] (mapv :path (:files p)))))))
+
+(deftest an-all-zero-sha-entry-without-the-directory-flag-is-skipped-not-planned
+  (testing "even if Steam ever sends the sentinel without flag-directory set, it must
+            still never become a zero-byte file -- absent is absent"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha [])
+                                  (entry "real.bsa" 10 "sha-r" [["c0" 0 10]])))]
+      (is (= ["real.bsa"] (mapv :path (:files p))))
+      (is (not (contains? (set (:dirs p)) "Content/Characters")))
+      (is (= 1 (:skipped p))))))
+
+(deftest two-all-zero-sha-entries-never-become-copies-of-one-another
+  (testing "the exact hazard the finding named: a sentinel must never make two
+            directory placeholders (or any two hash-less entries) copies of each other"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha []
+                                         :flags plan/flag-directory)
+                                  (entry "Content/Maps" 0 zero-sha []
+                                         :flags plan/flag-directory)))]
+      (is (= ["Content/Characters" "Content/Maps"] (:dirs p)))
+      (is (= [] (:files p)))
+      (is (= [] (:copies p))
+          "an all-zero sha must never be treated as a match, even against itself"))))
 
 ;; --- properties ---------------------------------------------------------
 

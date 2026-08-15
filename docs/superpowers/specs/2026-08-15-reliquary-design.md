@@ -332,8 +332,15 @@ completed chunks are skipped.
 
 This is what makes the interrupted screen's claim — *nothing needs to be
 re-fetched* — literally true. It is a claim the app should not make unless the
-format guarantees it, so the progress file is written before the bytes it
-describes are acknowledged, never after.
+ordering guarantees it, so: a chunk is recorded in the progress file only
+**after** its `FileChannel` write has returned, never before. A progress file
+that runs ahead of the disk silently skips chunks that were never written, and
+the resumed install is quietly corrupt.
+
+*(Amended 2026-08-15: the original wording here — "written before the bytes it
+describes are acknowledged" — read as an instruction to write progress first,
+which is the opposite of what is safe. It cost an implementer a round of
+confusion before being caught.)*
 
 ### Progress and control
 
