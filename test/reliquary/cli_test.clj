@@ -1,0 +1,52 @@
+(ns reliquary.cli-test
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [reliquary.cli :as cli]
+            [reliquary.config :as config]
+            [reliquary.steam.auth :as auth]))
+
+(deftest exit-codes-follow-the-error-contract
+  (is (= 1 (cli/exit-code-for (ex-info "x" {:reliquary/error :incorrect}))))
+  (is (= 2 (cli/exit-code-for (ex-info "x" {:reliquary/error :unavailable}))))
+  (is (= 3 (cli/exit-code-for (ex-info "x" {:reliquary/error :io}))))
+  (is (= 4 (cli/exit-code-for (ex-info "x" {:reliquary/error :unauthenticated}))))
+  (is (= 1 (cli/exit-code-for (ex-info "x" {})))))
+
+(deftest usage-is-shown-for-no-command-and-exits-zero
+  (let [out (with-out-str (is (= 0 (cli/run []))))]
+    (is (str/includes? out "usage: reliquary"))))
+
+(deftest an-unknown-command-exits-nonzero
+  (with-out-str (is (= 1 (cli/run ["nonsense"])))))
+
+(deftest list-renders-the-real-bundled-catalog
+  (let [out (with-out-str (is (= 0 (cli/run ["list"]))))]
+    (is (str/includes? out "Cyberpunk 2077"))
+    (is (str/includes? out "1_63_legacy_patch") "the historical branches must be offered")
+    (is (str/includes? out "1_5_97") "Skyrim SE's community downgrade target")))
+
+(deftest a-version-with-no-size-says-unknown-not-zero
+  (testing "community-sourced versions genuinely lack a size; 0.0 GB would be a lie"
+    (let [out (with-out-str (cli/run ["list"]))]
+      (is (str/includes? out "size unknown"))
+      ;; substring matching is wrong here -- "110.0 GB" contains "0.0 GB".
+      ;; Anchor on the whole size field instead.
+      (is (not-any? #(re-find #"(?:^|\s)0\.0 GB" %) (str/split-lines out))
+          "a real size must never round down to 0.0 GB and read as unknown"))))
+
+(deftest login-saves-the-token-and-never-prints-it
+  (let [d (.toFile (java.nio.file.Files/createTempDirectory
+                    "reliquary-cli" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (binding [config/*config-dir* d]
+        (with-redefs [auth/login-qr! (fn [on-event]
+                                       (on-event {:type :qr :challenge-url "https://s.team/q/1/2"})
+                                       {:refresh-token "SECRET-JWT-VALUE"
+                                        :account "someone" :steam-id "765"})]
+          (let [out (with-out-str (is (= 0 (cli/login []))))]
+            (is (= {:refresh-token "SECRET-JWT-VALUE" :account "someone"} (config/token))
+                "the token must reach disk")
+            (is (not (str/includes? out "SECRET-JWT-VALUE"))
+                "the token must never reach the terminal")
+            (is (str/includes? out "Signed in as someone")))))
+      (finally (run! clojure.java.io/delete-file (reverse (file-seq d)))))))

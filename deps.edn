@@ -26,6 +26,14 @@
    :main-opts   ["-m" "cognitect.test-runner"]
    :exec-fn     cognitect.test-runner.api/test}
 
+  :cli
+  ;; --sun-misc-unsafe-memory-access=allow silences protobuf's four-line Unsafe
+  ;; warning on every run; it is noise from a dependency, not from us, and it
+  ;; would otherwise sit between the user and the QR code they need to scan.
+  {:jvm-opts  ["--enable-native-access=ALL-UNNAMED"
+               "--sun-misc-unsafe-memory-access=allow"]
+   :main-opts ["-m" "reliquary.cli"]}
+
   :dev
   {:extra-paths ["test" "test/resources" "spike"]
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"]}
