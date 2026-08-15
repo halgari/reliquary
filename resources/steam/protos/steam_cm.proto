@@ -1,0 +1,132 @@
+syntax = "proto2";
+
+message CMsgProtoBufHeader {
+  optional fixed64 steamid = 1;
+  optional int32 client_sessionid = 2;
+  optional fixed64 jobid_source = 10 [default = 18446744073709551615];
+  optional fixed64 jobid_target = 11 [default = 18446744073709551615];
+  optional string target_job_name = 12;
+  optional int32 eresult = 13 [default = 2];
+  optional string error_message = 14;
+}
+message CMsgMulti {
+  optional uint32 size_unzipped = 1;
+  optional bytes message_body = 2;
+}
+message CMsgClientHeartBeat { optional bool send_reply = 1; }
+message CMsgClientLogon {
+  optional uint32 protocol_version = 1;
+  optional uint32 cell_id = 3;
+  optional string client_language = 6;
+  optional uint32 client_os_type = 7;
+  optional bool should_remember_password = 8 [default = false];
+  optional bytes machine_id = 30;
+  optional string account_name = 50;
+  optional bool supports_rate_limit_response = 102;
+  optional string access_token = 108;
+}
+message CMsgClientLogonResponse {
+  optional int32 eresult = 1 [default = 2];
+  optional int32 heartbeat_seconds = 3;
+  optional fixed64 client_supplied_steamid = 20;
+}
+message CMsgClientLoggedOff { optional int32 eresult = 1 [default = 2]; }
+message CMsgClientLicenseList {
+  message License {
+    optional uint32 package_id = 1;
+    optional uint64 access_token = 17;
+  }
+  optional int32 eresult = 1;
+  repeated License licenses = 2;
+}
+message CMsgClientPICSAccessTokenRequest {
+  repeated uint32 packageids = 1;
+  repeated uint32 appids = 2;
+}
+message CMsgClientPICSAccessTokenResponse {
+  message Token { optional uint32 id = 1; optional uint64 access_token = 2; }
+  repeated Token package_access_tokens = 1;
+  repeated uint32 package_denied_tokens = 2;
+  repeated Token app_access_tokens = 3;
+  repeated uint32 app_denied_tokens = 4;
+}
+message CMsgClientPICSProductInfoRequest {
+  message AppInfo { optional uint32 appid = 1; optional uint64 access_token = 2; }
+  message PackageInfo { optional uint32 packageid = 1; optional uint64 access_token = 2; }
+  repeated PackageInfo packages = 1;
+  repeated AppInfo apps = 2;
+  optional bool meta_data_only = 3;
+}
+message CMsgClientPICSProductInfoResponse {
+  message AppInfo {
+    optional uint32 appid = 1;
+    optional uint32 change_number = 2;
+    optional bool missing_token = 3;
+    optional bytes buffer = 5;
+  }
+  message PackageInfo {
+    optional uint32 packageid = 1;
+    optional uint32 change_number = 2;
+    optional bool missing_token = 3;
+    optional bytes buffer = 5;
+  }
+  repeated AppInfo apps = 1;
+  repeated PackageInfo packages = 3;
+  optional bool response_pending = 6;
+}
+
+// ---- Phase C1: content / manifests ----
+message CMsgClientGetDepotDecryptionKey { optional uint32 depot_id = 1; optional uint32 app_id = 2; }
+message CMsgClientGetDepotDecryptionKeyResponse {
+  optional int32 eresult = 1;
+  optional uint32 depot_id = 2;
+  optional bytes depot_encryption_key = 3;
+}
+message ContentManifestPayload {
+  message FileMapping {
+    message ChunkData {
+      optional bytes sha = 1;
+      optional fixed32 crc = 2;
+      optional uint64 offset = 3;
+      optional uint32 cb_original = 4;
+      optional uint32 cb_compressed = 5;
+    }
+    optional string filename = 1;
+    optional uint64 size = 2;
+    optional uint32 flags = 3;
+    optional bytes sha_filename = 4;
+    optional bytes sha_content = 5;
+    repeated ChunkData chunks = 6;
+    optional string linktarget = 7;
+  }
+  repeated FileMapping mappings = 1;
+}
+message ContentManifestMetadata {
+  optional uint32 depot_id = 1;
+  optional uint64 gid_manifest = 2;
+  optional uint32 creation_time = 3;
+  optional bool filenames_encrypted = 4;
+  optional uint64 cb_disk_original = 5;
+  optional uint64 cb_disk_compressed = 6;
+  optional uint32 unique_chunks = 7;
+}
+message CContentServerDirectory_GetManifestRequestCode_Request {
+  optional uint32 app_id = 1;
+  optional uint32 depot_id = 2;
+  optional uint64 manifest_id = 3;
+  optional string app_branch = 4;
+}
+message CContentServerDirectory_GetManifestRequestCode_Response { optional uint64 manifest_request_code = 1; }
+message CContentServerDirectory_ServerInfo {
+  optional string type = 1;
+  optional string host = 8;
+  optional string vhost = 9;
+  optional string https_support = 12;
+}
+message CContentServerDirectory_GetServersForSteamPipe_Request {
+  optional uint32 cell_id = 1;
+  optional uint32 max_servers = 2;
+}
+message CContentServerDirectory_GetServersForSteamPipe_Response {
+  repeated CContentServerDirectory_ServerInfo servers = 1;
+}
