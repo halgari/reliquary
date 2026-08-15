@@ -1,0 +1,6 @@
+/.cpcache/
+/.clj-kondo/.cache/
+/.lsp/.cache/
+/classes/
+/target/
+/build/
