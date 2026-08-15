@@ -672,3 +672,9 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <http://www.gnu.org/philosophy/why-not-lgpl.html>.
+
+                    ADDITIONAL PERMISSION UNDER GNU GPL VERSION 3 SECTION 7
+
+  As a special exception, you may link this program with the Clojure runtime
+  and distribute the result, without those libraries falling under the terms
+  of the GNU General Public License.
