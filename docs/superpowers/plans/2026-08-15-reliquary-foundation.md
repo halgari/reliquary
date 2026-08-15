@@ -95,8 +95,11 @@ they land:
 
 The openjfx artifacts are platform-classified. tools.deps does not evaluate the
 Maven profile activation that normally picks a classifier, so they are pinned
-explicitly. **This is the first thing that will break on another platform** —
-the Windows build swaps `linux` for `win`.
+explicitly, using the `lib$classifier` coordinate syntax. The older
+`{:mvn/version … :classifier "linux"}` map key was REMOVED from tools.deps and
+is rejected outright by Clojure CLI 1.12.5 with "`:classifier` in Maven
+coordinates is no longer supported". **This is the first thing that will break
+on another platform** — the Windows build swaps `$linux` for `$win`.
 
 ```clojure
 {:paths ["src" "resources"]
@@ -105,9 +108,9 @@ the Windows build swaps `linux` for `win`.
 
         ;; UI
         cljfx/cljfx                          {:mvn/version "1.10.10"}
-        org.openjfx/javafx-base              {:mvn/version "25.0.4" :classifier "linux"}
-        org.openjfx/javafx-graphics          {:mvn/version "25.0.4" :classifier "linux"}
-        org.openjfx/javafx-controls          {:mvn/version "25.0.4" :classifier "linux"}
+        org.openjfx/javafx-base$linux          {:mvn/version "25.0.4"}
+        org.openjfx/javafx-graphics$linux      {:mvn/version "25.0.4"}
+        org.openjfx/javafx-controls$linux      {:mvn/version "25.0.4"}
 
         ;; Steam
         com.google.protobuf/protobuf-java    {:mvn/version "4.35.1"}

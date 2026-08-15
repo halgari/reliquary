@@ -24,8 +24,19 @@ fi
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 curl -fsSL "$url" -o "$tmp/graal.tar.gz"
-mkdir -p "$DEST"
-tar -xzf "$tmp/graal.tar.gz" -C "$DEST" --strip-components=1
 
-"$DEST/bin/native-image" --version >&2
+# Extract into a staging dir alongside DEST (same filesystem as ROOT, so the
+# final move is atomic) and only verify + promote it to DEST once extraction
+# and the sanity check both succeed. A half-extracted tree must never be
+# visible at DEST, and the fast path above must only ever see a tree that
+# passed this check.
+stage=$(mktemp -d "$ROOT/.staging-XXXXXX")
+trap 'rm -rf "$tmp" "$stage"' EXIT
+tar -xzf "$tmp/graal.tar.gz" -C "$stage" --strip-components=1
+
+"$stage/bin/native-image" --version >&2
+
+rm -rf "$DEST"
+mv "$stage" "$DEST"
+
 echo "$DEST"
