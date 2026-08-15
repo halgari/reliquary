@@ -25,18 +25,46 @@ rm -rf target/runtime target/app
 MODS=$("$JDK/bin/jdeps" --ignore-missing-deps --print-module-deps --multi-release 26 "$JAR")
 echo "jdeps resolved: $MODS" >&2
 
+# Sanity-check the derived list before building a runtime out of it.
+#
+# jdeps has a failure mode that produces a legal-looking but wrong answer: if
+# any dependency jar contributes a module-info.class, jdeps reads it as the
+# whole uberjar's module descriptor and reports only what THAT module needs.
+# org.tukaani:xz did exactly this via META-INF/versions/9/module-info.class,
+# and the answer came back "java.base" -- a runtime built from which is
+# missing java.sql and, transitively, java.logging, so the app dies at
+# startup with ClassNotFoundException: java.util.logging.LogManager.
+#
+# java.desktop is the cheapest tell: anything that draws a window needs it,
+# and it is present in every correct list this project can produce. A list
+# without it means jdeps analysed something other than our code.
+case ",$MODS," in
+  *,java.desktop,*) ;;
+  *)
+    echo "error: jdeps returned an implausible module list: $MODS" >&2
+    echo "       expected java.desktop among them. A stray module-info.class in" >&2
+    echo "       a dependency jar is the usual cause -- see build.clj's" >&2
+    echo "       :exclude, and docs/superpowers/spikes/2026-08-15-jlink-jpackage.md." >&2
+    exit 1
+    ;;
+esac
+
 "$JDK/bin/jlink" \
   --module-path "$JDK/jmods:$FX_JMODS" \
   --add-modules "$MODS,javafx.base,javafx.graphics,javafx.controls" \
   --strip-debug --no-header-files --no-man-pages --compress=zip-6 \
   --output target/runtime
 
+# --enable-native-access silences the four restricted-method warnings JavaFX
+# draws on every launch. It is cosmetic today, but the warning is a promise:
+# a future JDK blocks the restricted System::load and the app stops starting.
 "$JDK/bin/jpackage" \
   --type app-image \
   --name Reliquary \
   --input target/lib \
   --main-jar reliquary.jar \
   --runtime-image target/runtime \
-  --dest target/app
+  --dest target/app \
+  --java-options=--enable-native-access=javafx.graphics
 
 du -sh target/runtime target/app

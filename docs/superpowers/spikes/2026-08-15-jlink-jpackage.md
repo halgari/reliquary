@@ -8,6 +8,12 @@ Subject: `reliquary.spike.fx-window` — the same window Task 3 tried to compile
 with native-image, unchanged.
 Host: Linux, headless; every run under Xvfb.
 
+**Units.** Every size in this document is **decimal MB** (10^6 bytes), because
+the design spec's 40–80 MB budget is decimal and because Task 3's headline
+figure was quoted that way. Raw byte counts are given alongside so nothing has
+to be taken on trust. Task 3's document mixed MB and MiB; that is the reason for
+the discipline here, not a stylistic preference.
+
 ## Verdict
 
 | Question | Answer |
@@ -17,26 +23,36 @@ Host: Linux, headless; every run under Xvfb.
 | Does the jlink + jpackage app image run? | **Yes** — `SPIKE-OK ticks=5`, exit 0. |
 | Was `--add-modules` needed at runtime? | **No.** jpackage's generated launcher resolves JavaFX from the runtime image on its own. |
 | Is it one self-contained directory needing no installed JDK? | **Yes** — verified by running it under `env -i` with no `PATH` and no `JAVA_HOME`. |
-| Total packaged app image | **73,399,309 bytes — 70.0 MiB** |
-| vs. Task 3's native binary | **Smaller.** 81.1 MB / 82 MiB-with-`.so`s becomes 70.0 MiB, *and it actually runs.* |
+| Total packaged app image | **73.4 MB** (73,399,361 bytes) |
+| vs. Task 3's native binary | **7.7 MB smaller — a 9.5 % saving** — *and it actually runs.* |
+| vs. Task 3's binary plus its 8 loose `.so` files | 12.0 MB smaller, a 14.1 % saving (85.4 MB → 73.4 MB) |
 
-The replacement toolchain wins on both axes Task 3 lost on. That is the whole
-finding; everything below is the arithmetic behind it and the traps found on the
-way.
+Task 3's binary was 81.1 MB on its own and needed 4.3 MB of loose JDK shared
+libraries beside it (85.4 MB for the directory as a whole). Both comparisons are
+given because they answer different questions: 9.5 % is the honest
+like-for-like figure against the number Task 3 headlined, and 14.1 % is what a
+distributable-against-distributable comparison looks like. **The single number to
+quote is 9.5 %.**
+
+The replacement toolchain wins on both axes Task 3 lost on — it is smaller, and
+unlike the native binary it starts. Everything below is the arithmetic behind
+that and the traps found on the way.
 
 ## The numbers
 
-All sizes are `du -sb`, i.e. bytes on disk.
+All sizes are `du -sb`, i.e. bytes on disk, with decimal MB alongside.
 
-| Artifact | Bytes | MiB |
+| Artifact | Bytes | MB |
 | --- | ---: | ---: |
-| Uberjar, `clojure -T:build uber` (bundles JavaFX) | 59,314,631 | 56.6 |
-| Uberjar, `clojure -T:build uber :omit-javafx true` | 8,565,418 | 8.2 |
-| jlink runtime for the slim jar's module list | 62,172,090 | 59.3 |
-| jlink runtime for the full module list (see below) | 64,349,436 | 61.4 |
-| **App image from the slim jar** | **73,399,309** | **70.0** |
-| App image from the fat jar | 126,325,868 | 120.5 |
-| App image, slim jar + full module list (projected) | 75,576,655 | 72.1 |
+| Uberjar, `clojure -T:build uber` (bundles JavaFX) | 59,314,631 | 59.3 |
+| Uberjar, `clojure -T:build uber :omit-javafx true` | 8,565,418 | 8.6 |
+| jlink runtime for the slim jar's module list | 62,172,090 | 62.2 |
+| jlink runtime for the full module list (see below) | 64,349,436 | 64.3 |
+| **App image from the slim jar** | **73,399,361** | **73.4** |
+| App image from the fat jar | 126,325,868 | 126.3 |
+| App image, slim jar + full module list (projected) | 75,576,707 | 75.6 |
+| *Task 3, native binary alone* | *81,100,000* | *81.1* |
+| *Task 3, binary + its 8 loose `.so` files* | *85,412,032* | *85.4* |
 
 The app image breaks down as: the jlink runtime, plus the uberjar copied
 verbatim into `lib/app/`, plus a 2,614,696-byte `libapplauncher.so` and a
@@ -52,7 +68,7 @@ lifecycles lazily (`cljfx.fx/lazy-load`), and Reliquary will use neither, but
 Maven resolution still drags them onto the classpath — and `libjfxwebkit.so`
 alone is **39.5 MB compressed**, the single largest thing in the build. Together
 with `javafx-base`/`graphics`/`controls`, JavaFX accounts for 48.9 MB of the
-56.6 MiB fat jar.
+59.3 MB fat jar.
 
 Every byte of that is *inert in a packaged build*. The jlink runtime supplies
 `javafx.base`, `javafx.graphics` and `javafx.controls` as real named modules,
@@ -70,7 +86,7 @@ So `build/uber` takes `:omit-javafx true`, which drops every `org.openjfx`
 artifact from the basis before `b/uber` explodes it. The default stays fat,
 because a fat jar is the one that runs under a plain `java -jar` on a stock JDK,
 and that is a useful thing to keep. `bin/package.sh` warns if it is handed a fat
-jar rather than silently producing a 120 MiB image.
+jar rather than silently producing a 126 MB image.
 
 ### The module list
 
@@ -87,9 +103,8 @@ java.base, java.desktop, java.sql, jdk.unsupported
 ```
 
 That is **not** the list the finished application will need, and the difference
-is worth stating because a short module list is exactly how a packaged app dies
-six months later on a code path nobody exercised. A probe uberjar built with all
-20 `reliquary.steam.*` namespaces AOT-compiled resolves to:
+is worth stating. A probe uberjar built with all 20 `reliquary.steam.*`
+namespaces AOT-compiled resolves to:
 
 ```
 java.base, java.desktop, java.net.http, java.sql, jdk.jfr, jdk.unsupported, jdk.xml.dom
@@ -100,6 +115,9 @@ It is absent from the spike's list only because the spike jar contains no
 Reliquary code beyond the window. Since `package.sh` runs `jdeps` fresh each
 time, this corrects itself the moment the app has a real entry point; no list is
 hard-coded anywhere.
+
+`package.sh` also asserts the derived list contains `java.desktop` and fails the
+build if it does not — see Trap 1.
 
 **jdeps' blind spot, checked rather than assumed.** `jdeps` reads bytecode
 references, so it cannot see modules reached through `ServiceLoader` — most
@@ -130,43 +148,93 @@ to search.
 
 ## Traps found
 
-**1. A stray `module-info.class` made `jdeps` report `java.base` and nothing
-else.** `org.tukaani:xz` ships `META-INF/versions/9/module-info.class`. With
+### 1. A stray `module-info.class` made `jdeps` report `java.base` and nothing else
+
+`org.tukaani:xz` ships `META-INF/versions/9/module-info.class`. With
 `--multi-release 26`, `jdeps` read that as the *whole uberjar's* module
-descriptor and dutifully reported the jar's only requirement as `java.base`. The
-jlink runtime built from that list would have been missing `java.desktop` — i.e.
-all of AWT, which JavaFX needs — and nothing in the pipeline would have
-complained until the app was run.
+descriptor and dutifully reported the jar's only requirement as `java.base`.
 
-This is the most dangerous thing in the task, because it fails *quietly and
-plausibly*: `java.base` is a legal answer, just a wrong one. `b/uber` does strip
-`module-info.class`, but its exclusions are matched with `re-matches` against the
-full path and its pattern only covers a root-level one, so the versioned copy
-slipped through. `build.clj` now adds `".*/module-info\\.class"`.
+**What that actually costs, measured rather than assumed.** `java.desktop`
+survives: `bin/package.sh` passes `javafx.base,javafx.graphics,javafx.controls`
+to jlink explicitly, and `javafx.graphics` declares `requires java.desktop` (and
+`java.xml`), so jlink pulls them in regardless of what jdeps said. A runtime
+linked from `java.base` plus the three JavaFX modules contains:
 
-If the module list ever comes back implausibly short, look here first.
+```
+java.base  java.datatransfer  java.desktop  java.prefs  java.xml
+javafx.base  javafx.controls  javafx.graphics
+```
 
-**2. `b/compile-clj`'s `:src-dirs` does not affect the compile classpath.** The
-brief's `build.clj` passed `:src-dirs ["src" "spike"]` and failed with
+The real casualties are **`java.sql`**, **`jdk.unsupported`** (which is where
+`sun.misc.Unsafe` lives), and **`java.logging`**, which the correct build gets
+transitively because `java.sql` requires it.
+
+**And it fails loudly, at startup.** Running the shipped jar on that degraded
+runtime does not limp along until some untested code path — it dies immediately,
+before any window:
+
+```
+Exception in thread "main" java.lang.ExceptionInInitializerError
+        at java.base/java.lang.Class.forName0(Native Method)
+        ...
+        at clojure.lang.RT.load(RT.java:469)
+Caused by: java.lang.ClassNotFoundException: java.util.logging.LogManager
+```
+
+Exit 1. Step 9's smoke test — run the packaged binary, expect
+`SPIKE-OK ticks=5` — would have caught this on the first attempt.
+
+So the defect is real and produces a broken build, but its failure mode is loud
+and early rather than silent and deferred. It is fixed at the source: `b/uber`
+does strip `module-info.class`, but its exclusions are matched with `re-matches`
+against the full path and its pattern only covers a root-level one, so the
+versioned copy slipped through. `build.clj` now adds `".*/module-info\\.class"`.
+
+`bin/package.sh` additionally asserts that the derived list contains
+`java.desktop` and aborts if it does not. That specific check would *not* have
+caught this specific bug — `java.desktop` is exactly the module that survives —
+but it is the cheap tell for the general class of "jdeps analysed something
+other than our code", and it costs nothing on the path every release takes.
+Verified by re-injecting xz's `module-info.class` into a good jar: `package.sh`
+prints `jdeps resolved: java.base`, then `error: jdeps returned an implausible
+module list`, and exits 1 before jlink runs.
+
+If the module list ever comes back short, look here first.
+
+### 2. `b/compile-clj`'s `:src-dirs` does not affect the compile classpath
+
+The brief's `build.clj` passed `:src-dirs ["src" "spike"]` and failed with
 `Could not locate reliquary/spike/fx_window.clj on classpath`. `:src-dirs` is
 used for namespace *discovery* only; the classpath comes from the basis, and
 `spike` is not in `:paths`. Fixed by synthesising an alias into the basis rather
 than by adding `spike` to `:paths`, which would have shipped the spike in every
 build.
 
-**3. The uberjar does not contain `src/`.** `b/uber` copies the class-dir plus
-the dependency jars — nothing else. Reliquary's own namespaces reach the jar
-only via `b/compile-clj`, which AOT-compiles the `:ns-compile` set and whatever
-it transitively requires. Today that is the spike window alone, so the Steam
-client is genuinely absent from the measured image (see the caveat below). Once
-a real entry point requires it, it will be pulled in automatically — but a
-future `main` that loads namespaces dynamically would not be, and that would
-show up as a missing namespace at runtime, not at build time.
+### 3. The uberjar does not contain `src/`
+
+`b/uber` copies the class-dir plus the dependency jars — nothing else.
+Reliquary's own namespaces reach the jar only via `b/compile-clj`, which
+AOT-compiles the `:ns-compile` set and whatever it transitively requires. Today
+that is the spike window alone, so the Steam client is genuinely absent from the
+measured image (see the caveat below). Once a real entry point requires it, it
+will be pulled in automatically — but a future `main` that loads namespaces
+dynamically would not be, and that would show up as a missing namespace at
+runtime, not at build time.
+
+### 4. The launcher needs `--enable-native-access=javafx.graphics`
+
+Out of the box the packaged app printed four `WARNING:` lines on every launch,
+because JavaFX's `NativeLibLoader` calls the restricted `System::load`. The JVM
+names the fix in the warning itself. It is cosmetic today, but the warning is a
+deprecation promise — "Restricted methods will be blocked in a future release" —
+so a future JDK stops the app starting rather than nagging. `bin/package.sh`
+passes `--java-options=--enable-native-access=javafx.graphics` to jpackage; the
+launch is now silent. Cost: 52 bytes, one line in `lib/app/Reliquary.cfg`.
 
 ## What these numbers do not yet carry
 
 The same caveat Task 3's 81.1 MB carried, so the comparison stays honest. The
-70.0 MiB image contains:
+73.4 MB image contains:
 
 - **Yes:** the JDK runtime, JavaFX base/graphics/controls, Clojure, cljfx, and
   the dependency jars for protobuf, zxing, xz and data.json — those are libs, so
@@ -175,14 +243,18 @@ The same caveat Task 3's 81.1 MB carried, so the comparison stays honest. The
   UI beyond one label and one canvas, and **no bundled fonts** — the spike
   renders with whatever fontconfig hands it.
 
-Compiling the Steam client in costs about 2.65 MB: 2,177,346 bytes for the
-`java.net.http`, `jdk.jfr` and `jdk.xml.dom` modules it pulls into the runtime
-(that is the measured 75,576,655-byte projection in the table), plus 473,247
-bytes of AOT-compiled classes for its 20 namespaces. Real UI and any bundled
-fonts come on top of that. The
-design spec's 40–80 MB band is still live under this toolchain, with maybe 10 MB
-of headroom — where native-image had already blown through it while doing
-nothing.
+Compiling the Steam client in costs about 2.7 MB: 2.2 MB (2,177,346 bytes) for
+the `java.net.http`, `jdk.jfr` and `jdk.xml.dom` modules it pulls into the
+runtime — that is the measured 75.6 MB projection in the table — plus 0.5 MB
+(473,247 bytes) of AOT-compiled classes for its 20 namespaces. Real UI and any
+bundled fonts come on top of that.
+
+**Headroom against the spec's 80 MB ceiling is 6.6 MB today, and 4.4 MB once the
+Steam client lands.** That is tight, and it is tight before a single line of
+real UI or a single bundled font. The band is still achievable under this
+toolchain — which is more than could be said of native-image, which had already
+overshot it while doing nothing — but it needs watching from here on, not
+revisiting at the end.
 
 Untrimmed levers if that headroom runs out, roughly in order of return:
 `--compress=zip-9`, dropping `jdk.jfr`, `jpackage --strip-native-commands`, and
