@@ -34,6 +34,33 @@
       (is (not-any? #(re-find #"(?:^|\s)0\.0 GB" %) (str/split-lines out))
           "a real size must never round down to 0.0 GB and read as unknown"))))
 
+(deftest download-requires-a-known-appid-and-version
+  (testing "a typo must not reach Steam"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (cli/parse ["download" "999999" "public" "/tmp/x"]))
+        "an unknown appid")
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (cli/parse ["download" "1091500" "nonsense-branch" "/tmp/x"]))
+        "an unknown version-id for a real game")))
+
+(deftest download-parse-error-lists-the-valid-version-ids
+  (testing "the user just mistyped one -- show what would have worked"
+    (try
+      (cli/parse ["download" "1091500" "nonsense-branch" "/tmp/x"])
+      (is false "should have thrown")
+      (catch clojure.lang.ExceptionInfo e
+        (is (= :incorrect (:reliquary/error (ex-data e))))
+        (is (str/includes? (ex-message e) "1_63_legacy_patch"))))))
+
+(deftest download-parse-accepts-a-real-appid-and-version
+  (let [{:keys [game version dest]} (cli/parse ["download" "1091500" "public" "/tmp/x"])]
+    (is (= 1091500 (:appid game)))
+    (is (= "public" (:id version)))
+    (is (= "/tmp/x" dest))))
+
+(deftest download-requires-all-three-arguments
+  (is (thrown? clojure.lang.ExceptionInfo (cli/parse ["download" "1091500" "public"]))))
+
 (deftest login-saves-the-token-and-never-prints-it
   (let [d (.toFile (java.nio.file.Files/createTempDirectory
                     "reliquary-cli" (make-array java.nio.file.attribute.FileAttribute 0)))]

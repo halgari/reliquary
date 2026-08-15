@@ -7,8 +7,10 @@
    phone, and everything downstream needs the token that produces. Getting the
    token onto disk unblocks every other task."
   (:gen-class)
-  (:require [reliquary.catalog :as catalog]
+  (:require [clojure.string :as str]
+            [reliquary.catalog :as catalog]
             [reliquary.config :as config]
+            [reliquary.download :as download]
             [reliquary.error :as error]
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
@@ -96,20 +98,129 @@
                          (if (seq (:build v)) (str "build " (:build v)) "build unknown")))))
     0))
 
+(defn parse
+  "Validate CLI arguments before anything talks to Steam.
+
+   `args` is the full argument vector including the command word, e.g.
+   [\"download\" \"1091500\" \"public\" \"/games/cp2077\"]. For `download`, this
+   resolves the appid and version-id against the catalog and raises :incorrect
+   if either is unknown -- naming what was not found and, for a bad
+   version-id, listing the game's valid ids, since the likely cause is a typo
+   the user just made. A session is never opened to discover this.
+
+   Returns {:game :version :dest} for `download`."
+  [args]
+  (let [[cmd & more] args]
+    (case cmd
+      "download"
+      (let [[appid-str version-id dest] more]
+        (when (or (str/blank? appid-str) (str/blank? version-id) (str/blank? dest))
+          (error/raise :incorrect
+                       "usage: reliquary download <appid> <version-id> <dest>"))
+        (let [appid (try (Long/parseLong appid-str)
+                         (catch Exception _
+                           (error/raise :incorrect (str "not a valid appid: " appid-str))))
+              cat   (catalog/load!)
+              game  (catalog/game cat appid)]
+          (when-not game
+            (error/raise :incorrect (str "unknown appid: " appid-str)))
+          (let [version (catalog/version game version-id)]
+            (when-not version
+              (error/raise :incorrect
+                           (str "unknown version \"" version-id "\" for " (:title game)
+                                " -- valid ids: "
+                                (str/join ", " (map :id (:versions game))))))
+            {:game game :version version :dest dest})))
+      {:command cmd :args (vec more)})))
+
+(defn- fmt-mb [bytes]
+  (format "%.0f MB" (/ (double (or bytes 0)) 1048576.0)))
+
+(defn- print-progress!
+  "One rewriting terminal line -- a long download must not scroll the
+   terminal with thousands of lines. Never touches depot keys or the token;
+   the snapshot carries neither."
+  [{:keys [stage bytes-done bytes-total bytes-per-sec]}]
+  (let [pct (if (and bytes-total (pos? bytes-total))
+              (* 100.0 (/ (double bytes-done) (double bytes-total)))
+              0.0)]
+    (print (format "\r%-11s %5.1f%%  %s / %s  %6.1f MB/s   "
+                    (name (or stage :idle)) pct
+                    (fmt-mb bytes-done) (fmt-mb bytes-total)
+                    (/ (double (or bytes-per-sec 0.0)) 1048576.0)))
+    (flush)))
+
+(defn- run-download!
+  "Poll `ctx`'s snapshot onto one rewriting line while `execute!` runs on this
+   thread, whatever it returns or throws. Always leaves a final progress line
+   and a trailing newline, so a failure's stack trace (printed by -main)
+   starts on its own line."
+  [ctx]
+  (let [stop?   (atom false)
+        printer (doto (Thread. (fn []
+                                  (while (not @stop?)
+                                    (print-progress! (download/snapshot ctx))
+                                    (Thread/sleep 200)))
+                                "reliquary-progress")
+                  (.setDaemon true)
+                  (.start))]
+    (try
+      (download/execute! ctx)
+      (finally
+        (reset! stop? true)
+        (print-progress! (download/snapshot ctx))
+        (println)))))
+
+(defn download
+  "Resolve `appid`/`version-id` against the catalog, open a Steam session,
+   and run the download. The appid/version-id pair is checked BEFORE the
+   session opens, so a typo costs nothing but a catalog lookup.
+
+   Ctrl-C sets the engine's cancel flag via a shutdown hook and waits for this
+   thread to actually stop, so an interrupted run flushes its progress file
+   and resumes on the next invocation instead of losing work."
+  [args]
+  (let [{:keys [game version dest]} (parse (into ["download"] args))
+        session (session/open!)]
+    (try
+      (println "Resolving" (:title game) (:label version)
+               (str "(" (gb (:bytes version)) ")") "to" (str dest) "...")
+      (let [rv          (download/resolve-version session game version)
+            ctx         (download/make-ctx
+                         (assoc rv :dest dest :appid (:appid game) :version-id (:id version)))
+            main-thread (Thread/currentThread)
+            hook        (Thread. (fn []
+                                    (download/cancel! ctx)
+                                    (.join main-thread))
+                                  "reliquary-cancel")]
+        (.addShutdownHook (Runtime/getRuntime) hook)
+        (try
+          (let [snap (run-download! ctx)]
+            (case (:stage snap)
+              :done      (do (println "Download complete:" (str dest)) 0)
+              :cancelled (do (println "Cancelled -- rerun the same command to resume.") 130)
+              (do (println "Download did not complete (stage" (name (:stage snap)) ")") 1)))
+          (finally
+            (try (.removeShutdownHook (Runtime/getRuntime) hook)
+                 (catch IllegalStateException _ nil)))))
+      (finally (session/close! session)))))
+
 (def ^:private commands
-  {"login"  #'login
-   "logout" #'logout
-   "status" #'status
-   "list"   #'list-games})
+  {"login"    #'login
+   "logout"   #'logout
+   "status"   #'status
+   "list"     #'list-games
+   "download" #'download})
 
 (defn run [args]
   (if-let [f (commands (first args))]
     (f (rest args))
-    (do (println "usage: reliquary <login|logout|status|list>")
+    (do (println "usage: reliquary <login|logout|status|list|download>")
         (println)
         (println "  login    scan a QR with the Steam mobile app; saves a refresh token")
         (println "  status   confirm the saved token still logs on to Steam")
         (println "  list     show the bundled catalog's games and versions")
+        (println "  download <appid> <version-id> <dest>   fetch a version to disk")
         (println "  logout   forget the saved token")
         (if (first args) 1 0))))
 
