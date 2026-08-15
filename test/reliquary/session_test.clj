@@ -8,7 +8,14 @@
 (deftest expired-reads-the-jwt-expiry
   (with-redefs [crypto/jwt-claims (fn [_] {:sub "76561198000000000" :exp 1000})]
     (is (session/expired? "jwt" 1001))
-    (is (not (session/expired? "jwt" 999)))))
+    (is (not (session/expired? "jwt" 999)))
+    (is (session/expired? "jwt" 1000)
+        "exp == now is deliberately treated as expired, not as the last valid second")))
+
+(deftest expired-with-no-exp-claim-is-expired
+  (with-redefs [crypto/jwt-claims (fn [_] {:sub "76561198000000000"})]
+    (is (session/expired? "jwt" 0)
+        "a claims map with no :exp is unusable and must count as expired")))
 
 (deftest an-unreadable-token-counts-as-expired
   (with-redefs [crypto/jwt-claims (fn [_] (throw (ex-info "bad jwt" {})))]
