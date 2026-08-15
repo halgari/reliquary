@@ -13,6 +13,7 @@ small one with non-public branches.
 | Wall time | **< 25 s** |
 | Throughput | ~130–150 MB/s sustained, **166 MB/s peak** |
 | Exit | 0, stages `:preparing` → `:downloading` → `:copying` → `:done` |
+| Exit on cancel | **130**, stage `:cancelled` (verified on two mid-transfer runs) |
 
 `Stardew Valley.dll` on disk is a genuine `PE32+ executable … Mono/.Net assembly`.
 
@@ -56,13 +57,25 @@ chain rather than trusting `:dirs`.
 Verified fixed on disk: `Content/Characters` is a directory, and all three
 never-named directories exist and are populated.
 
-## Open defect found during this run
+## A defect I reported here that turned out not to exist
 
-**A cancelled download exits 0.** After a real SIGINT the process exits with code
-0 — identical to a completed download — so a wrapping script cannot tell the two
-apart. The stubbed subprocess test reported 130, so this only surfaced against a
-real run. Cancel being "not an error" internally is right; reporting it to the
-shell as success is not.
+**Retracted 2026-08-15.** This note previously claimed "a cancelled download
+exits 0", called it an open defect, and carried it into the final review. It is
+wrong, and the error was mine.
+
+The runs I measured had **already finished** before my `SIGINT` landed — 669 MB
+on disk and `Download complete` in the log. Stardew downloads in well under the
+delay I was waiting, so the signal hit a dead process and `wait` reported the
+completed run's 0.
+
+Re-measured against runs that genuinely caught a transfer in flight (260 MB and
+343 MB on disk, stage `cancelled`): **exit 130 both times**, which is what
+`cli.clj` returns for `:cancelled` by explicit design.
+
+Worth keeping the retraction rather than deleting the claim: the review caught
+it by re-measuring instead of taking the note at face value, and the shape of
+the mistake — a signal delivered to a process that had already succeeded, read
+as evidence about cancellation — is easy to repeat.
 
 ## Numbers worth carrying forward
 
