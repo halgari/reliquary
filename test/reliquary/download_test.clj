@@ -355,3 +355,38 @@
             (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC" (slurp (io/file dest "sub" "b.bin"))))
             (is (= 3 (reduce + 0 (vals @hits)))
                 "a copy is free next to a download; it must not re-fetch")))))))
+
+(deftest implicit-parent-directories-need-no-manifest-dir-entry
+  (testing "the exact hazard from the live gate: a real Stardew Valley (413150) manifest
+            lists files under Content/Characters/Dialogue, Content/Strings and
+            Content/Characters/Monsters with no :dirs entry anywhere naming those
+            directories. Preallocation must create a file's -- and a copy's -- full
+            parent chain itself, not rely on :dirs or on some other file's open()
+            happening to create it as a side effect first."
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host _hits]
+            (let [ctx (download/make-ctx
+                       {:plan {:download-bytes 30 :disk-bytes 60 :total-chunks 3
+                               :dirs [] :skipped 0
+                               :files [{:path "Content/Characters/Dialogue/a.bin" :size 30
+                                        :depot-id 1 :sha-content "sha-a"
+                                        :chunks (vec all-chunks)}]
+                               :copies [{:path "Content/Strings/copy.bin"
+                                         :source "Content/Characters/Dialogue/a.bin"
+                                         :size 30}]}
+                        :keys depot-keys
+                        :hosts [host]
+                        :dest dest
+                        :appid 7
+                        :version-id "public"})]
+              (let [snap (download/execute! ctx {:workers 2})]
+                (is (= :done (:stage snap))
+                    "an empty :dirs must not fail the download when every directory it
+                     needs is only implied by a file's own path")
+                (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC"
+                       (slurp (io/file dest "Content" "Characters" "Dialogue" "a.bin"))))
+                (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC"
+                       (slurp (io/file dest "Content" "Strings" "copy.bin")))
+                    "the copy destination's own implied directory must be created too")))))))))

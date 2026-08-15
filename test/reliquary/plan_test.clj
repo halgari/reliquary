@@ -195,6 +195,48 @@
                  (plan/build (manifest (entry "a" 10 "sha-1" [["c0" 0 10]])
                                        (entry "a" 20 "sha-2" [["c1" 0 20]])))))))
 
+;; --- live-gate findings ---------------------------------------------------
+
+(deftest an-all-zero-sha-is-a-directory-sentinel-not-a-content-hash
+  (testing "the literal value from a real Stardew Valley (413150) manifest: Steam's
+            directory entry Content/Characters carries this exact sha, size 0, no chunks
+            -- classifying it as a regular file plans a zero-byte FILE where the engine's
+            own children later need a DIRECTORY, and the real download crashed exactly
+            this way (\"cannot create Content/Characters (FileNotFoundException)\")"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha []
+                                         :flags plan/flag-directory)
+                                  (entry "Content/Characters/Haley.xnb" 10 "sha-h"
+                                         [["c0" 0 10]])))]
+      (is (= ["Content/Characters"] (:dirs p))
+          "the all-zero-sha entry must land in :dirs, not be treated as content")
+      (is (not (contains? (set (mapv :path (:files p))) "Content/Characters"))
+          "and must never appear in :files")
+      (is (= ["Content/Characters/Haley.xnb"] (mapv :path (:files p)))))))
+
+(deftest an-all-zero-sha-entry-without-the-directory-flag-is-skipped-not-planned
+  (testing "even if Steam ever sends the sentinel without flag-directory set, it must
+            still never become a zero-byte file -- absent is absent"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha [])
+                                  (entry "real.bsa" 10 "sha-r" [["c0" 0 10]])))]
+      (is (= ["real.bsa"] (mapv :path (:files p))))
+      (is (not (contains? (set (:dirs p)) "Content/Characters")))
+      (is (= 1 (:skipped p))))))
+
+(deftest two-all-zero-sha-entries-never-become-copies-of-one-another
+  (testing "the exact hazard the finding named: a sentinel must never make two
+            directory placeholders (or any two hash-less entries) copies of each other"
+    (let [zero-sha "0000000000000000000000000000000000000000"
+          p (plan/build (manifest (entry "Content/Characters" 0 zero-sha []
+                                         :flags plan/flag-directory)
+                                  (entry "Content/Maps" 0 zero-sha []
+                                         :flags plan/flag-directory)))]
+      (is (= ["Content/Characters" "Content/Maps"] (:dirs p)))
+      (is (= [] (:files p)))
+      (is (= [] (:copies p))
+          "an all-zero sha must never be treated as a match, even against itself"))))
+
 ;; --- properties ---------------------------------------------------------
 
 ;; Names are generated distinctly (gen/vector-distinct) across every file in

@@ -58,15 +58,35 @@
 
 (defn- directory? [e] (pos? (bit-and (long (or (:flags e) 0)) flag-directory)))
 
+(def ^:private zero-sha
+  "Steam's sentinel for \"this entry carries no content hash\" -- 40 hex
+   zeros. Confirmed on a real depot: a Stardew Valley (appid 413150) manifest
+   sends this exact string, with size 0 and no chunks, on the DIRECTORY entry
+   Content/Characters. It is never a real SHA-1 -- a genuine digest landing on
+   all-zero bytes is a 2^-160 event, and Steam always emits this literal
+   string for absence -- so it must be treated as absent everywhere presence
+   of a content hash is tested, exactly like the empty string already is:
+   classification, and copy/dedup. Two entries that both merely lack a hash
+   must never become copies of one another because they happen to share this
+   sentinel."
+  "0000000000000000000000000000000000000000")
+
+(defn- real-sha
+  "`sha`, or nil if it carries no real content hash -- absent, empty, or
+   Steam's all-zero sentinel."
+  [sha]
+  (when (and (seq sha) (not= sha zero-sha)) sha))
+
 (defn- regular-file?
   "Structural classification, NOT flags: manifest.clj deliberately refuses to
    define EDepotFileFlag constants beyond flag-directory (see its docstring),
-   so a symlink's bits cannot be pinned. An entry with chunks, or a content
-   SHA, is content the engine has to fetch or copy -- a file. An entry with
-   neither is nothing the engine can serve; flag-directory only decides
-   whether that entry becomes a directory or is silently skipped."
+   so a symlink's bits cannot be pinned. An entry with chunks, or a REAL
+   content SHA (see `real-sha`), is content the engine has to fetch or copy --
+   a file. An entry with neither is nothing the engine can serve;
+   flag-directory only decides whether that entry becomes a directory or is
+   silently skipped."
   [e]
-  (boolean (or (seq (:chunks e)) (seq (:sha-content e)))))
+  (boolean (or (seq (:chunks e)) (real-sha (:sha-content e)))))
 
 (defn- norm-chunks [chunks]
   (into []
@@ -123,8 +143,10 @@
 
    Files sharing a content SHA-1 are fetched once; the rest become :copies.
    Steam depots do repeat content, and a copy is free next to a download. An
-   empty sha-content is treated as absent -- never as a match -- so a
-   manifest missing the field doesn't collapse unrelated files together. Two
+   empty sha-content, or Steam's all-zero sentinel (see `zero-sha`), is treated
+   as absent -- never as a match -- so a manifest missing the field, or naming
+   a directory that carries the sentinel instead of a real digest, doesn't
+   collapse unrelated files together. Two
    entries sharing a sha-content but declaring different sizes cannot be the
    same content, so a size conflict means this is NOT a copy: the entry is
    planned as its own file rather than aborting the whole download over a
@@ -176,8 +198,8 @@
                                   (str "manifest lists the same path twice: " path)
                                   {:path path}))
               size     (->long (:size e) :size)
-              sha      (:sha-content e)
-              has-sha? (seq sha)
+              sha      (real-sha (:sha-content e))
+              has-sha? (some? sha)
               src      (when has-sha? (get seen sha))
               as-file  (fn [seen']
                          (let [cs (norm-chunks (:chunks e))]

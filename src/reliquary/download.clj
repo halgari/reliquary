@@ -228,15 +228,37 @@
                                  (.getSimpleName (class e)) ")")
                         {:path path})))))
 
+(defn- parent-dirs
+  "Every parent directory `files` and `copies` need on disk under `dest`,
+   deduplicated. Steam does not emit a manifest entry for every intermediate
+   directory -- a real Stardew Valley (413150) manifest lists files under
+   Content/Characters/Dialogue, Content/Strings and Content/Characters/Monsters
+   with no entry anywhere naming those directories -- so `:dirs` (the
+   manifest's explicit, and sometimes absent or misleading, directory
+   entries) cannot be the only source of directories. A file's own path is
+   the one thing that can be trusted to name every directory it needs."
+  [^File dest files copies]
+  (into #{} (map (fn [{:keys [path]}] (.getParent (io/file dest path))))
+        (concat files copies)))
+
 (defn- preallocate!
   "Create every directory, then create and size every file and every copy
    destination, BEFORE a single chunk is requested.
+
+   Directories come from two sources, both created up front, in their own
+   pass, before a single file is opened: `:dirs` (the manifest's explicit
+   directory entries) and the parent chain of every file and copy
+   destination (see `parent-dirs`) -- relying on a file's own open to create
+   its parent as a side effect would interleave directory creation with file
+   creation, and a misclassified entry earlier in the list (see plan.clj) can
+   turn a later directory's parent into an already-existing plain file.
 
    A download that discovers a full disk at 94% has spent the user's bandwidth
    to produce nothing. Returns {path -> FileChannel} for the files it kept
    open; anything opened is closed again if a later file fails."
   [^File dest {:keys [dirs files copies]}]
   (run! #(ensure-dir! (io/file dest %)) dirs)
+  (run! #(ensure-dir! (io/file %)) (parent-dirs dest files copies))
   (let [opened (atom {})]
     (try
       (doseq [{:keys [path size]} files]
