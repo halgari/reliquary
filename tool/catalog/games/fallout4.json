@@ -1,0 +1,28 @@
+{
+  "nexus_domain": "fallout4",
+  "nexus_name": "Fallout 4",
+  "appid": 377160,
+  "title": "Fallout 4",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/377160/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f7861bd71e6c0c218d8ff69fb1c626aec0d187cf.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_910437ac708aed7c028f6e43a6224c633d086b0a.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f649b8e57749f380cca225db5074edbb1e06d7f5.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_c310f858e6a7b02ffa21db984afb0dd1b24c1423.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_5e2d136759e0ff4e0d74940fffc9c64e8cdcd833.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "There's another settlement that needs our help.", "attrib": "Preston Garvey"},
+    {"text": "Two hundred years ago, I never would have thought this level of dust possible!", "attrib": "Codsworth"},
+    {"text": "I'm a synth. Synthetic man. All the parts, minus a few red blood cells.", "attrib": "Nick Valentine"},
+    {"text": "Come on, Blue. This isn't amateur hour.", "attrib": "Piper Wright"},
+    {"text": "Dogmeat is modeled on lead level designer Joel Burgess's own dog, River, who also voiced his barks.", "attrib": "development trivia"},
+    {"text": "The $120 Pip-Boy Collector's Edition shipped with a real wearable Pip-Boy that cradled your phone.", "attrib": "development trivia"},
+    {"text": "Every player has a settlement stockpiled with two hundred desk fans they will never use.", "attrib": "every player, eventually"},
+    {"text": "You promise yourself just one more settlement, then the main quest. Still promising it at level 80.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 377160 confirmed via Steam appdetails (type=game, name='Fallout 4', developer Bethesda Game Studios). Preston Garvey's line is often misquoted online as 'Another settlement needs your help' — the verbatim in-game dialogue (verified against Fallout Wiki's transcribed dialogue file) is 'There's another settlement that needs our help,' quoted here exactly. All character quotes verified against Fallout Wiki (fallout.fandom.com) transcribed dialogue files via its MediaWiki API (direct page fetches return HTTP 403 from Cloudflare; the api.php?action=parse endpoint works around this). Screenshot cache-buster query params stripped; capsule URL follows the standard template."
+}

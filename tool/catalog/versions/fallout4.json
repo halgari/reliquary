@@ -1,0 +1,68 @@
+{
+ "appid": 377160,
+ "name": "Fallout 4",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "22848228",
+   "date": "2026-05-27",
+   "bytes": 67536079650,
+   "depots": [
+    {
+     "depot-id": 377161,
+     "manifest-gid": "5983086794954940044"
+    },
+    {
+     "depot-id": 377162,
+     "manifest-gid": "387388833281246371"
+    },
+    {
+     "depot-id": 377163,
+     "manifest-gid": "8363807899725426636"
+    },
+    {
+     "depot-id": 377164,
+     "manifest-gid": "8492427313392140315"
+    },
+    {
+     "depot-id": 377165,
+     "manifest-gid": "2033965788399743191"
+    },
+    {
+     "depot-id": 377166,
+     "manifest-gid": "5627643066330450040"
+    },
+    {
+     "depot-id": 377167,
+     "manifest-gid": "7494413550139810042"
+    },
+    {
+     "depot-id": 377168,
+     "manifest-gid": "3728836035123485280"
+    },
+    {
+     "depot-id": 393880,
+     "manifest-gid": "4656512446653497676"
+    },
+    {
+     "depot-id": 393881,
+     "manifest-gid": "9220466047319762009"
+    },
+    {
+     "depot-id": 393882,
+     "manifest-gid": "8191305962459798887"
+    },
+    {
+     "depot-id": 393883,
+     "manifest-gid": "8665224215527782698"
+    },
+    {
+     "depot-id": 393884,
+     "manifest-gid": "7858461782713595876"
+    }
+   ]
+  }
+ ]
+}

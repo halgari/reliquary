@@ -1,0 +1,60 @@
+{
+ "appid": 489830,
+ "name": "The Elder Scrolls V: Skyrim Special Edition",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "13189953",
+   "date": "2024-01-17",
+   "bytes": 29742606498,
+   "depots": [
+    {
+     "depot-id": 489831,
+     "manifest-gid": "8442952117333549665"
+    },
+    {
+     "depot-id": 489832,
+     "manifest-gid": "8042843504692938467"
+    },
+    {
+     "depot-id": 489833,
+     "manifest-gid": "1914580699073641964"
+    },
+    {
+     "depot-id": 489834,
+     "manifest-gid": "8562891139598763344"
+    },
+    {
+     "depot-id": 489835,
+     "manifest-gid": "9152699258833967999"
+    },
+    {
+     "depot-id": 489836,
+     "manifest-gid": "2360664012913025776"
+    },
+    {
+     "depot-id": 489837,
+     "manifest-gid": "8402094395440824039"
+    },
+    {
+     "depot-id": 489838,
+     "manifest-gid": "3873588632592923754"
+    },
+    {
+     "depot-id": 489839,
+     "manifest-gid": "176511637554234126"
+    },
+    {
+     "depot-id": 544860,
+     "manifest-gid": "8476536650815851202"
+    },
+    {
+     "depot-id": 544861,
+     "manifest-gid": "3494476046078906882"
+    }
+   ]
+  }
+ ]
+}

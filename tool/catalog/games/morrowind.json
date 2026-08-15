@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "morrowind",
+  "nexus_name": "Morrowind",
+  "appid": 22320,
+  "title": "The Elder Scrolls III: Morrowind® Game of the Year Edition",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/22320/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009069.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009070.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009071.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009072.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009073.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009074.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "What a grand and intoxicating innocence! How could you be so naïve?", "attrib": "Dagoth Ur, at his own fortress"},
+    {"text": "They have taken you from the Imperial City's prison, first by carriage, and now by boat.", "attrib": "Azura, in the opening dream"},
+    {"text": "I had it last week before their weekly 'Let's shake down Fargoth' ritual.", "attrib": "Fargoth, on his missing ring"},
+    {"text": "Wake up. We're here.", "attrib": "Jiub, the player's cellmate"},
+    {"text": "The Xbox port would secretly reboot itself mid-load to free up RAM, Todd Howard later revealed.", "attrib": "development trivia"},
+    {"text": "Oblivion later canonized Jiub as a saint for personally driving Morrowind's cliff racers into extinction.", "attrib": "development trivia"},
+    {"text": "Every player eventually stacks Fortify Intelligence potions into game-breaking alchemy loops.", "attrib": "every player, eventually"},
+    {"text": "New players fight the first screeching cliff racer. Everyone else just starts running.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 22320 confirmed via Steam appdetails (type=game). Morrowind exists on Steam only as the Game of the Year Edition, which bundles the Tribunal and Bloodmoon expansions with no separate base-game-only SKU available, so this is the correct and only match for the Nexus 'Morrowind' domain. Character quotes verified verbatim against Wikiquote's Elder Scrolls III: Morrowind page (Dagoth Ur, Azura, Jiub) and UESP's Fargoth NPC dialogue page. The Xbox self-reboot trivia comes from Todd Howard's own account, widely reported (GameSpot, Hackaday) and corroborated by an .ini flag found in the game files calling XLaunchNewImage. The Saint Jiub/cliff-racer trivia is a confirmed Oblivion in-joke (St. Jiub's Fair in Cheydinhal, NPC dialogue) rather than a direct dev quote, so it's framed as trivia, not attributed as a real person's words."
+}

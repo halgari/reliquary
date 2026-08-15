@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "starwarsbattlefront22017",
+  "nexus_name": "Star Wars: Battlefront II (2017)",
+  "appid": 1237950,
+  "title": "STAR WARS™ Battlefront™ II",
+  "studio": "DICE",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/1237950/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_4d4265ec83814642cc303d5fe312da8cf6d6a80f.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_625abcf051f814c2f009ac9322d4c470271fa0e2.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_6a84c15d3d4ecacdb36545be857d208d6c7d3e92.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_5b05cfc5e4e6a3f4bde51f2b20370e5f367bddf4.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_a0bb86ca908239a33c1bba05bd5e3743d11f9d4c.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_741f131aba46c488d750062c1b5715c286681e9d.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Someone told me once that rebellions are built on hate. I never stopped believing it.", "attrib": "Iden Versio, Inferno Squad"},
+    {"text": "A choice to be better. May the Force be with you.", "attrib": "Luke Skywalker"},
+    {"text": "Where do you think you're going?", "attrib": "General Grievous, mid-Claw Rush"},
+    {"text": "The intent is to provide players with a sense of pride and accomplishment for unlocking different heroes.", "attrib": "EA Community Team, official reply to the loot box backlash, 2017"},
+    {"text": "DICE built the campaign largely to answer the loudest complaint about 2015's Battlefront: no single-player mode.", "attrib": "development trivia"},
+    {"text": "Backlash over pay-to-win loot boxes wiped roughly $3 billion off EA's market value within days of launch.", "attrib": "development trivia"},
+    {"text": "Every lobby has one player who mains Vader and force-chokes their own teammates by accident.", "attrib": "every match, eventually"},
+    {"text": "Grievous's four lightsabers look terrifying until someone just shoots him from across the map.", "attrib": "every player, eventually"}
+  ],
+  "notes": "This is the 2017 DICE/EA game (appid 1237950), deliberately chosen over the 2005 Pandemic 'STAR WARS Battlefront II (Classic, 2005)' (appid 6060) found in the same storesearch results — the Nexus domain 'starwarsbattlefront22017' names the year explicitly, and appdetails for 1237950 confirms developer=DICE, publisher=Electronic Arts, matching the modern title. Character quotes (Iden Versio, Luke Skywalker, General Grievous) verified verbatim via IMDb's quotes page for the game, which lists full scene context. The EA 'sense of pride and accomplishment' line is the actual, widely documented text of EA Community Team's official Reddit reply, later recorded in Guinness World Records as the most-downvoted comment in Reddit history (~683,000 downvotes) -- included once, kept dry/factual per the brief, and not used as the basis for every quote in this entry. The $3B market-value and loot-box-removal facts are independently corroborated (CNBC, Forbes, Windows Central) and are presented as trivia, not editorializing."
+}

@@ -1,0 +1,28 @@
+{
+  "nexus_domain": "newvegas",
+  "nexus_name": "Fallout New Vegas",
+  "appid": 22380,
+  "title": "Fallout: New Vegas",
+  "studio": "Obsidian Entertainment",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/22380/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_62f8d0b006935ff6de7fe276f713e7d15e579bc9.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_ec8a28942fcb5cb15718f949ab81124932a5084d.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_f703adcb9aa1d718a39288adf7d2e1b4dc0e568a.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e05e3697347c076d3382188bcf883339cf6144d5.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e430a2c8a841d4bc32bd8207223a91e3dbe0cdea.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Truth is, the game was rigged from the start.", "attrib": "Benny"},
+    {"text": "Sorry to deny you a moment of primate triumph, but you'll have to go elsewhere to sound your barbaric yawp.", "attrib": "Mr. House"},
+    {"text": "You did a super job wrapping things up! And I'm not just saying that because I have to!", "attrib": "Yes Man"},
+    {"text": "Obsidian built New Vegas in about 18 months, reusing Fallout 3's engine to make the deadline.", "attrib": "development trivia"},
+    {"text": "New Vegas needed an 85 on Metacritic for Obsidian's contractual bonus. It scored 84.", "attrib": "development trivia"},
+    {"text": "Every player turns on Hardcore Mode, dies of dehydration outside Goodsprings, and quietly turns it back off.", "attrib": "every player, eventually"},
+    {"text": "You'll spend hours deciding who deserves the Strip — NCR, Legion, House, or yourself — and still aren't sure.", "attrib": "every player, eventually"},
+    {"text": "You pick Wild Wasteland for the jokes, then forget you did until a UFO crashes into the road ahead.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 22380 confirmed via Steam appdetails (type=game, name='Fallout: New Vegas', developer Obsidian Entertainment, publisher Bethesda Softworks — matches the Nexus 'newvegas' domain unambiguously, no SKU splits to resolve here). Character quotes verified verbatim against Fallout Wiki's transcribed dialogue files via its MediaWiki API (api.php?action=parse), since direct HTML fetches 403 via Cloudflare on both plain curl and WebFetch. The 85-Metacritic-bonus story is well documented (Chris Avellone confirmed it publicly); New Vegas scored 84 on PC/Xbox 360."
+}

@@ -1,0 +1,802 @@
+[
+ {
+  "nexus_id": 1704,
+  "name": "Skyrim Special Edition",
+  "domain": "skyrimspecialedition",
+  "mods": 137165,
+  "downloads": 12507050759,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 1151,
+  "name": "Fallout 4",
+  "domain": "fallout4",
+  "mods": 75837,
+  "downloads": 2389674459,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 110,
+  "name": "Skyrim",
+  "domain": "skyrim",
+  "mods": 73138,
+  "downloads": 1986757156,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 130,
+  "name": "Fallout New Vegas",
+  "domain": "newvegas",
+  "mods": 41664,
+  "downloads": 1314013127,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 101,
+  "name": "Oblivion",
+  "domain": "oblivion",
+  "mods": 33405,
+  "downloads": 338235815,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 1303,
+  "name": "Stardew Valley",
+  "domain": "stardewvalley",
+  "mods": 32820,
+  "downloads": 807009764,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 3333,
+  "name": "Cyberpunk 2077",
+  "domain": "cyberpunk2077",
+  "mods": 23176,
+  "downloads": 1523174519,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 3474,
+  "name": "Baldur's Gate 3",
+  "domain": "baldursgate3",
+  "mods": 18932,
+  "downloads": 509489703,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 120,
+  "name": "Fallout 3",
+  "domain": "fallout3",
+  "mods": 17173,
+  "downloads": 200658740,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 100,
+  "name": "Morrowind",
+  "domain": "morrowind",
+  "mods": 15779,
+  "downloads": 128488571,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 4187,
+  "name": "Starfield",
+  "domain": "starfield",
+  "mods": 13543,
+  "downloads": 189031068,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 6119,
+  "name": "Helldivers 2",
+  "domain": "helldivers2",
+  "mods": 10975,
+  "downloads": 30887296,
+  "genre": "Third-Person Shooter"
+ },
+ {
+  "nexus_id": 2229,
+  "name": "Star Wars: Battlefront II (2017)",
+  "domain": "starwarsbattlefront22017",
+  "mods": 9716,
+  "downloads": 26368955,
+  "genre": "FPS"
+ },
+ {
+  "nexus_id": 952,
+  "name": "The Witcher 3",
+  "domain": "witcher3",
+  "mods": 8872,
+  "downloads": 209264628,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 2673,
+  "name": "Blade & Sorcery",
+  "domain": "bladeandsorcery",
+  "mods": 8838,
+  "downloads": 84992496,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 3174,
+  "name": "Mount & Blade II: Bannerlord",
+  "domain": "mountandblade2bannerlord",
+  "mods": 8558,
+  "downloads": 143582438,
+  "genre": "Strategy"
+ },
+ {
+  "nexus_id": 1059,
+  "name": "7 Days To Die",
+  "domain": "7daystodie",
+  "mods": 8474,
+  "downloads": 36649523,
+  "genre": "FPS"
+ },
+ {
+  "nexus_id": 7106,
+  "name": "Marvel Rivals",
+  "domain": "marvelrivals",
+  "mods": 8421,
+  "downloads": 33890604,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 4333,
+  "name": "Elden Ring",
+  "domain": "eldenring",
+  "mods": 7424,
+  "downloads": 59389582,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 2531,
+  "name": "Monster Hunter: World",
+  "domain": "monsterhunterworld",
+  "mods": 6498,
+  "downloads": 92863929,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 3024,
+  "name": "Red Dead Redemption 2",
+  "domain": "reddeadredemption2",
+  "mods": 5770,
+  "downloads": 70384155,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 2600,
+  "name": "My Summer Car",
+  "domain": "mysummercar",
+  "mods": 5228,
+  "downloads": 34158345,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 5195,
+  "name": "Resident Evil 4 (2023)",
+  "domain": "residentevil42023",
+  "mods": 5179,
+  "downloads": 43697838,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 641,
+  "name": "The Sims 4",
+  "domain": "thesims4",
+  "mods": 5098,
+  "downloads": 30476557,
+  "genre": "Sandbox"
+ },
+ {
+  "nexus_id": 4205,
+  "name": "Ready or Not",
+  "domain": "readyornot",
+  "mods": 4839,
+  "downloads": 52977975,
+  "genre": "FPS"
+ },
+ {
+  "nexus_id": 4536,
+  "name": "Marvel's Spider-Man Remastered",
+  "domain": "marvelsspidermanremastered",
+  "mods": 4399,
+  "downloads": 17220179,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 7587,
+  "name": "Oblivion Remastered",
+  "domain": "oblivionremastered",
+  "mods": 4234,
+  "downloads": 34248160,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 140,
+  "name": "Dragon Age: Origins",
+  "domain": "dragonage",
+  "mods": 4034,
+  "downloads": 78404841,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 2751,
+  "name": "Devil May Cry 5",
+  "domain": "devilmaycry5",
+  "mods": 3654,
+  "downloads": 13006457,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 6993,
+  "name": "Monster Hunter Wilds",
+  "domain": "monsterhunterwilds",
+  "mods": 3633,
+  "downloads": 37913084,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 728,
+  "name": "Dragon Age: Inquisition",
+  "domain": "dragonageinquisition",
+  "mods": 3311,
+  "downloads": 36699734,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 4124,
+  "name": "Blade & Sorcery: Nomad",
+  "domain": "bladeandsorcerynomad",
+  "mods": 3307,
+  "downloads": 26623472,
+  "genre": "Hack and Slash"
+ },
+ {
+  "nexus_id": 6063,
+  "name": "Palworld",
+  "domain": "palworld",
+  "mods": 3266,
+  "downloads": 38658509,
+  "genre": "Survival"
+ },
+ {
+  "nexus_id": 4095,
+  "name": "Monster Hunter Rise",
+  "domain": "monsterhunterrise",
+  "mods": 3242,
+  "downloads": 34884426,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 2777,
+  "name": "Ace Combat 7: Skies Unknown",
+  "domain": "acecombat7skiesunknown",
+  "mods": 3204,
+  "downloads": 3414489,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 2590,
+  "name": "Fallout 76",
+  "domain": "fallout76",
+  "mods": 3159,
+  "downloads": 10862180,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 5329,
+  "name": "Street Fighter 6",
+  "domain": "streetfighter6",
+  "mods": 2951,
+  "downloads": 12040177,
+  "genre": "Fighting"
+ },
+ {
+  "nexus_id": 1634,
+  "name": "No Man's Sky",
+  "domain": "nomanssky",
+  "mods": 2857,
+  "downloads": 16657496,
+  "genre": "Sandbox"
+ },
+ {
+  "nexus_id": 7804,
+  "name": "Stellar Blade",
+  "domain": "stellarblade",
+  "mods": 2853,
+  "downloads": 58986135,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 7286,
+  "name": "Kingdom Come: Deliverance II",
+  "domain": "kingdomcomedeliverance2",
+  "mods": 2671,
+  "downloads": 21927333,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 3712,
+  "name": "Mass Effect Legendary Edition",
+  "domain": "masseffectlegendaryedition",
+  "mods": 2583,
+  "downloads": 30768551,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 3946,
+  "name": "Guitar Hero World Tour",
+  "domain": "guitarheroworldtour",
+  "mods": 2530,
+  "downloads": 1504929,
+  "genre": "Music"
+ },
+ {
+  "nexus_id": 6945,
+  "name": "Dragon Age: The Veilguard",
+  "domain": "dragonagetheveilguard",
+  "mods": 2527,
+  "downloads": 2353638,
+  "genre": "Adventure"
+ },
+ {
+  "nexus_id": 3667,
+  "name": "Valheim",
+  "domain": "valheim",
+  "mods": 2506,
+  "downloads": 27002428,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 1037,
+  "name": "Batman: Arkham Knight",
+  "domain": "batmanarkhamknight",
+  "mods": 2392,
+  "downloads": 9183042,
+  "genre": "Adventure"
+ },
+ {
+  "nexus_id": 4134,
+  "name": "Jurassic World Evolution 2",
+  "domain": "jurassicworldevolution2",
+  "mods": 2376,
+  "downloads": 8054161,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 1155,
+  "name": "Subnautica",
+  "domain": "subnautica",
+  "mods": 2160,
+  "downloads": 40093392,
+  "genre": "Sandbox"
+ },
+ {
+  "nexus_id": 8863,
+  "name": "Resident Evil Requiem",
+  "domain": "residentevilrequiem",
+  "mods": 2129,
+  "downloads": 11523677,
+  "genre": "Survival"
+ },
+ {
+  "nexus_id": 3729,
+  "name": "Kingdom Hearts III",
+  "domain": "kingdomhearts3",
+  "mods": 2107,
+  "downloads": 3512065,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 190,
+  "name": "Mount & Blade",
+  "domain": "mountandblade",
+  "mods": 2050,
+  "downloads": 618214,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 3100,
+  "name": "Planet Zoo",
+  "domain": "planetzoo",
+  "mods": 2003,
+  "downloads": 10326293,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 2971,
+  "name": "Halo: The Master Chief Collection",
+  "domain": "halothemasterchiefcollection",
+  "mods": 1966,
+  "downloads": 1674845,
+  "genre": "FPS"
+ },
+ {
+  "nexus_id": 941,
+  "name": "Final Fantasy XIV",
+  "domain": "finalfantasy14",
+  "mods": 1941,
+  "downloads": 4737408,
+  "genre": "MMORPG"
+ },
+ {
+  "nexus_id": 7237,
+  "name": "Final Fantasy VII Rebirth",
+  "domain": "finalfantasy7rebirth",
+  "mods": 1932,
+  "downloads": 9118203,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 1091,
+  "name": "Metal Gear Solid V: The Phantom Pain",
+  "domain": "metalgearsolidvtpp",
+  "mods": 1930,
+  "downloads": 11893407,
+  "genre": "Stealth"
+ },
+ {
+  "nexus_id": 2763,
+  "name": "Sekiro: Shadows Die Twice",
+  "domain": "sekiro",
+  "mods": 1907,
+  "downloads": 16229364,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 2702,
+  "name": "Resident Evil 2 (2019)",
+  "domain": "residentevil22019",
+  "mods": 1804,
+  "downloads": 22837230,
+  "genre": "Horror"
+ },
+ {
+  "nexus_id": 4202,
+  "name": "Final Fantasy VII Remake",
+  "domain": "finalfantasy7remake",
+  "mods": 1755,
+  "downloads": 11392825,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 804,
+  "name": "Darkest Dungeon",
+  "domain": "darkestdungeon",
+  "mods": 1732,
+  "downloads": 20425664,
+  "genre": "Roguelike"
+ },
+ {
+  "nexus_id": 6082,
+  "name": "Marvel's Spider-Man 2",
+  "domain": "marvelsspiderman2",
+  "mods": 1708,
+  "downloads": 5231114,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 8597,
+  "name": "My Winter Car",
+  "domain": "mywintercar",
+  "mods": 1697,
+  "downloads": 3025139,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 2659,
+  "name": "X4: Foundations",
+  "domain": "x4foundations",
+  "mods": 1691,
+  "downloads": 7802968,
+  "genre": "Space sim"
+ },
+ {
+  "nexus_id": 5972,
+  "name": "Avatar: Frontiers of Pandora",
+  "domain": "avatarfrontiersofpandora",
+  "mods": 1690,
+  "downloads": 1749295,
+  "genre": "Adventure"
+ },
+ {
+  "nexus_id": 2298,
+  "name": "Kingdom Come: Deliverance",
+  "domain": "kingdomcomedeliverance",
+  "mods": 1667,
+  "downloads": 23854502,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 1392,
+  "name": "Dark Souls 3",
+  "domain": "darksouls3",
+  "mods": 1661,
+  "downloads": 12281047,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 736,
+  "name": "Kenshi",
+  "domain": "kenshi",
+  "mods": 1624,
+  "downloads": 10334200,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 3030,
+  "name": "Ghost Recon Breakpoint",
+  "domain": "ghostreconbreakpoint",
+  "mods": 1590,
+  "downloads": 5823680,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 449,
+  "name": "War Thunder",
+  "domain": "warthunder",
+  "mods": 1587,
+  "downloads": 1046614,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 6944,
+  "name": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+  "domain": "stalker2heartofchornobyl",
+  "mods": 1557,
+  "downloads": 20548749,
+  "genre": "FPS"
+ },
+ {
+  "nexus_id": 141,
+  "name": "Dragon Age 2",
+  "domain": "dragonage2",
+  "mods": 1548,
+  "downloads": 30329195,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 162,
+  "name": "Dark Souls",
+  "domain": "darksouls",
+  "mods": 1511,
+  "downloads": 11711556,
+  "genre": "Adventure"
+ },
+ {
+  "nexus_id": 5113,
+  "name": "Hogwarts Legacy",
+  "domain": "hogwartslegacy",
+  "mods": 1491,
+  "downloads": 21258318,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 257,
+  "name": "Zoo Tycoon 2",
+  "domain": "zootycoon2",
+  "mods": 1458,
+  "downloads": 885755,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 191,
+  "name": "Mount & Blade: Warband",
+  "domain": "mbwarband",
+  "mods": 1425,
+  "downloads": 5604814,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 2573,
+  "name": "Jurassic World Evolution",
+  "domain": "jurassicworldevolution",
+  "mods": 1416,
+  "downloads": 2728965,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 4309,
+  "name": "Sifu",
+  "domain": "sifu",
+  "mods": 1416,
+  "downloads": 3944367,
+  "genre": "Fighting"
+ },
+ {
+  "nexus_id": 8969,
+  "name": "Crimson Desert",
+  "domain": "crimsondesert",
+  "mods": 1377,
+  "downloads": 9715818,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 3199,
+  "name": "DOOM Eternal",
+  "domain": "doometernal",
+  "mods": 1353,
+  "downloads": 1559260,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 482,
+  "name": "Dark Souls 2",
+  "domain": "darksouls2",
+  "mods": 1334,
+  "downloads": 4658560,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 4767,
+  "name": "JoJo's Bizarre Adventure: All-Star Battle R",
+  "domain": "jojosbizarreadventureallstarbattler",
+  "mods": 1334,
+  "downloads": 1221477,
+  "genre": "Fighting"
+ },
+ {
+  "nexus_id": 5735,
+  "name": "Mortal Kombat 1",
+  "domain": "mortalkombat",
+  "mods": 1304,
+  "downloads": 1543454,
+  "genre": "Fighting"
+ },
+ {
+  "nexus_id": 4272,
+  "name": "Yu-Gi-Oh Master Duel",
+  "domain": "yugiohmasterduel",
+  "mods": 1284,
+  "downloads": 3218028,
+  "genre": "Strategy"
+ },
+ {
+  "nexus_id": 2750,
+  "name": "Derail Valley",
+  "domain": "derailvalley",
+  "mods": 1277,
+  "downloads": 1797791,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 4302,
+  "name": "Dying Light 2",
+  "domain": "dyinglight2",
+  "mods": 1268,
+  "downloads": 4408803,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 5982,
+  "name": "Railroader",
+  "domain": "railroader",
+  "mods": 1264,
+  "downloads": 2368531,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 2433,
+  "name": "State of Decay 2",
+  "domain": "stateofdecay2",
+  "mods": 1263,
+  "downloads": 9070021,
+  "genre": "Survival"
+ },
+ {
+  "nexus_id": 6234,
+  "name": "Dragon's Dogma 2",
+  "domain": "dragonsdogma2",
+  "mods": 1194,
+  "downloads": 12079346,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 7381,
+  "name": "Schedule I",
+  "domain": "schedule1",
+  "mods": 1189,
+  "downloads": 11298489,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 3099,
+  "name": "MechWarrior 5: Mercenaries",
+  "domain": "mechwarrior5mercenaries",
+  "mods": 1164,
+  "downloads": 10405845,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 6225,
+  "name": "Supermarket Simulator",
+  "domain": "supermarketsimulator",
+  "mods": 1139,
+  "downloads": 9052883,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 2295,
+  "name": "Modding Tools",
+  "domain": "site",
+  "mods": 1124,
+  "downloads": 113530227,
+  "genre": "Sandbox"
+ },
+ {
+  "nexus_id": 893,
+  "name": "Grand Theft Auto V Legacy",
+  "domain": "gta5",
+  "mods": 1116,
+  "downloads": 2874599,
+  "genre": "Sandbox"
+ },
+ {
+  "nexus_id": 5902,
+  "name": "NARUTO X BORUTO Ultimate Ninja STORM CONNECTIONS",
+  "domain": "narutoxborutoultimateninjastormconnections",
+  "mods": 1095,
+  "downloads": 812580,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 2432,
+  "name": "Dark Souls Remastered",
+  "domain": "darksoulsremastered",
+  "mods": 1082,
+  "downloads": 4669385,
+  "genre": "RPG"
+ },
+ {
+  "nexus_id": 7480,
+  "name": "inZOI",
+  "domain": "inzoi",
+  "mods": 1076,
+  "downloads": 3299973,
+  "genre": "Simulation"
+ },
+ {
+  "nexus_id": 2679,
+  "name": "Yakuza 0",
+  "domain": "yakuza0",
+  "mods": 1019,
+  "downloads": 1673979,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 7627,
+  "name": "Grand Theft Auto V Enhanced",
+  "domain": "gta5enhanced",
+  "mods": 1019,
+  "downloads": 1013081,
+  "genre": "Action"
+ },
+ {
+  "nexus_id": 1894,
+  "name": "Mass Effect Andromeda",
+  "domain": "masseffectandromeda",
+  "mods": 1016,
+  "downloads": 10987431,
+  "genre": "ARPG"
+ },
+ {
+  "nexus_id": 3191,
+  "name": "Resident Evil 3 (2020)",
+  "domain": "residentevil32020",
+  "mods": 997,
+  "downloads": 14206074,
+  "genre": "Horror"
+ },
+ {
+  "nexus_id": 2927,
+  "name": "Daggerfall Unity",
+  "domain": "daggerfallunity",
+  "mods": 993,
+  "downloads": 12816346,
+  "genre": "RPG"
+ }
+]

@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "skyrimspecialedition",
+  "nexus_name": "Skyrim Special Edition",
+  "appid": 489830,
+  "title": "The Elder Scrolls V: Skyrim Special Edition",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/489830/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_73c1a0bb7e1720c8a1847186c3ddd837d3ca7a8d.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_d64b646612ab1402bdda8e400672aa0dbcb352ea.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_b6bb6f79278505b3f48567f08c21f7a0eb171c68.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_921ccea650df936a0b14ebd5dd4ecc73c1d2a12d.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_8c7ecd394afb581b9b2137a3de04433f78fdf4ea.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/489830/ss_50c3da9e29e9b0368889379cdd03a71aba8d614c.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Do you get to the Cloud District very often? Oh, what am I saying—of course you don't.", "attrib": "Nazeem, Whiterun's most beloved citizen"},
+    {"text": "I am sworn to carry your burdens.", "attrib": "Lydia, Housecarl of Whiterun"},
+    {"text": "Zu'u unslaad! Zu'u nis oblaan! (\"I am eternal! I cannot be killed!\")", "attrib": "Alduin, moments before exploding"},
+    {"text": "M'aiq once walked to High Hrothgar. So many steps, he lost count.", "attrib": "M'aiq the Liar"},
+    {"text": "A giant's power attack can launch you hundreds of feet skyward — a physics quirk Bethesda never fully patched.", "attrib": "development trivia"},
+    {"text": "Bethesda's E3 joke about a Skyrim game for Amazon Alexa turned out to be real. You can still play it by voice.", "attrib": "development trivia"},
+    {"text": "Every player swears they'll be a mage this time. Most end up a stealth archer within the hour.", "attrib": "every player, eventually"},
+    {"text": "You will carry forty unenchanted iron daggers to sell later. You never sell them.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 489830 is the base game confirmed via Steam appdetails (type=game, matches Steam's official title verbatim). Note the Steam listing now describes itself as the 'Anniversary Edition' bundle in its storefront copy (Creation Club content included), but the appid/title/developer are unchanged from the original Special Edition base game — this is still the correct entry, not a separate SKU. Screenshot URLs had their '?t=...' cache-busting query params stripped since they are not required for the images to load; at least two verified HTTP 200. The Alduin quote uses in-game Dragon language with the game's own subtitle translation in parentheses, since the raw phrase alone isn't recognizable to most players."
+}

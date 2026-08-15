@@ -1,0 +1,44 @@
+{
+ "appid": 1716740,
+ "name": "Starfield",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "23518663",
+   "date": "2026-06-11",
+   "bytes": 169346759739,
+   "depots": [
+    {
+     "depot-id": 1716741,
+     "manifest-gid": "6026043903923231328"
+    },
+    {
+     "depot-id": 1716742,
+     "manifest-gid": "3130703038371677921"
+    },
+    {
+     "depot-id": 1716743,
+     "manifest-gid": "7908035178130303133"
+    },
+    {
+     "depot-id": 1716744,
+     "manifest-gid": "7835038652843152485"
+    },
+    {
+     "depot-id": 1716745,
+     "manifest-gid": "8082676786766068854"
+    },
+    {
+     "depot-id": 1716746,
+     "manifest-gid": "8256719953704350900"
+    },
+    {
+     "depot-id": 1716747,
+     "manifest-gid": "1299082767590167920"
+    }
+   ]
+  }
+ ]
+}

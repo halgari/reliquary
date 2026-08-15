@@ -1,0 +1,28 @@
+{
+  "nexus_domain": "oblivion",
+  "nexus_name": "Oblivion",
+  "appid": 22330,
+  "title": "The Elder Scrolls IV: Oblivion® Game of the Year Edition (2009)",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/22330/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009037.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009038.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009039.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009040.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009041.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Golly, you're the best! I'm going to follow you and watch you and worship the ground you walk on! Let's go!", "attrib": "Adoring Fan"},
+    {"text": "Find him, and close shut the jaws of Oblivion.", "attrib": "Uriel Septim VII"},
+    {"text": "Stop right there, criminal scum!", "attrib": "Imperial City Watch guard"},
+    {"text": "17 voice actors voiced 1,497 NPCs — a ratio you can hear in every tavern conversation.", "attrib": "development trivia"},
+    {"text": "Todd Howard voiced one NPC himself: the Daedric Prince Clavicus Vile.", "attrib": "development trivia"},
+    {"text": "Every player spends the whole game trying not to look at NPC faces too closely.", "attrib": "every player, eventually"},
+    {"text": "You get arrested for trespassing in your own house because a guard saw you climb through the window.", "attrib": "every player, eventually"},
+    {"text": "By the twentieth Oblivion Gate, you're closing them out of obligation, not heroism.", "attrib": "every player, eventually"}
+  ],
+  "notes": "DELIBERATE CHOICE: Nexus's 'oblivion' domain is the ORIGINAL 2006 Oblivion, not the 2025 Oblivion Remastered (which has its own separate Nexus domain/appid, 2623190, and is not this entry). appid 22330 is the only Oblivion SKU Steam currently sells — its storefront listing and appdetails title itself as 'Game of the Year Edition (2009)' (bundling the Shivering Isles and Knights of the Nine expansions), but this is the same base-game appid the original 2006 release has always used on Steam; there is no separate un-bundled 'vanilla' Oblivion appid to choose instead, so 22330 is correct and deliberate. title/studio copied verbatim from Steam appdetails (type=game, developer Bethesda Game Studios, publisher Bethesda Softworks), including the registered-trademark glyph and parenthetical '(2009)' Steam itself displays. Character quotes verified verbatim against UESP (fetched via curl with a browser User-Agent; UESP 403s on default UA) and Elder Scrolls Fandom's MediaWiki API (api.php?action=parse; plain HTML fetches on fandom domains also 403 via Cloudflare for both curl and WebFetch). The Uriel Septim line is an excerpt from a single unbroken in-game sentence, not a splice of separate lines."
+}

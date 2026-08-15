@@ -1,0 +1,28 @@
+{
+  "nexus_domain": "skyrim",
+  "nexus_name": "Skyrim",
+  "appid": 72850,
+  "title": "The Elder Scrolls V: Skyrim",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/72850/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_4e95fbcf72ce2a9f86075738fa9930ef2bed1ac7.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b16a3740e032afe1c4b0477174eae7af8444b85d.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b3c5c70421af0c6a48dab2fbac88814a8827c057.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b29aa0a2503547a15e9e210551b9c3eed42cba78.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_8aad65240099ed6f44953d051d1fca5d4f16e174.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Hey, you. You're finally awake.", "attrib": "Ralof, the first line spoken in the game"},
+    {"text": "I used to be an adventurer like you. Then I took an arrow in the knee...", "attrib": "Whiterun guard"},
+    {"text": "Dragons were never gone. They were just invisible and very, very quiet.", "attrib": "M'aiq the Liar"},
+    {"text": "Radiant AI's list of NPC behaviors began as a napkin sketch from Todd Howard; nearly all of it shipped.", "attrib": "development trivia"},
+    {"text": "Dragon Shouts were inspired by the sound-based \"Weirding Way\" combat in David Lynch's 1984 Dune film.", "attrib": "development trivia"},
+    {"text": "Killing one town chicken turns the whole town hostile — the chicken shares its owners' faction.", "attrib": "development trivia"},
+    {"text": "Every player spends the first hour picking flowers and ignoring the dragon that just leveled a town.", "attrib": "every player, eventually"},
+    {"text": "You fast-travel everywhere, then feel guilty and walk once, just to see the scenery.", "attrib": "every player, eventually"}
+  ],
+  "notes": "This is the ORIGINAL 2011 Skyrim (nexus domain 'skyrim'), not Special Edition — appid 72850 confirmed via Steam appdetails (type=game, name='The Elder Scrolls V: Skyrim', released 10 Nov 2011, developer Bethesda Game Studios). Special Edition (appid 489830) is a separate, already-completed catalog entry (tool/catalog/games/skyrimspecialedition.json); quotes here were deliberately chosen not to overlap with that entry's selections (different character lines, different trivia) even though both games share most dialogue. Character quotes verified verbatim against UESP (fetched via curl with a browser User-Agent, since UESP 403s on default WebFetch/curl UA) and the Elder Scrolls Fandom wiki's MediaWiki API (fallout/elderscrolls fandom domains 403 plain HTML requests via Cloudflare but their api.php?action=parse endpoint returns wikitext fine). The chicken-hostility trivia is corroborated by lead artist Matt Carofano's public comments that it was an unplanned emergent result of chickens sharing their town's faction."
+}

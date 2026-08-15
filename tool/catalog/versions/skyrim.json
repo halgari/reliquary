@@ -1,0 +1,168 @@
+{
+ "appid": 72850,
+ "name": "The Elder Scrolls V: Skyrim",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "15039560",
+   "date": "2024-09-05",
+   "bytes": 43741285430,
+   "depots": [
+    {
+     "depot-id": 211721,
+     "manifest-gid": "8491601813494771150"
+    },
+    {
+     "depot-id": 211722,
+     "manifest-gid": "1022735717219821693"
+    },
+    {
+     "depot-id": 211723,
+     "manifest-gid": "1086946781294420899"
+    },
+    {
+     "depot-id": 211724,
+     "manifest-gid": "1276143862192158998"
+    },
+    {
+     "depot-id": 211725,
+     "manifest-gid": "8299795016551985184"
+    },
+    {
+     "depot-id": 211726,
+     "manifest-gid": "5289416362846105567"
+    },
+    {
+     "depot-id": 211727,
+     "manifest-gid": "7751553359064521832"
+    },
+    {
+     "depot-id": 211728,
+     "manifest-gid": "4059246410413922004"
+    },
+    {
+     "depot-id": 211729,
+     "manifest-gid": "7463371072418866286"
+    },
+    {
+     "depot-id": 220761,
+     "manifest-gid": "2344958374935388264"
+    },
+    {
+     "depot-id": 220762,
+     "manifest-gid": "5113555411172661886"
+    },
+    {
+     "depot-id": 220763,
+     "manifest-gid": "8215433295476872627"
+    },
+    {
+     "depot-id": 220764,
+     "manifest-gid": "7691844347959071567"
+    },
+    {
+     "depot-id": 220765,
+     "manifest-gid": "257722701370938794"
+    },
+    {
+     "depot-id": 220766,
+     "manifest-gid": "931899454736580467"
+    },
+    {
+     "depot-id": 220767,
+     "manifest-gid": "1912731935620426238"
+    },
+    {
+     "depot-id": 220768,
+     "manifest-gid": "8180020645450882851"
+    },
+    {
+     "depot-id": 220769,
+     "manifest-gid": "2819260933799905552"
+    },
+    {
+     "depot-id": 226881,
+     "manifest-gid": "5951986179928071119"
+    },
+    {
+     "depot-id": 226882,
+     "manifest-gid": "1063207227414446171"
+    },
+    {
+     "depot-id": 226883,
+     "manifest-gid": "2843325968068819127"
+    },
+    {
+     "depot-id": 226884,
+     "manifest-gid": "3812267532474553905"
+    },
+    {
+     "depot-id": 226885,
+     "manifest-gid": "1585497366712628883"
+    },
+    {
+     "depot-id": 226886,
+     "manifest-gid": "5952995101008705423"
+    },
+    {
+     "depot-id": 226887,
+     "manifest-gid": "7536838561817009398"
+    },
+    {
+     "depot-id": 226888,
+     "manifest-gid": "921222014325323019"
+    },
+    {
+     "depot-id": 226890,
+     "manifest-gid": "612194655676385333"
+    },
+    {
+     "depot-id": 72851,
+     "manifest-gid": "430694959351693705"
+    },
+    {
+     "depot-id": 72853,
+     "manifest-gid": "5477471785942614203"
+    },
+    {
+     "depot-id": 72854,
+     "manifest-gid": "7714663930157316519"
+    },
+    {
+     "depot-id": 72855,
+     "manifest-gid": "2251296615448706646"
+    },
+    {
+     "depot-id": 72856,
+     "manifest-gid": "1727971286572746112"
+    },
+    {
+     "depot-id": 72857,
+     "manifest-gid": "7452763826351096823"
+    },
+    {
+     "depot-id": 72858,
+     "manifest-gid": "7838100264460942831"
+    },
+    {
+     "depot-id": 72859,
+     "manifest-gid": "5471547594501309345"
+    },
+    {
+     "depot-id": 72860,
+     "manifest-gid": "5193644833404975611"
+    },
+    {
+     "depot-id": 72861,
+     "manifest-gid": "400878757036949667"
+    },
+    {
+     "depot-id": 72862,
+     "manifest-gid": "2225156885713950567"
+    }
+   ]
+  }
+ ]
+}

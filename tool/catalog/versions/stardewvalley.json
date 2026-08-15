@@ -1,0 +1,76 @@
+{
+ "appid": 413150,
+ "name": "Stardew Valley",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "16826371",
+   "date": "2024-12-22",
+   "bytes": 691846347,
+   "depots": [
+    {
+     "depot-id": 413151,
+     "manifest-gid": "4278718763097142923"
+    }
+   ]
+  },
+  {
+   "id": "compatibility",
+   "label": "For 32-bit systems. The legacy XNA version of Stardew Valley.",
+   "branch": "compatibility",
+   "build": "16826373",
+   "date": "2024-12-22",
+   "bytes": 580712810,
+   "depots": [
+    {
+     "depot-id": 413151,
+     "manifest-gid": "4848991934266309406"
+    }
+   ]
+  },
+  {
+   "id": "previous_version",
+   "label": "The previous version of Stardew Valley (currently 1.6.14)",
+   "branch": "previous_version",
+   "build": "16375315",
+   "date": "2024-12-20",
+   "bytes": 690853004,
+   "depots": [
+    {
+     "depot-id": 413151,
+     "manifest-gid": "1364246008775303529"
+    }
+   ]
+  },
+  {
+   "id": "legacy_1.6.8",
+   "label": "The legacy 1.6.8 version of Stardew Valley",
+   "branch": "legacy_1.6.8",
+   "build": "14198583",
+   "date": "2024-11-04",
+   "bytes": 675607362,
+   "depots": [
+    {
+     "depot-id": 413151,
+     "manifest-gid": "1777024427851858279"
+    }
+   ]
+  },
+  {
+   "id": "legacy_1.5.6",
+   "label": "The legacy 1.5.6 version of Stardew Valley.",
+   "branch": "legacy_1.5.6",
+   "build": "8043676",
+   "date": "2024-03-18",
+   "bytes": 650810621,
+   "depots": [
+    {
+     "depot-id": 413151,
+     "manifest-gid": "5609262347030774375"
+    }
+   ]
+  }
+ ]
+}

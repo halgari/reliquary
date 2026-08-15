@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "helldivers2",
+  "nexus_name": "Helldivers 2",
+  "appid": 553850,
+  "title": "HELLDIVERS™ 2",
+  "studio": "Arrowhead Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/553850/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/aed08979e15f54798f287dd8820fb5838476b5fa/ss_aed08979e15f54798f287dd8820fb5838476b5fa.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/71ef7c65fcf63ff974ce42150190c0420c66c72b/ss_71ef7c65fcf63ff974ce42150190c0420c66c72b.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/6c8b61a7c63479b6f526d285af6687a362d5d7ae/ss_6c8b61a7c63479b6f526d285af6687a362d5d7ae.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_0c79f56fc7be1bd0102f2ca1c92c8f0900daf4fb.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_33e684e9cb2517af1599f0ca2b57d65ee82c2e51.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_8949ed7dd24a02d5ea13b08fc5c04fab400dc4bd.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "How about a nice cup of Liber-tea?", "attrib": "a Helldiver, mid-firefight"},
+    {"text": "There is but one assured path to peace... and that path is war.", "attrib": "Democracy Officer"},
+    {"text": "I only regret that I have but one ship's worth of lives to give to our cause.", "attrib": "Democracy Officer"},
+    {"text": "Democracy has landed.", "attrib": "a Helldiver, upon landing"},
+    {"text": "Helldivers 2 runs on Autodesk's Stingray engine, discontinued by Autodesk back in 2018.", "attrib": "development trivia"},
+    {"text": "After the game sold 12 million copies, Arrowhead noted there were now more Helldivers than Swedes.", "attrib": "development trivia"},
+    {"text": "Every squad loses at least one Helldiver to a poorly aimed orbital strike. Usually more than one.", "attrib": "every squad, eventually"},
+    {"text": "Nobody reads the stratagem input before throwing it. Everyone learns the 380mm barrage the hard way.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 553850 confirmed via Steam appdetails (type=game, name='HELLDIVERS™ 2', developer Arrowhead Game Studios). Only one SKU on Steam; the storefront description shown by appdetails is for the Digital Deluxe Edition bundle, but the appid/title/developer are for the base game itself, so no SKU ambiguity. Helldiver/Democracy Officer lines verified verbatim against Wikiquote's Helldivers 2 page, which compiles in-game barks and propaganda lines by category (Helldiver dialogue, Democracy Officer). The Stingray-engine and 12-million-copies/Sweden facts are both independently corroborated (PC Gamer, GameDeveloper.com, Sony Q1 2024 earnings commentary from Arrowhead's then-CEO Johan Pilestedt)."
+}

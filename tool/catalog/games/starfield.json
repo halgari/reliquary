@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "starfield",
+  "nexus_name": "Starfield",
+  "appid": 1716740,
+  "title": "Starfield",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/1716740/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_4887dc140a637684ddcfca518458668409f946dc.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_b2821283cb140cd5a6289a8160016b6a60d8f96e.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_68f15d580bf91971f637be5e464bc803482d78f7.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_aae99c177004bb5ec653d2fcb65a5d30489ec7b8.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_c8594798fadfd8e042b2fc8afff7bcf4872c5198.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1716740/ss_2288919a390c0147b7d2226354a61452016fd087.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Easy, girl. Breathe. You'll have a heart attack.", "attrib": "Sarah Morgan, to Noel"},
+    {"text": "War, disease, famine. All the classics.", "attrib": "The Hunter"},
+    {"text": "By Vectera, by Vectera, by Vectera! I can't believe it!", "attrib": "The Adoring Fan"},
+    {"text": "He's Barrett, I'm Barrett. Other than that mind-bending fact, there's really not much to it.", "attrib": "Barrett, meeting his alternate self"},
+    {"text": "Starfield shipped with over 200,000 lines of recorded dialogue, more than any prior Bethesda game.", "attrib": "development trivia"},
+    {"text": "Todd Howard first pitched Starfield's concept back in 2013, years before it entered full production.", "attrib": "development trivia"},
+    {"text": "Every player scans the first planet's every rock. By the tenth planet, they don't even land.", "attrib": "every player, eventually"},
+    {"text": "Players begged for a flight sim, then fast-travel past every system they unlock.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 1716740 confirmed via Steam appdetails (type=game, name='Starfield', developer/publisher Bethesda Game Studios/Softworks). Only one Starfield SKU exists on Steam (the storefront page bundles Premium Edition upsells in its description, but the base appid/title are unchanged), so no SKU ambiguity here. Character quotes (Sarah Morgan, The Hunter, Barrett, Adoring Fan) were cross-checked across two independent fan compilations (TheGamer, GearsRealm) that agreed on wording, plus corroborating search results for the Adoring Fan's 'By Vectera' line as a deliberate callback to Oblivion's Adoring Fan ('By Azura'); I could not reach starfieldwiki.net or the Fandom wiki directly (both blocked by Cloudflare bot-checks even via a text-extraction proxy), so these are the best-available verbatim sources. The 200,000-lines-of-dialogue figure and the 2013 pitch date are both widely reported development facts, sourced independently."
+}

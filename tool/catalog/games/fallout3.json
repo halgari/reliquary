@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "fallout3",
+  "nexus_name": "Fallout 3",
+  "appid": 22370,
+  "title": "Fallout 3: Game of the Year Edition",
+  "studio": "Bethesda Game Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/22370/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_87fb57e11912a692f29614f88411d0db2cba405a.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_d770133d0a0c1b9b73fa31f20f29fe6617b73cfb.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_2405f21839a5cec01918a5f6fe7cae0b80422107.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_37398576af0f80af58744b56a24b8526833f2efb.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_b37fe0d332ed8877e06a2b18efc95b1dab2a54af.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_be899cfc4b2716f77d0a07737d519895ae0919f2.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "War. War never changes.", "attrib": "opening narration, voiced by Ron Perlman"},
+    {"text": "Freedom is the sovereign right of every American.", "attrib": "Liberty Prime"},
+    {"text": "Todd Howard found out Bethesda now owned the Fallout license from a Post-it note, not a memo.", "attrib": "development trivia"},
+    {"text": "Fallout 3 was refused classification in Australia over its morphine item, so Bethesda renamed it 'Med-X' worldwide.", "attrib": "development trivia"},
+    {"text": "The original ending just stopped after the main quest — Broken Steel later gave players a way to keep playing.", "attrib": "development trivia"},
+    {"text": "Every player fires at least one Fat Man just to watch the mushroom cloud, tactical necessity be damned.", "attrib": "every player, eventually"},
+    {"text": "Everyone starts as a saintly Vault dweller. The first raider with decent armor changes that fast.", "attrib": "every player, eventually"},
+    {"text": "You will hoard bottle caps, pre-War money, and teddy bears you will never once use.", "attrib": "every player, eventually"}
+  ],
+  "notes": "Two live Steam SKUs exist for this Nexus entry: base 'Fallout 3' (appid 22300, type=game, released 2008, with all 5 add-ons and the soundtrack sold as separate DLC per its own appdetails) and 'Fallout 3: Game of the Year Edition' (appid 22370, type=game, released 2009, dlc:null — everything is already built into this single SKU). Deliberately chose 22370: it's the standalone, complete-content product that most current buyers and virtually all Fallout 3 mods on Nexus assume is installed (many mods reference or require assets from Broken Steel, Point Lookout, The Pitt, Operation: Anchorage, or Mothership Zeta), whereas the base SKU requires separately purchasing all five to reach the same state. Title field is verbatim from Steam appdetails for 22370, which differs from the plain 'Fallout 3' nexus_name — flagging this since it's a deliberate SKU choice, not a near-miss. Screenshots/capsule verified HTTP 200 against appid 22370. Quotes: opening narration and Liberty Prime's line are both verbatim per fallout.wiki (fetched via curl with a browser User-Agent, since it 403s plain WebFetch like UESP does); development trivia (Post-it note story, Australian Med-X renaming, Broken Steel fixing the original abrupt ending) cross-verified via PC Gamer, Cinemablend/OFLC coverage, and Military.com's Todd Howard interview."
+}

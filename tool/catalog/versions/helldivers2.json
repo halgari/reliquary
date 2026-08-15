@@ -1,0 +1,28 @@
+{
+ "appid": 553850,
+ "name": "HELLDIVERS\u2122 2",
+ "versions": [
+  {
+   "id": "public",
+   "label": "Latest \u2014 public",
+   "branch": "public",
+   "build": "24601870",
+   "date": "2026-08-12",
+   "bytes": 23886939929,
+   "depots": [
+    {
+     "depot-id": 553851,
+     "manifest-gid": "3115173675505021070"
+    },
+    {
+     "depot-id": 553853,
+     "manifest-gid": "7669628172356516538"
+    },
+    {
+     "depot-id": 553854,
+     "manifest-gid": "6929803021334100650"
+    }
+   ]
+  }
+ ]
+}

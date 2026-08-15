@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "cyberpunk2077",
+  "nexus_name": "Cyberpunk 2077",
+  "appid": 1091500,
+  "title": "Cyberpunk 2077",
+  "studio": "CD PROJEKT RED",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_2f649b68d579bf87011487d29bc4ccbfdd97d34f.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_0e64170751e1ae20ff8fdb7001a8892fd48260e7.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_af2804aa4bf35d4251043744412ce3b359a125ef.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_7924f64b6e5d586a80418c9896a1c92881a7905b.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_4eb068b1cf52c91b57157b84bed18a186ed7714b.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_b529b0abc43f55fc23fe8058eddb6e37c9629a6a.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Wake the fuck up, Samurai. We have a city to burn.", "attrib": "Johnny Silverhand"},
+    {"text": "We all lap up the last of our fuel eventually. But that hardly means the journey wasn't a joy.", "attrib": "Delamain"},
+    {"text": "Sony pulled Cyberpunk 2077 from the PlayStation Store for six months after launch over bugs and performance.", "attrib": "development trivia"},
+    {"text": "Every V line was recorded twice — Gavin Drea and Cherami Leigh, kept apart so neither would imitate the other.", "attrib": "development trivia"},
+    {"text": "Night City and Adam Smasher both trace back to Mike Pondsmith's 1988 tabletop RPG, Cyberpunk 2020.", "attrib": "development trivia"},
+    {"text": "Every character creator session ends with a face a full-coverage cyberware helmet will hide for the rest of the game.", "attrib": "every player, eventually"},
+    {"text": "Every dumpster, glovebox, and trash pile in Night City gets opened at least once, on principle.", "attrib": "every player, eventually"},
+    {"text": "Everyone swears they will romance exactly one person in Night City. Most end up juggling three apartments.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 1091500 confirmed via Steam appdetails (type=game, developer/publisher CD PROJEKT RED). Distinguished from Phantom Liberty (2138330, a DLC/expansion), REDmod (2060310, a tool), and Bonus Content (1495710) in the storesearch results — those are not the base game. Johnny Silverhand's 'Wake the f*** up, Samurai' line is cross-verified verbatim across multiple independent sources (Last.fm track title, several YouTube upload titles, TikTok captions) with consistent wording; kept the profanity intact rather than softening it into a paraphrase, since it's the game's single most-quoted line and not a slur. The Delamain line is corroborated word-for-word across two independent quote roundups (TheGamer, a personal blog quoting it with the 'V, a word of advice' lead-in trimmed). Cyberpunk.fandom.com and IMDb both 403/blocked curl and WebFetch, so character-quote sourcing leaned on secondary roundup articles cross-checked against each other rather than the primary wiki."
+}

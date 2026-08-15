@@ -1,0 +1,29 @@
+{
+  "nexus_domain": "baldursgate3",
+  "nexus_name": "Baldur's Gate 3",
+  "appid": 1086940,
+  "title": "Baldur's Gate 3",
+  "studio": "Larian Studios",
+  "art": {
+    "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/1086940/library_600x900.jpg",
+    "screenshots": [
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_c73bc54415178c07fef85f54ee26621728c77504.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_73d93bea842b93914d966622104dcb8c0f42972b.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_cf936d31061b58e98e0c646aee00e6030c410cda.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_b6a6ee6e046426d08ceea7a4506a1b5f44181543.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_6b8faba0f6831a406ce015648958da9612d14dbb.1920x1080.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_8fc5eba770b4a1639b31666908bdd2bbc1aa2ae4.1920x1080.jpg"
+    ]
+  },
+  "quotes": [
+    {"text": "Why do beautiful people taste better? It hardly seems fair on the ugly — they have such wonderful personalities.", "attrib": "Astarion"},
+    {"text": "Tongs. A wide variety of tongs.", "attrib": "the Narrator, examining a workbench"},
+    {"text": "Halsin wasn't originally a romance option — Larian added him after fans latched onto the character during early access.", "attrib": "development trivia"},
+    {"text": "The finished game holds over 236 hours of recorded dialogue across a script that runs past two million words.", "attrib": "development trivia"},
+    {"text": "Larian spent six years building the game, three of them in public early access.", "attrib": "development trivia"},
+    {"text": "Every lawful-good cleric run ends with someone shoved off a cliff for the extra experience.", "attrib": "every player, eventually"},
+    {"text": "Every player accidentally murders a shopkeeper once, then reloads the save in shame.", "attrib": "every player, eventually"},
+    {"text": "Long rest gets called after every single fight, whether anyone actually needs it or not.", "attrib": "every player, eventually"}
+  ],
+  "notes": "appid 1086940 confirmed via Steam appdetails (type=game, developer/publisher Larian Studios), distinguished from the Digital Deluxe Edition DLC (2378500) and Toolkit Data (2956320) in storesearch results. The Astarion quote is corroborated verbatim in a ScreenRant quote roundup. The narrator 'Tongs' line is cross-verified against narrator voice actor Amelia Tyler's own interview quote of the same line (PC Gamer/Yahoo coverage of her interview), which is about as close to a primary source as is reachable without game files; TVTropes and the BG3 wiki both blocked WebFetch with 403s. Dev trivia (Halsin's romance route being added post-reveal due to fan reaction, the six-year/three-years-in-EA development timeline, and the 236-hour dialogue total from a 2M+ word script) is drawn from Larian's own public statements as reported by TheGamer, ScreenRant, and a widely reported fan tally covered by PC Gamer and GamesRadar."
+}
