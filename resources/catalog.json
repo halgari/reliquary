@@ -1,0 +1,48 @@
+{
+  "schema-version": 1,
+  "generated": "2026-08-15T00:00:00Z",
+  "games": [
+    {
+      "appid": 220,
+      "title": "Half-Life 2",
+      "studio": "Valve",
+      "art": {
+        "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/220/library_600x900.jpg",
+        "screenshots": []
+      },
+      "quotes": [],
+      "versions": [
+        {
+          "id": "public",
+          "label": "Latest — public",
+          "branch": "public",
+          "build": "0",
+          "date": "2026-08-15",
+          "bytes": 0,
+          "depots": [{"depot-id": 221, "manifest-gid": "0"}]
+        }
+      ]
+    },
+    {
+      "appid": 400,
+      "title": "Portal",
+      "studio": "Valve",
+      "art": {
+        "capsule": "https://cdn.cloudflare.steamstatic.com/steam/apps/400/library_600x900.jpg",
+        "screenshots": []
+      },
+      "quotes": [],
+      "versions": [
+        {
+          "id": "public",
+          "label": "Latest — public",
+          "branch": "public",
+          "build": "0",
+          "date": "2026-08-15",
+          "bytes": 0,
+          "depots": [{"depot-id": 401, "manifest-gid": "0"}]
+        }
+      ]
+    }
+  ]
+}
