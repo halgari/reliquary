@@ -15,7 +15,7 @@
   (:require [clojure.data.json :as json]
             [clojure.java.io :as io]
             [reliquary.config :as config])
-  (:import (java.io File)
+  (:import (java.io File InputStream)
            (java.net URI)
            (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
            (java.time Duration Instant)))
@@ -106,33 +106,63 @@
   []
   (newest (bundled) (cached)))
 
+(def ^:const max-catalog-bytes
+  "A hard ceiling on the refresh response body. The catalog URL is the only
+   host this application contacts that is neither Steam nor a Steam CDN, so an
+   unbounded read here is an unbounded memory sink handed to an untrusted
+   server. The bundled catalog is under 2 KB; a few MB is generous headroom
+   for the catalog to grow for years without anyone touching this constant."
+  (* 4 1024 1024))
+
+(defn- read-capped
+  "Read `stream` into a string, or nil if it exceeds `max-catalog-bytes`.
+   Always closes `stream`. Reads at most one byte past the cap, so memory use
+   stays bounded even against a server that never stops sending."
+  [^InputStream stream]
+  (with-open [in stream]
+    (let [buf   (byte-array (inc max-catalog-bytes))
+          total (loop [off 0]
+                  (let [n (.read in buf off (- (alength buf) off))]
+                    (cond
+                      (neg? n)                       off
+                      (>= (+ off n) (alength buf))    (+ off n)
+                      :else                           (recur (+ off n)))))]
+      (when (<= total max-catalog-bytes)
+        (String. buf 0 total "UTF-8")))))
+
 (defn refresh!
   "Fetch `url` on a background thread and call `on-done` with the parsed
    catalog if it is valid and newer than what we have. Returns immediately.
 
-   Silent on every failure. The UI shows which catalog is live in its status
-   line; a failed refresh simply means that line keeps saying what it said."
+   Silent on every failure -- including a body over `max-catalog-bytes`. The
+   UI shows which catalog is live in its status line; a failed refresh simply
+   means that line keeps saying what it said."
   [^String url on-done]
-  (.start
-   (Thread.
-    (fn []
-      (try
-        (let [client (-> (HttpClient/newBuilder)
-                         (.connectTimeout (Duration/ofSeconds 10))
-                         (.build))
-              resp   (.send client
-                            (-> (HttpRequest/newBuilder (URI/create url))
-                                (.timeout (Duration/ofSeconds 20))
-                                (.build))
-                            (HttpResponse$BodyHandlers/ofString))]
-          (when (<= 200 (.statusCode resp) 299)
-            (when-let [fresh (parse (.body resp))]
-              (when (= fresh (newest (load!) fresh))
-                (io/make-parents (cache-file))
-                (spit (cache-file) (.body resp))
-                (on-done fresh)))))
-        (catch Exception _ nil)))
-    "reliquary-catalog-refresh")))
+  (let [^Thread t (Thread.
+                   (fn []
+                     (try
+                       (let [client (-> (HttpClient/newBuilder)
+                                        (.connectTimeout (Duration/ofSeconds 10))
+                                        (.build))
+                             resp   (.send client
+                                           (-> (HttpRequest/newBuilder (URI/create url))
+                                               (.timeout (Duration/ofSeconds 20))
+                                               (.build))
+                                           (HttpResponse$BodyHandlers/ofInputStream))]
+                         (when (<= 200 (.statusCode resp) 299)
+                           (when-let [body (read-capped (.body resp))]
+                             (when-let [fresh (parse body)]
+                               (when (= fresh (newest (load!) fresh))
+                                 (io/make-parents (cache-file))
+                                 (spit (cache-file) body)
+                                 (on-done fresh))))))
+                       (catch Exception _ nil)))
+                   "reliquary-catalog-refresh")]
+    ;; a catalog refresh is strictly best-effort: nothing is lost by the JVM
+    ;; exiting mid-fetch, but a non-daemon thread would hold the app open for
+    ;; up to ~30s (connect + request timeout) after the window closes.
+    (.setDaemon t true)
+    (.start t)))
 
 (defn games [catalog] (:games catalog))
 (defn game [catalog appid] (first (filter #(= (long appid) (:appid %)) (:games catalog))))

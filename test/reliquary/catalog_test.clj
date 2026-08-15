@@ -4,8 +4,29 @@
             [clojure.test :refer [deftest is testing]]
             [reliquary.catalog :as catalog]
             [reliquary.config :as config])
-  (:import (java.nio.file Files)
+  (:import (com.sun.net.httpserver HttpExchange HttpHandler HttpServer)
+           (java.net InetSocketAddress)
+           (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
+
+(defn- local-http-server
+  "A JDK HttpServer bound to an OS-assigned port, serving `body` (bytes) at
+   `path` with `status` after an optional `delay-ms`. Caller must (.stop server 0)."
+  ([path status body] (local-http-server path status body 0))
+  ([path status ^bytes body delay-ms]
+   (let [server (HttpServer/create (InetSocketAddress. "127.0.0.1" 0) 0)]
+     (.createContext server path
+       (reify HttpHandler
+         (handle [_ ex]
+           (when (pos? delay-ms) (Thread/sleep ^long delay-ms))
+           (.sendResponseHeaders ^HttpExchange ex status (alength body))
+           (with-open [os (.getResponseBody ^HttpExchange ex)]
+             (.write os body)))))
+     (.start server)
+     server)))
+
+(defn- server-url [server path]
+  (str "http://127.0.0.1:" (.getPort (.getAddress ^HttpServer server)) path))
 
 (def ^:private minimal
   "{\"schema-version\":1,\"generated\":\"2026-01-01T00:00:00Z\",
@@ -86,3 +107,31 @@
         (spit (io/file d "catalog.json") "{ broken")
         (is (= (:generated (catalog/bundled)) (:generated (catalog/load!)))))
       (finally (run! io/delete-file (reverse (file-seq d)))))))
+
+(deftest refresh-runs-on-a-daemon-thread
+  ;; the handler sleeps before responding, so the refresh thread is still
+  ;; alive when we inspect it; the body is invalid JSON, so the fetch stops at
+  ;; `parse` once it does respond and never reaches the cache-write step --
+  ;; safe to run without a *data-dir* override, since no thread-local binding
+  ;; would reach this background thread anyway.
+  (let [server (local-http-server "/slow" 200 (.getBytes "not json" "UTF-8") 2000)]
+    (try
+      (catalog/refresh! (server-url server "/slow") (fn [_] nil))
+      (Thread/sleep 300) ;; give the thread time to start and register itself
+      (let [t (first (filter #(= "reliquary-catalog-refresh" (.getName ^Thread %))
+                              (keys (Thread/getAllStackTraces))))]
+        (is (some? t) "the refresh thread should be observable while the fetch is in flight")
+        (is (true? (.isDaemon ^Thread t))
+            "a non-daemon thread would hold the JVM open for up to ~30s after the window closes"))
+      (finally (.stop ^HttpServer server 0)))))
+
+(deftest an-oversized-response-is-discarded-without-calling-on-done
+  (let [big    (byte-array (inc catalog/max-catalog-bytes) (byte 65))
+        server (local-http-server "/big" 200 big)]
+    (try
+      (let [called (atom false)]
+        (catalog/refresh! (server-url server "/big") (fn [_] (reset! called true)))
+        (Thread/sleep 1500)
+        (is (false? @called)
+            "a body over max-catalog-bytes must be discarded like any other refresh failure"))
+      (finally (.stop ^HttpServer server 0)))))
