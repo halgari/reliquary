@@ -84,9 +84,20 @@
    {:index 1 :id "c1" :offset 10 :cb-original 10}
    {:index 2 :id "c2" :offset 20 :cb-original 10}])
 
+(def ^:private depot-keys
+  "The depot key `ctx-for` hands the engine. `plain-fetch` asserts it receives
+   exactly this key for the depot it was asked to fetch -- the engine is
+   verified elsewhere to thread the right key, but nothing pinned that here,
+   so a regression that swapped or dropped it would pass every test in this
+   file silently. This assert makes the correct behaviour permanent."
+  {1 "deadbeef"})
+
 (defn- plain-fetch
   "chunk/fetch-decoded minus the crypto: the real cdn rotation to the fixture."
-  ^bytes [{:keys [hosts depot-id chunk]}]
+  ^bytes [{:keys [hosts depot-id chunk key-hex]}]
+  (assert (= key-hex (get depot-keys depot-id))
+          (str "engine passed key " (pr-str key-hex) " for depot " depot-id
+               ", expected " (pr-str (get depot-keys depot-id))))
   (cdn/fetch-with-rotation
    hosts
    (fn [host] (str "http://" host "/depot/" depot-id "/chunk/" (:id chunk)))
@@ -125,7 +136,7 @@
                  :dirs [] :copies [] :skipped 0
                  :files [{:path "a.bin" :size 30 :depot-id 1 :sha-content "sha-a"
                           :chunks (vec chunks)}]}
-    :keys       {1 "deadbeef"}
+    :keys       depot-keys
     :hosts      [host]
     :dest       dest
     :appid      7
@@ -198,6 +209,26 @@
                 (is (not (contains? (get done "a.bin") 1))
                     "a chunk recorded before its write is a chunk the resume will skip")))))))))
 
+(deftest a-failing-write-raises-a-categorized-io-error
+  (testing "write-at! must never escape bare -- cli/-main only catches
+            ExceptionInfo, so an uncategorized IOException or
+            IllegalArgumentException would reach the user as a stack trace
+            instead of exit code 3"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host _hits]
+            (let [ctx (ctx-for host dest [{:index 0 :id "c0" :offset -1 :cb-original 10}])]
+              (try
+                (download/execute! ctx {:workers 1})
+                (is false "execute! should have thrown")
+                (catch Throwable t
+                  (is (instance? clojure.lang.ExceptionInfo t)
+                      "a write failure must be a categorized ExceptionInfo, not a raw exception")
+                  (is (= :io (:reliquary/error (ex-data t))))))
+              (is (= :io (:category (:error (download/snapshot ctx))))
+                  "the snapshot's :error must carry the same category"))))))))
+
 (deftest preallocation-fails-before-any-chunk-is-fetched
   (testing "a full disk must fail immediately, not at 94%"
     (with-tmp
@@ -210,6 +241,34 @@
                          (download/execute! (ctx-for host dest all-chunks) {:workers 3})))
             (is (empty? @hits)
                 "not one chunk should be requested if the files cannot be created")))))))
+
+(deftest a-full-disk-fails-in-preparing-before-any-chunk-is-requested
+  (testing "setLength creates a SPARSE file -- it reserves nothing -- so
+            without an explicit usable-space check a genuinely full disk
+            fails at 94%, not up front, which is the whole point of
+            preallocation"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            (let [ctx (assoc-in (ctx-for host dest all-chunks)
+                                [:plan :disk-bytes] Long/MAX_VALUE)]
+              (try
+                (download/execute! ctx {:workers 3})
+                (is false "execute! should have thrown")
+                (catch Throwable t
+                  (is (instance? clojure.lang.ExceptionInfo t))
+                  (is (= :io (:reliquary/error (ex-data t))))
+                  (is (re-find #"not enough disk space" (ex-message t)))))
+              (is (empty? @hits)
+                  "not one chunk should be requested when the disk cannot hold the plan")
+              (is (= :failed (:stage (download/snapshot ctx))))
+              (is (= :io (:category (:error (download/snapshot ctx)))))
+              ;; a hard proof the failure lands before :downloading is ever
+              ;; entered: preallocate! (which follows the space check) never
+              ;; ran, so no file exists on disk at all.
+              (is (not (.exists (io/file dest "a.bin")))
+                  "the space check must fire before any file is created"))))))))
 
 (deftest a-worker-failure-raises-and-leaves-the-disk-alone
   (testing "a 404 chunk is a failed download, not a silently short file"

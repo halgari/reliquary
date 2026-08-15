@@ -166,6 +166,31 @@
   (when-not (or (.isDirectory d) (.mkdirs d) (.isDirectory d))
     (error/raise :io (str "cannot create folder " (.getPath d)) {:path (.getPath d)})))
 
+(defn- usable-space
+  "The usable space on `f`'s filesystem. `File/getUsableSpace` answers 0 for a
+   path that does not exist yet -- not \"unknown\", 0 -- so a fresh download
+   into a not-yet-created destination would misreport as a full disk unless
+   this walks up to the nearest ancestor that actually exists."
+  ^long [^File f]
+  (loop [f f]
+    (if (or (nil? f) (.exists f))
+      (if f (.getUsableSpace f) 0)
+      (recur (.getParentFile f)))))
+
+(defn- ensure-disk-space!
+  "The disk must have room for the whole plan before a single chunk is
+   requested. `setLength` (used below to size every file) is `ftruncate`: it
+   creates a SPARSE file that claims no real blocks until written, so without
+   this check a genuinely full disk still fails at 94% -- the exact outcome
+   preallocation exists to prevent."
+  [^File dest ^long needed]
+  (let [avail (usable-space dest)]
+    (when (< avail needed)
+      (error/raise :io
+                   (str "not enough disk space at " (.getPath dest) ": need "
+                        needed " bytes, only " avail " available")
+                   {:path (.getPath dest) :needed needed :available avail}))))
+
 (defn- close-all! [channels]
   (doseq [^FileChannel ch (vals channels)]
     (try (.close ch) (catch Exception _ nil))))
@@ -225,12 +250,22 @@
         (recur (+ pos (long (.write ch buf pos))))))))
 
 (defn- write-chunk!
+  "Any failure here -- a disk-full IOException, a bad offset, anything -- is
+   :io and names the path and offset, never the cause's full text: a raw,
+   uncategorized exception would reach cli/-main's ExceptionInfo-only catch
+   and print a stack trace where the user needs an exit code."
   [channels ^File dest ^String path ^bytes b offset]
   (let [offset (long offset)]
-    (if-let [^FileChannel ch (get channels path)]
-      (write-at! ch b offset)
-      (with-open [raf (RandomAccessFile. (io/file dest path) "rw")]
-        (write-at! (.getChannel raf) b offset)))))
+    (try
+      (if-let [^FileChannel ch (get channels path)]
+        (write-at! ch b offset)
+        (with-open [raf (RandomAccessFile. (io/file dest path) "rw")]
+          (write-at! (.getChannel raf) b offset)))
+      (catch Exception e
+        (error/raise :io
+                     (str "cannot write " path " at offset " offset " ("
+                          (.getSimpleName (class e)) ")")
+                     {:path path :offset offset})))))
 
 ;; ---- execution --------------------------------------------------------------
 
@@ -317,6 +352,7 @@
     (try
       (swap! state assoc :stage :preparing :error nil)
       (refresh!)
+      (ensure-disk-space! dest (long (or (:disk-bytes plan) 0)))
       (let [channels (preallocate! dest todo)
             q        (LinkedBlockingQueue.)
             ^ScheduledExecutorService sched
