@@ -191,13 +191,33 @@ against the full path and its pattern only covers a root-level one, so the
 versioned copy slipped through. `build.clj` now adds `".*/module-info\\.class"`.
 
 `bin/package.sh` additionally asserts that the derived list contains
-`java.desktop` and aborts if it does not. That specific check would *not* have
-caught this specific bug — `java.desktop` is exactly the module that survives —
-but it is the cheap tell for the general class of "jdeps analysed something
-other than our code", and it costs nothing on the path every release takes.
-Verified by re-injecting xz's `module-info.class` into a good jar: `package.sh`
-prints `jdeps resolved: java.base`, then `error: jdeps returned an implausible
-module list`, and exits 1 before jlink runs.
+`java.desktop` and aborts if it does not. **This does catch the xz defect**, and
+`java.desktop` is the right thing to key on. The assertion inspects `$MODS` —
+the raw jdeps output — before jlink is invoked, and under the defect jdeps
+reports `java.base` and nothing else. Verified by re-injecting xz's
+`module-info.class` into a good jar:
+
+```
+$ ./bin/package.sh
+jdeps resolved: java.base
+error: jdeps returned an implausible module list: java.base
+       expected java.desktop among them. ...
+EXIT=1
+```
+
+Exit 1, before jlink runs. The distinction that matters: `java.desktop` is
+absent from the *raw jdeps list*, which is what the check reads, even though it
+would have been present in the *final linked runtime*, because
+`javafx.graphics` forces it in regardless of what jdeps said. Those are two
+different lists, and only the first one is what the guard sees.
+
+*(Corrected in fix round 2. This paragraph previously claimed the check "would
+not have caught this specific bug — `java.desktop` is exactly the module that
+survives". That conflated the raw jdeps output with the linked runtime, and the
+reproduction transcript directly above it disproved it. Recorded rather than
+erased, for the same reason as the correction in Trap 1: this document is the
+justification for a project-shaping decision, and its errors are part of what
+makes it trustworthy.)*
 
 If the module list ever comes back short, look here first.
 
