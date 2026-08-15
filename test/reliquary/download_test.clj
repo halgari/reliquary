@@ -23,6 +23,7 @@
             [reliquary.steam.cm.content :as content]
             [reliquary.steam.manifest :as manifest])
   (:import (com.sun.net.httpserver HttpHandler HttpServer)
+           (java.io RandomAccessFile)
            (java.net InetSocketAddress)
            (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
@@ -55,6 +56,21 @@
                                  :depots [{:depot-id 1 :manifest-gid "a"}]})
       (is (= "1_63_legacy_patch" @seen)
           "a historical version on a named branch must not ask for public"))))
+
+(deftest resolution-carries-the-manifest-identity-of-the-build
+  (testing "the progress file is bound to this map; without it a resume can
+            apply one build's chunk indices to another build's manifests"
+    (with-redefs [content/depot-key (constantly "ab")
+                  content/manifest-request-code (fn [_ _ _ _ _] "1")
+                  content/cdn-servers (constantly ["h"])
+                  manifest/fetch (constantly (byte-array 0))
+                  manifest/parse (constantly {:depot-id 1 :files []})]
+      (is (= {1 "gid-a" 2 "gid-b"}
+             (:manifests (download/resolve-version
+                          {} {:appid 7}
+                          {:branch "public"
+                           :depots [{:depot-id 1 :manifest-gid "gid-a"}
+                                    {:depot-id 2 :manifest-gid "gid-b"}]})))))))
 
 (deftest resolution-keeps-the-keys-out-of-the-plan
   (testing "the plan is what gets serialized into progress files and snapshots"
@@ -128,19 +144,26 @@
     (try (f d)
          (finally (run! #(io/delete-file % true) (reverse (file-seq d)))))))
 
+(def ^:private manifests
+  "The build ctx-for's plan came from. A resume is only honoured against this
+   same map -- see the C1 test below."
+  {1 "gid-one"})
+
 (defn- ctx-for
   "A one-file plan (a.bin, 30 bytes) over `chunks`, pointed at the fixture."
-  [host dest chunks]
-  (download/make-ctx
-   {:plan       {:download-bytes 30 :disk-bytes 30 :total-chunks (count chunks)
-                 :dirs [] :copies [] :skipped 0
-                 :files [{:path "a.bin" :size 30 :depot-id 1 :sha-content "sha-a"
-                          :chunks (vec chunks)}]}
-    :keys       depot-keys
-    :hosts      [host]
-    :dest       dest
-    :appid      7
-    :version-id "public"}))
+  ([host dest chunks] (ctx-for host dest chunks manifests))
+  ([host dest chunks manifests]
+   (download/make-ctx
+    {:plan       {:download-bytes 30 :disk-bytes 30 :total-chunks (count chunks)
+                  :dirs [] :copies [] :skipped 0
+                  :files [{:path "a.bin" :size 30 :depot-id 1 :sha-content "sha-a"
+                           :chunks (vec chunks)}]}
+     :keys       depot-keys
+     :hosts      [host]
+     :manifests  manifests
+     :dest       dest
+     :appid      7
+     :version-id "public"})))
 
 (deftest chunks-land-at-their-declared-offsets
   (testing "byte-exactness is the only assertion that catches an off-by-one in
@@ -182,8 +205,8 @@
             (let [c (ctx-for host dest all-chunks)]
               (future (Thread/sleep 20) (download/cancel! c))
               (download/execute! c {:workers 1})
-              (let [done (progress/load dest 7 "public")
-                    ch   (java.io.RandomAccessFile. (io/file dest "a.bin") "r")]
+              (let [done (progress/load dest 7 "public" manifests)
+                    ch   (RandomAccessFile. (io/file dest "a.bin") "r")]
                 (doseq [i (get done "a.bin")]
                   (.seek ch (* 10 i))
                   (let [buf (byte-array 10)]
@@ -205,7 +228,7 @@
             (let [ctx (ctx-for host dest [{:index 0 :id "c0" :offset 0 :cb-original 10}
                                           {:index 1 :id "c1" :offset -1 :cb-original 10}])]
               (is (thrown? Exception (download/execute! ctx {:workers 1})))
-              (let [done (progress/load dest 7 "public")]
+              (let [done (progress/load dest 7 "public" manifests)]
                 (is (not (contains? (get done "a.bin") 1))
                     "a chunk recorded before its write is a chunk the resume will skip")))))))))
 
@@ -390,3 +413,119 @@
                 (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC"
                        (slurp (io/file dest "Content" "Strings" "copy.bin")))
                     "the copy destination's own implied directory must be created too")))))))))
+
+;; ---- the resume is bound to the manifests that produced it (C1) -------------
+
+(deftest a-resume-against-different-manifests-is-discarded-not-honoured
+  (testing "the one failure mode on this engine that produces a corrupt install
+            which looks clean. A recorded chunk is an INDEX into one manifest's
+            chunk list; `public` is a moving target and catalog/refresh! can
+            swap a version's manifest-gid between two runs, so the same
+            dest/appid/version-id can resolve to a different build tomorrow.
+            Applying yesterday's indices to it mixes two builds, and nothing
+            downstream looks: no verification pass, and the per-chunk SHA-1
+            never sees the chunks that were skipped as already done."
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            ;; one chunk lands, recorded against {1 "gid-one"}
+            (download/execute! (ctx-for host dest all-chunks) {:workers 1 :chunk-budget 1})
+            (is (= 1 (reduce + 0 (vals @hits))))
+            ;; the version now resolves to a DIFFERENT manifest
+            (let [snap (download/execute! (ctx-for host dest all-chunks {1 "gid-two"})
+                                          {:workers 1})]
+              (is (= :done (:stage snap)))
+              (is (= 4 (reduce + 0 (vals @hits)))
+                  "every chunk must be re-fetched: the recorded index belonged to
+                   another build, so it cannot be trusted to name the same bytes")
+              (is (= 3 (:chunks-done snap))
+                  "a discarded resume starts from zero work done, not from the
+                   count the stale progress file claimed")
+              (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC" (slurp (io/file dest "a.bin")))))
+            ;; and the file is now bound to the manifests that actually wrote it
+            (is (= {"a.bin" #{0 1 2}} (progress/load dest 7 "public" {1 "gid-two"})))
+            (is (= {} (progress/load dest 7 "public" {1 "gid-one"})))))))))
+
+(deftest a-resume-against-the-same-manifests-is-still-honoured
+  (testing "the discard must be narrow: an unchanged build has to resume, or
+            C1's fix has simply deleted the resume feature"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            (download/execute! (ctx-for host dest all-chunks) {:workers 1 :chunk-budget 1})
+            (download/execute! (ctx-for host dest all-chunks) {:workers 3})
+            (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC" (slurp (io/file dest "a.bin"))))
+            (is (every? #(= 1 %) (vals @hits))
+                "same manifests, so nothing may be re-fetched")))))))
+
+;; ---- the space check asks for the remainder (I2) ----------------------------
+
+(deftest a-resume-does-not-re-demand-the-space-it-already-spent
+  (testing "ensure-disk-space! against the whole plan makes every resume fail
+            permanently on a disk sized close to the game -- including a resume
+            with zero chunks left, whose bytes are already ON that disk. That is
+            the exact opposite of what preallocation exists for."
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            ;; a complete install, 30 bytes on disk
+            (is (= :done (:stage (download/execute! (ctx-for host dest all-chunks)
+                                                    {:workers 3}))))
+            ;; a destination far too small for the WHOLE install, but with
+            ;; nothing at all left to write
+            (with-redefs [download/usable-space (fn [_] 5)]
+              (let [snap (download/execute! (ctx-for host dest all-chunks) {:workers 3})]
+                (is (= :done (:stage snap))
+                    "a resume with nothing remaining needs no space and must pass")
+                (is (= 3 (reduce + 0 (vals @hits))) "and must re-fetch nothing")))))))))
+
+(deftest a-partial-resume-is-checked-against-what-is-left-to-write
+  (testing "the remainder, not the whole plan: 10 of 30 bytes are down, so 20
+            is what still has to fit"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host _hits]
+            (download/execute! (ctx-for host dest all-chunks) {:workers 1 :chunk-budget 1})
+            ;; 25 < 30 (the whole plan) but > 20 (the remainder)
+            (with-redefs [download/usable-space (fn [_] 25)]
+              (is (= :done (:stage (download/execute! (ctx-for host dest all-chunks)
+                                                      {:workers 3})))))
+            (is (= "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC" (slurp (io/file dest "a.bin"))))))))))
+
+(deftest the-remainder-check-still-refuses-a-disk-that-cannot-hold-the-rest
+  (testing "crediting what is on disk must not become crediting everything"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            (download/execute! (ctx-for host dest all-chunks) {:workers 1 :chunk-budget 1})
+            (with-redefs [download/usable-space (fn [_] 5)] ;; 20 still to write
+              (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not enough disk space"
+                                    (download/execute! (ctx-for host dest all-chunks)
+                                                       {:workers 3}))))
+            (is (= 1 (reduce + 0 (vals @hits)))
+                "the resume must stop before fetching, exactly as a fresh run would")))))))
+
+;; ---- the snapshot's units (I5) ----------------------------------------------
+
+(deftest the-snapshot-reports-both-rates-in-the-same-unit
+  (testing "a UI that reads :samples as MB/s next to a :bytes-per-sec in B/s
+            gets it wrong once, silently, by a factor of a million"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host _hits]
+            (let [ctx  (ctx-for host dest all-chunks)
+                  snap (download/execute! ctx {:workers 3})]
+              (is (contains? snap :bytes-per-sec))
+              (is (contains? snap :wire-bytes-per-sec)
+                  "there must be a wire rate at all -- the docstring promised one")
+              (is (every? number? (:samples snap)))
+              ;; nothing in the map is pre-scaled: a B/s rate over this fixture
+              ;; is in the thousands, an MB/s one would be a fraction
+              (is (every? #(or (zero? %) (>= % 1.0)) (:samples snap))
+                  "samples are B/s, the same unit as the rates, not MB/s"))))))))

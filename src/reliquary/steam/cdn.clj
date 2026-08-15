@@ -53,6 +53,21 @@
                                      {:status code})
       :else             (error/raise :unavailable (str "cdn error, HTTP " code) {:status code}))))
 
+(defn- backoff!
+  "Sleep between attempts. An InterruptedException here is NOT a bug to let
+   fly: it is uncategorized, so it would escape the download engine and reach
+   cli/-main's ExceptionInfo-only catch as a stack trace and exit 1, where the
+   contract promises a categorized exit code. It becomes :unavailable -- the
+   fetch was interrupted, so the resource was not obtained -- and the thread's
+   interrupt flag is restored, because swallowing it would hide the shutdown
+   from every later blocking call on this thread."
+  [^long ms what]
+  (try
+    (Thread/sleep ms)
+    (catch InterruptedException _
+      (.interrupt (Thread/currentThread))
+      (error/raise :unavailable (str "interrupted while retrying " what)))))
+
 (defn fetch-with-rotation
   "GET from the first CDN host that answers, and return the raw body.
 
@@ -90,7 +105,7 @@
                     (if (:ok out)
                       out
                       (if (< n (long *fetch-attempts*))
-                        (do (Thread/sleep (* 250 n)) (recur (inc n)))
+                        (do (backoff! (* 250 n) what) (recur (inc n)))
                         out))))]
         (if-let [b (:ok r)]
           b

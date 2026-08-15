@@ -140,15 +140,22 @@
 (defn- print-progress!
   "One rewriting terminal line -- a long download must not scroll the
    terminal with thousands of lines. Never touches depot keys or the token;
-   the snapshot carries neither."
-  [{:keys [stage bytes-done bytes-total bytes-per-sec]}]
+   the snapshot carries neither.
+
+   The speed is :wire-bytes-per-sec, the COMPRESSED bytes coming off the
+   wire -- the number a user can compare against their connection.
+   :bytes-per-sec measures decompressed bytes, which is the right input for
+   the percentage above but overstates the network by the compression ratio.
+   Both arrive in B/s; the engine does not pre-scale, so the division to
+   MB/s happens here, at the point of display."
+  [{:keys [stage bytes-done bytes-total wire-bytes-per-sec]}]
   (let [pct (if (and bytes-total (pos? bytes-total))
               (* 100.0 (/ (double bytes-done) (double bytes-total)))
               0.0)]
     (print (format "\r%-11s %5.1f%%  %s / %s  %6.1f MB/s   "
                     (name (or stage :idle)) pct
                     (fmt-mb bytes-done) (fmt-mb bytes-total)
-                    (/ (double (or bytes-per-sec 0.0)) 1048576.0)))
+                    (/ (double (or wire-bytes-per-sec 0.0)) 1048576.0)))
     (flush)))
 
 (defn- run-download!
