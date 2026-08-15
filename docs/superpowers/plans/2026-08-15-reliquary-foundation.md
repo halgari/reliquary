@@ -57,7 +57,7 @@ XZ 1.12, graal-build-time 1.0.6, GraalVM CE for JDK 25.
 | `src/reliquary/catalog.clj` | catalog parse, validate, three-source merge |
 | `src/reliquary/plan.clj` | pure: manifests → chunk work plan |
 | `resources/steam/steam.desc` | copied — protobuf descriptor set |
-| `test/reliquary/steam/**` | copied — 21 offline fixture test namespaces |
+| `test/reliquary/steam/**` | copied — 20 offline fixture test namespaces |
 | `test/resources/steam/**` | copied — captured Steam fixtures (272 KB) |
 | `spike/` | the two native-image spikes, kept as living gates |
 | `docs/superpowers/spikes/` | recorded spike findings |
@@ -257,7 +257,7 @@ risk ladder still needs this code, so it is not gated on the spikes.
 - Create: `src/reliquary/steam/{api,apps,auth,auth_api,cdn,chunk,crypto,depots,kv,manifest,proto,qr,vzip}.clj`
 - Create: `src/reliquary/steam/cm/{client,connection,content,discovery,envelope,multi}.clj`
 - Create: `resources/steam/steam.desc`, `resources/steam/protos/*.proto`
-- Create: `test/reliquary/steam/**` (21 namespaces)
+- Create: `test/reliquary/steam/**` (20 namespaces)
 - Create: `test/resources/steam/**` (fixtures)
 
 **Interfaces:**
@@ -345,7 +345,7 @@ Insert above the `(ns …)` form of each copied file:
 - [ ] **Step 5: Run the copied tests**
 
 Run: `clojure -M:test`
-Expected: PASS, 21 namespaces. Failures at this point are namespace-rename
+Expected: PASS, 20 namespaces. Failures at this point are namespace-rename
 mistakes or a missing fixture, not logic — the code is unchanged and was green
 in mauvi.
 
@@ -469,16 +469,21 @@ a custom font, a `Canvas` with 2D drawing (what the QR renderer needs), and
                               :text    "RELIQUARY"
                               :style   {:-fx-text-fill "#F2F0EE"
                                         :-fx-font-size 18}}
-                             {:fx/type      :canvas
-                              :width        120 :height 120
-                              :on-created   draw!}
+                             ;; ext-on-instance-lifecycle is how cljfx hands
+                             ;; you the real Node. :canvas has no :on-created
+                             ;; prop -- drawing needs the instance itself.
+                             {:fx/type    fx/ext-on-instance-lifecycle
+                              :on-created draw!
+                              :desc       {:fx/type :canvas
+                                           :width 120 :height 120}}
                              {:fx/type :label
                               :text    (str "ticks " ticks)
                               :style   {:-fx-text-fill "#9A9A9A"}}]}}})
 
 (defn -main [& _]
-  (let [state (atom {:ticks 0})
-        app   (fx/create-app state :desc-fn view)]
+  (let [state    (atom {:ticks 0})
+        renderer (fx/create-renderer :middleware (fx/wrap-map-desc #'view))]
+    (fx/mount-renderer state renderer)
     ;; prove Platform/runLater works from a plain thread, which every
     ;; background download update will depend on
     (.start (Thread. (fn []
@@ -489,7 +494,7 @@ a custom font, a `Canvas` with 2D drawing (what the QR renderer needs), and
                        (println "SPIKE-OK ticks=5")
                        (Platform/exit)
                        (System/exit 0))))
-    app))
+    renderer))
 ```
 
 - [ ] **Step 2: Write `bin/native.sh`**
@@ -687,7 +692,9 @@ git commit -m "Spike: protobuf, LZMA and TLS inside a native image"
 - Create: `test/reliquary/config_test.clj`
 
 **Interfaces:**
-- Consumes: `reliquary.error/raise`
+- Consumes: nothing. Note that this namespace deliberately never raises —
+  a corrupt config reads as `{}` so a file the user never edited cannot
+  prevent the app from starting.
 - Produces:
   - `(config-dir)` → `java.io.File`, `$XDG_CONFIG_HOME/reliquary` or `~/.config/reliquary`
   - `(data-dir)` → `java.io.File`, `$XDG_DATA_HOME/reliquary` or `~/.local/share/reliquary`
