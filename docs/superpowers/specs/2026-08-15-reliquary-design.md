@@ -239,26 +239,69 @@ over-inclusive sync where a denial was expected. The catalog names exactly the
 depots this version needs; a denial means the account cannot have this build,
 and saying so immediately is better than delivering a partial install.
 
+**Language depots are selected, not swept.** The catalog's `bytes` sums every
+Windows depot including all language packs — Skyrim SE reads 27.7 GB against a
+real install nearer 12 GB. The engine picks the base depots plus one language
+rather than fetching eleven.
+
+**A catalog version may not know its size or build id.** Versions sourced from
+community downgrade guides carry `bytes` 0 and `build` "" because those are not
+published. Render that as *unknown*; never as "0.0 GB".
+
 ### Planning (`plan.clj`, pure)
+
+*Amended 2026-08-15 after the foundation branch's final review — the shape below
+supersedes the original sketch.*
 
 Manifest file entries flatten into a work list:
 
 ```clojure
-{:total-bytes  36730000000
- :total-chunks 31200
- :files [{:path "Data/textures.bsa"
-          :size 4194304000
-          :sha-content "a94a8f…"
-          :chunks [{:id "3f2b…" :offset 0 :cb-original 1048576 :cb-compressed 812004}
-                   …]}]}
+{:download-bytes 8000        ; unique content actually fetched
+ :disk-bytes     9000        ; everything written, duplicates included
+ :total-chunks   12
+ :dirs   ["Data"]
+ :files  [{:path "Data/textures.bsa"
+           :size 4194304000
+           :depot-id 489831
+           :sha-content "a94a8f…"
+           :chunks [{:index 0 :id "3f2b…" :offset 0
+                     :cb-original 1048576 :cb-compressed 812004}]}]
+ :copies [{:path "b.bsa" :source "a.bsa" :size 4096}]}
 ```
 
-Directories are dropped. Files sharing a content SHA-1 are downloaded once and
-copied — Steam depots do repeat content, and this is free.
+Two byte totals, not one: `:download-bytes` is what crosses the network,
+`:disk-bytes` is what lands. They differ whenever depots repeat content, and
+conflating them makes a progress bar that lies.
 
-Being pure, this is the layer that carries the property tests: total bytes
-equals the sum of chunk `cb-original`, chunk offsets tile each file exactly
-with no gap and no overlap, and no chunk extends past its file's size.
+Directories become `:dirs`. Files sharing a content SHA-1 are downloaded once
+and copied. `:index` is the stable chunk identity the resume file records.
+
+**No depot keys in the plan.** The plan map is what the engine serializes into
+progress files and error snapshots; a depot key is a secret under §9's rule and
+must not ride along. Keys travel separately as a `{depot-id -> key-hex}` map.
+
+**`:cb-compressed` is retained.** `chunk/fetch-decoded` reports wire bytes while
+the plan counts decompressed bytes; without the compressed size the two cannot
+be reconciled and the progress bar cannot reach 100%.
+
+**`build` validates its own invariants.** Chunks must tile each file exactly —
+no gap, no overlap, nothing past the file's size — and `build` raises
+`:incorrect` when they do not. Properties alone proved insufficient: a generator
+that constructs offsets by accumulation cannot produce a violation, so the
+invariant went unenforced and a gapped manifest planned a file with a hole in
+it. The properties remain, over a generator that shuffles chunk order so an
+implementation ignoring declared offsets is detectable.
+
+**Entry classification reads observable structure, not flag constants.**
+`manifest.clj` deliberately refuses to define `EDepotFileFlag` values, and a
+symlink entry (no chunks, no content SHA, a link target) misclassified by a
+`flags`-only test becomes an empty regular file. Classify on what the entry
+actually carries.
+
+**A path may appear once.** Two entries claiming one destination path is
+malformed remote input with no safe resolution, and raises `:incorrect` — a
+copy whose source equals its destination would truncate the source before
+reading it.
 
 ### Executing
 
