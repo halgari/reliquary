@@ -7,7 +7,12 @@ GRAAL_TAG="${GRAAL_TAG:-jdk-25.0.2}"
 ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/reliquary-toolchain"
 DEST="$ROOT/$GRAAL_TAG"
 
-if [ -x "$DEST/bin/native-image" ]; then
+# Fast path: only trust an existing DEST if it actually runs, not merely if
+# bin/native-image is present. Presence alone doesn't prove the tree was
+# fully extracted (e.g. an interrupted tar could leave bin/native-image
+# written but lib/ missing); running --version is a cheap, real exercise of
+# the installed tree.
+if [ -x "$DEST/bin/native-image" ] && "$DEST/bin/native-image" --version >/dev/null 2>&1; then
   echo "$DEST"
   exit 0
 fi
@@ -22,16 +27,14 @@ if [ -z "$url" ]; then
 fi
 
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+stage=$(mktemp -d "$ROOT/.staging-XXXXXX")
+trap 'rm -rf "$tmp" "$stage"' EXIT
 curl -fsSL "$url" -o "$tmp/graal.tar.gz"
 
 # Extract into a staging dir alongside DEST (same filesystem as ROOT, so the
 # final move is atomic) and only verify + promote it to DEST once extraction
 # and the sanity check both succeed. A half-extracted tree must never be
-# visible at DEST, and the fast path above must only ever see a tree that
-# passed this check.
-stage=$(mktemp -d "$ROOT/.staging-XXXXXX")
-trap 'rm -rf "$tmp" "$stage"' EXIT
+# visible at DEST.
 tar -xzf "$tmp/graal.tar.gz" -C "$stage" --strip-components=1
 
 "$stage/bin/native-image" --version >&2
