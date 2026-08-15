@@ -32,6 +32,22 @@
               (is (= {} (config/read-config))
                   "a corrupt config must not brick startup"))))
 
+(deftest config-dir-is-owner-only
+  (with-tmp (fn [d]
+              (config/write-config! {:a 1})
+              (let [p     (.toPath d)
+                    perms (PosixFilePermissions/toString (Files/getPosixFilePermissions p (make-array java.nio.file.LinkOption 0)))]
+                (is (= "rwx------" perms)
+                    "the refresh token lives in here; the directory must not be world/group traversable")))))
+
+(deftest non-map-config-reads-as-empty-and-save-token-still-works
+  (with-tmp (fn [d]
+              (spit (io/file d "config.edn") "[1 2 3]")
+              (is (= {} (config/read-config))
+                  "read-config promises {} for a corrupt config -- a vector must not slip through")
+              (config/save-token! {:refresh-token "jwt.abc.def" :account "someone"})
+              (is (= {:refresh-token "jwt.abc.def" :account "someone"} (config/token))))))
+
 (deftest token-round-trips-and-forgets
   (with-tmp (fn [_]
               (is (nil? (config/token)))

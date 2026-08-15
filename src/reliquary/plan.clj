@@ -76,12 +76,17 @@
    the engine should not have to look it up again.
 
    Files sharing a content SHA-1 are fetched once; the rest become :copies.
-   Steam depots do repeat content, and a copy is free next to a download.
-   An empty sha-content is treated as absent -- never as a match -- so a
+   Steam depots do repeat content, and a copy is free next to a download. An
+   empty sha-content is treated as absent -- never as a match -- so a
    manifest missing the field doesn't collapse unrelated files together. Two
-   entries sharing a sha-content but declaring different sizes is a
-   self-contradictory manifest (identical content cannot have two lengths)
-   and is rejected rather than guessed at."
+   entries sharing a sha-content but declaring different sizes cannot be the
+   same content, so a size conflict means this is NOT a copy: the entry is
+   planned as its own file rather than aborting the whole download over a
+   remote-controlled input like a sentinel/all-zero digest. A manifest that
+   lists the very same path twice under the same sha and size would, read
+   naively, produce a copy of a path onto itself -- and the engine's
+   Files/copy with REPLACE_EXISTING would truncate that path before reading
+   it -- so that case is rejected outright instead."
   [depot-manifests]
   (let [entries (for [{:keys [depot-id key-hex files]} depot-manifests
                       e files]
@@ -110,14 +115,30 @@
               size     (->long (:size e) :size)
               sha      (:sha-content e)
               has-sha? (seq sha)
-              src      (when has-sha? (get seen sha))]
+              src      (when has-sha? (get seen sha))
+              as-file  (fn [seen']
+                         (let [cs (norm-chunks (:chunks e))]
+                           [(next remaining)
+                            seen'
+                            (conj files {:path        path
+                                         :size        size
+                                         :depot-id    (:depot-id e)
+                                         :key-hex     (:key-hex e)
+                                         :sha-content sha
+                                         :chunks      cs})
+                            copies
+                            (+ dl-bytes (reduce + 0 (map :cb-original cs)))
+                            (+ disk size)
+                            (+ chunks (count cs))]))]
           (cond
-            (and has-sha? src (not= (:size src) size))
+            (and has-sha? src (= path (:path src)))
             (error/raise :incorrect
-                         (str "manifest declares sha-content " sha
-                              " at two different sizes")
-                         {:sha sha :first-path (:path src) :first-size (:size src)
-                          :second-path path :second-size size})
+                         (str "manifest lists the same path twice: " path)
+                         {:path path})
+
+            (and has-sha? src (not= (:size src) size))
+            (let [[rem seen' files' copies' dl' disk' chunks'] (as-file seen)]
+              (recur rem seen' files' copies' dl' disk' chunks'))
 
             (and has-sha? src)
             (recur (next remaining) seen files
@@ -125,19 +146,9 @@
                    dl-bytes (+ disk size) chunks)
 
             :else
-            (let [cs (norm-chunks (:chunks e))]
-              (recur (next remaining)
-                     (if has-sha? (assoc seen sha {:path path :size size}) seen)
-                     (conj files {:path        path
-                                  :size        size
-                                  :depot-id    (:depot-id e)
-                                  :key-hex     (:key-hex e)
-                                  :sha-content sha
-                                  :chunks      cs})
-                     copies
-                     (+ dl-bytes (reduce + 0 (map :cb-original cs)))
-                     (+ disk size)
-                     (+ chunks (count cs))))))))))
+            (let [[rem seen' files' copies' dl' disk' chunks']
+                  (as-file (if has-sha? (assoc seen sha {:path path :size size}) seen))]
+              (recur rem seen' files' copies' dl' disk' chunks'))))))))
 
 (defn chunk-count ^long [plan]
   (reduce + 0 (map (comp count :chunks) (:files plan))))

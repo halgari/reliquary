@@ -41,18 +41,25 @@
   []
   (let [f (config-file)]
     (if (.isFile f)
-      (try (or (edn/read-string (slurp f)) {})
+      (try (let [v (edn/read-string (slurp f))]
+             (if (map? v) v {}))
            (catch Exception _ {}))
       {})))
 
 (defn write-config!
-  "Write `m` atomically at mode 0600, creating the directory if needed.
+  "Write `m` atomically at mode 0600, creating the directory if needed and
+   hardening it to 0700.
 
    Atomic because a half-written config that loses a refresh token costs the
    user a re-login for no reason. Temp file in the SAME directory, so the
-   rename cannot cross a filesystem boundary and silently degrade to a copy."
+   rename cannot cross a filesystem boundary and silently degrade to a copy.
+   The directory is hardened the same way ~/.ssh is: the file being 0600 is
+   not a reason to leave its parent world-traversable."
   [m]
   (let [dir (doto (config-dir) .mkdirs)
+        _   (when (posix?)
+              (Files/setPosixFilePermissions (.toPath dir)
+                                             (PosixFilePermissions/fromString "rwx------")))
         tmp (Files/createTempFile (.toPath dir) ".config" ".tmp"
                                   (make-array FileAttribute 0))]
     (spit (.toFile tmp) (pr-str m))

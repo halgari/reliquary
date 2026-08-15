@@ -119,22 +119,39 @@
       (is (= ["a.bsa" "b.bsa"] (mapv :path (:files p))) "both remain real files")
       (is (= [] (:copies p))))))
 
-(deftest same-sha-content-at-two-different-sizes-is-rejected
-  (testing "identical content cannot have two lengths -- this is a self-contradictory manifest, not a copy hint"
+(deftest same-sha-content-at-two-different-sizes-is-planned-as-two-files
+  (testing "identical content cannot have two lengths, so a size conflict means this is NOT a copy -- a
+            remote-controlled sentinel/all-zero digest at differing sizes must not abort the whole
+            download; each side is simply fetched on its own"
+    (let [p (plan/build (manifest (entry "a.bsa" 10 "same" [["c0" 0 10]])
+                                  (entry "b.bsa" 20 "same" [["c1" 0 20]])))]
+      (is (= #{"a.bsa" "b.bsa"} (set (mapv :path (:files p)))) "both are real files")
+      (is (= [] (:copies p)) "neither is a copy -- their content is not proven identical"))))
+
+(deftest a-duplicate-path-never-produces-a-self-copy
+  (testing "the same path listed twice under the same sha and size would otherwise plan a copy of a
+            path onto itself; Files/copy with REPLACE_EXISTING would truncate the source before
+            reading it, so this is rejected as a malformed manifest instead"
     (is (thrown? clojure.lang.ExceptionInfo
                  (plan/build (manifest (entry "a.bsa" 10 "same" [["c0" 0 10]])
-                                       (entry "b.bsa" 20 "same" [["c1" 0 20]])))))))
+                                       (entry "a.bsa" 10 "same" [["c0" 0 10]])))))
+    (let [ex (try (plan/build (manifest (entry "a.bsa" 10 "same" [["c0" 0 10]])
+                                        (entry "a.bsa" 10 "same" [["c0" 0 10]])))
+                  nil
+                  (catch clojure.lang.ExceptionInfo e e))]
+      (is (= :incorrect (:reliquary/error (ex-data ex))))
+      (is (= "a.bsa" (:path (ex-data ex)))))))
 
 ;; --- properties ---------------------------------------------------------
 
 ;; Names are generated distinctly (gen/vector-distinct) across every file in
 ;; one manifest. Two independently-random gen/such-that names CAN collide at
-;; small sizes (single alphanumeric characters aren't rare), and since Finding
-;; 6's fix now rejects two entries that share a sha-content at different
-;; sizes, a same-name collision -- which produces the same "sha-<n>" for two
-;; files that this generator otherwise gives different random sizes -- would
-;; make these properties spuriously ERROR on an unrelated, valid rejection
-;; rather than exercise the tiling logic they exist to check.
+;; small sizes (single alphanumeric characters aren't rare), and a same-name
+;; collision producing the same "sha-<n>" for two files this generator
+;; otherwise gives different random sizes would trip the same-path-twice
+;; rejection -- an unrelated, valid rejection that would make these
+;; properties spuriously ERROR rather than exercise the tiling logic they
+;; exist to check.
 (defn- gen-file-named [n]
   (gen/let [sizes (gen/vector (gen/choose 1 5000) 1 8)]
     (let [offsets (reductions + 0 sizes)
