@@ -8,15 +8,21 @@ the app.
 
 **Architecture:** The Steam layer is copied wholesale from `mauvi-mod-manager`
 under `reliquary.*` namespaces, stripped of its pulsar/RocksDB coupling and
-backed instead by a plain EDN config file. Two spikes then compile a cljfx
-window and the Steam core to native binaries, because the whole small-binary
-premise rests on both surviving GraalVM. Four new pure-ish namespaces —
+backed instead by a plain EDN config file. A spike then tests whether a cljfx
+window survives GraalVM native-image (it does not — see Task 3) and a second
+task retires that toolchain in favour of jlink + jpackage. Four new pure-ish namespaces —
 `config`, `session`, `catalog`, `plan` — complete the foundation the download
 engine will sit on.
 
-**Tech Stack:** Clojure 1.12.5, cljfx 1.10.10, JavaFX 25.0.4, protobuf-java
+**Tech Stack:** Clojure 1.12.5, cljfx 1.10.10, JavaFX 26.0.2, protobuf-java
 4.35.1 (`DynamicMessage`, no generated classes), zxing 3.5.4, data.json 2.5.2,
-XZ 1.12, graal-build-time 1.0.6, GraalVM CE for JDK 25.
+XZ 1.12, tools.build 0.10.14, JDK 26 (jlink + jpackage).
+
+**Amended 2026-08-15.** Task 3's spike proved cljfx cannot be compiled by
+GraalVM native-image, and that the approach would not have delivered the size
+it promised. Task 4 was replaced: it retires the GraalVM toolchain and proves
+the jlink + jpackage pipeline in its place. Tasks 5-8 are untouched — they are
+pure Clojure and were never affected by the packaging choice.
 
 **Spec:** `docs/superpowers/specs/2026-08-15-reliquary-design.md`
 
@@ -24,9 +30,12 @@ XZ 1.12, graal-build-time 1.0.6, GraalVM CE for JDK 25.
 
 - **License**: GPL-3.0-or-later. Every new source file gets the standard GPL
   header comment naming `Reliquary` and `Copyright (C) 2026 Timothy Baldridge`.
-- **JDK 25, not 26.** GraalVM CE and Liberica NIK both top out at JDK 25. The
-  JDK 26 installed on this machine **cannot** produce a native image. Dev and
-  native builds both use JDK 25 so class-file versions never drift.
+- **JDK 26. No GraalVM, no native-image.** *(Amended 2026-08-15 after the Task 3
+  spike.)* cljfx does not survive native-image, and the empty-window binary
+  weighed 81.1 MB against a 40-80 MB expectation for the finished app. The
+  project packages with **jlink + jpackage** instead. That removes the JDK 25
+  ceiling GraalVM imposed, so dev and packaging both use the system JDK 26,
+  which ships jlink, jpackage and all 68 jmods.
 - **No pulsar, no RocksDB, no core.async, no FUSE.** A JNI native library in
   the image defeats the entire point. Persistent state is one EDN file plus one
   progress file per download.
@@ -589,101 +598,264 @@ git commit -m "Spike: does cljfx survive native-image, and at what size"
 
 ---
 
-### Task 4: Spike — the Steam core as a native binary
+### Task 4: Retire GraalVM, package with jlink + jpackage
 
-Separate from Task 3 because it fails for entirely different reasons:
-protobuf's descriptor reflection, TLS, and resource loading from inside the
-image.
+Task 3 proved the native-image path does not work for this stack and would not
+have paid for itself if it had. This task removes that toolchain and proves its
+replacement end to end, using the same spike window as the subject so the
+comparison is like for like.
 
 **Files:**
-- Create: `spike/reliquary/spike/steam_native.clj`
-- Create: `docs/superpowers/spikes/2026-08-15-steam-native.md`
+- Delete: `bin/native.sh`, `native/config/reachability-metadata.json`
+- Modify: `deps.edn` — drop `graal-build-time`, move JavaFX 25.0.4 → 26.0.2, add a `:build` alias
+- Rewrite: `bin/setup-toolchain.sh` — fetch JavaFX **jmods**, not GraalVM
+- Create: `build.clj` (tools.build uberjar)
+- Create: `bin/package.sh` (jdeps → jlink → jpackage)
+- Create: `docs/superpowers/spikes/2026-08-15-jlink-jpackage.md`
+- Keep unchanged: `spike/reliquary/spike/fx_window.clj` — it is the subject, and
+  it already self-terminates with `SPIKE-OK ticks=5`, which makes it a usable
+  smoke test for a packaged app
+- Keep unchanged: `docs/superpowers/spikes/2026-08-15-cljfx-native.md` — the
+  record of why this change happened
 
 **Interfaces:**
-- Consumes: Task 2's Steam namespaces, Task 3's `bin/native.sh`
-- Produces: a recorded verdict on protobuf + TLS under native-image
+- Consumes: the spike namespace from Task 3
+- Produces: `bin/setup-toolchain.sh` → prints the JavaFX jmods directory;
+  `clojure -T:build uber` → `target/lib/reliquary.jar`;
+  `bin/package.sh` → `target/app/Reliquary/bin/Reliquary`
 
-- [ ] **Step 1: Write the spike**
-
-Needs no Steam account. It exercises the three things a native image breaks:
-loading `steam.desc` as a resource, `DynamicMessage` descriptor reflection, and
-an outbound TLS connection.
-
-```clojure
-(ns reliquary.spike.steam-native
-  "The Steam core with no UI in it, so a native-image failure here is
-   unambiguously protobuf, LZMA or TLS -- never JavaFX. :gen-class for the same
-   reason as the fx spike: native-image needs a main class to exist."
-  (:gen-class)
-  (:require [clojure.java.io :as io]
-            [reliquary.steam.cm.discovery :as discovery]
-            [reliquary.steam.manifest :as manifest]
-            [reliquary.steam.proto :as proto]
-            [reliquary.steam.vzip :as vzip]))
-
-(defn -main [& _]
-  ;; 1. resource loading + protobuf descriptor reflection
-  (let [encoded (proto/encode "CMsgClientLogon" {:protocol-version 65580})
-        back    (proto/decode "CMsgClientLogon" encoded)]
-    (assert (= 65580 (:protocol-version back)) "protobuf round trip")
-    (println "PROTO-OK bytes=" (alength ^bytes encoded)))
-
-  ;; 2. the XZ/LZMA decoder and the manifest parser, off a committed fixture.
-  ;;    chunk-table, not parse: the committed manifest has encrypted filenames
-  ;;    (every current Steam depot does) and parse refuses that without a key.
-  ;;    chunk-table needs no key by design -- only `filename` is ciphertext.
-  (let [blob  (vzip/decompress (with-open [in (io/input-stream (io/resource "steam/manifest.zip"))]
-                                 (.readAllBytes in)))
-        table (manifest/chunk-table blob)]
-    (assert (seq table) "manifest chunk table came back empty")
-    (println "MANIFEST-OK files=" (count table)))
-
-  ;; 3. outbound TLS through java.net.http
-  (let [servers (discovery/cm-servers)]
-    (assert (seq servers) "CM server list came back empty")
-    (println "TLS-OK servers=" (count servers)))
-
-  (println "SPIKE-OK")
-  (System/exit 0))
-```
-
-Note: `manifest/parse` with a `nil` key raises when filenames are encrypted.
-If the committed fixture is an encrypted manifest, use `manifest/chunk-table`
-instead — it needs no key by design — and assert on the chunk count. Check
-`test/reliquary/steam/manifest_test.clj` for which the fixture is and match it.
-
-- [ ] **Step 2: Verify it passes on the JVM first**
-
-Run: `clojure -M:dev -m reliquary.spike.steam-native`
-Expected: four `-OK` lines. A failure here is a copy problem from Task 2, not
-a native-image problem — fix it before building.
-
-- [ ] **Step 3: Build the native binary**
-
-Run: `./bin/native.sh reliquary.spike.steam-native reliquary-spike-steam`
-Expected: a binary at `target/reliquary-spike-steam`. Record its size — this
-one has no JavaFX in it, so the difference against Task 3's binary tells you
-what JavaFX actually costs.
-
-- [ ] **Step 4: Run it**
-
-Run: `./target/reliquary-spike-steam`
-Expected: the same four `-OK` lines. The likely failures, each worth recording
-precisely: `steam.desc` not found (needs `-H:IncludeResources`), a protobuf
-reflection error (needs `reflect-config.json` entries), or a TLS handshake
-failure (needs `--enable-url-protocols` and possibly `-H:EnableSecurityServices`).
-
-- [ ] **Step 5: Record the findings**
-
-Write `docs/superpowers/spikes/2026-08-15-steam-native.md`: built or not, ran or
-not, binary size, every flag that had to be added, and the size delta against
-Task 3's binary.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 1: Remove the GraalVM toolchain**
 
 ```bash
-git add spike/ native/ docs/superpowers/spikes/
-git commit -m "Spike: protobuf, LZMA and TLS inside a native image"
+git rm -f bin/native.sh
+git rm -rf --ignore-unmatch native/config
+rm -rf target classes native
+```
+
+- [ ] **Step 2: Update `deps.edn`**
+
+Three changes: drop `graal-build-time` (it existed only to serve native-image),
+move JavaFX to 26.0.2 to match JDK 26, and add the `:build` alias. Leave every
+other pinned version alone.
+
+```clojure
+        org.openjfx/javafx-base$linux        {:mvn/version "26.0.2"}
+        org.openjfx/javafx-graphics$linux    {:mvn/version "26.0.2"}
+        org.openjfx/javafx-controls$linux    {:mvn/version "26.0.2"}
+```
+
+Remove the `com.github.clj-easy/graal-build-time` entry and the
+`;; native-image support` comment above it. Remove the `:aot` alias — nothing
+uses it now. Add:
+
+```clojure
+  :build
+  {:extra-paths ["."]
+   :extra-deps  {io.github.clojure/tools.build {:mvn/version "0.10.14"}}
+   :ns-default  build}
+```
+
+- [ ] **Step 3: Verify cljfx still runs on JavaFX 26**
+
+This is the one real risk in the version bump, so it is checked before anything
+is built on top of it.
+
+Run: `xvfb-run -a clojure -M:dev -m reliquary.spike.fx-window`
+Expected: prints `SPIKE-OK ticks=5` and exits 0.
+If it fails on a JavaFX API change, revert the three coordinates to `25.0.4`,
+record that in your report, and carry on — JDK 26 running JavaFX 25 is
+supported, and the version bump is a nicety, not a requirement.
+
+- [ ] **Step 4: Write `build.clj`**
+
+```clojure
+;; Reliquary — Copyright (C) 2026 Timothy Baldridge
+;; Licensed under the GNU General Public License v3 or later. See LICENSE.
+(ns build
+  "Uberjar builds. jpackage consumes the jar this produces."
+  (:require [clojure.tools.build.api :as b]))
+
+(def class-dir "target/classes")
+(def uber-file "target/lib/reliquary.jar")
+(def basis (delay (b/create-basis {:project "deps.edn"})))
+
+(defn clean [_] (b/delete {:path "target"}))
+
+(defn uber
+  "Build target/lib/reliquary.jar with `main` as its Main-Class.
+
+   Defaults to the spike window so the packaging pipeline can be proven before
+   the application has an entry point of its own."
+  [{:keys [main] :or {main 'reliquary.spike.fx-window}}]
+  (b/delete {:path class-dir})
+  (b/copy-dir {:src-dirs ["resources"] :target-dir class-dir})
+  (b/compile-clj {:basis      @basis
+                  :src-dirs   ["src" "spike"]
+                  :ns-compile [main]
+                  :class-dir  class-dir})
+  (b/uber {:class-dir class-dir
+           :uber-file uber-file
+           :basis     @basis
+           :main      main}))
+```
+
+- [ ] **Step 5: Build the uberjar and run it**
+
+Run:
+```
+clojure -T:build uber
+ls -l target/lib/reliquary.jar
+xvfb-run -a java -jar target/lib/reliquary.jar
+```
+Expected: the jar builds, and running it prints `SPIKE-OK ticks=5`. Record the
+jar size. If JavaFX complains that runtime components are missing, note it —
+cljfx calls `Platform/startup` directly rather than `Application.launch`, which
+normally sidesteps that check.
+
+- [ ] **Step 6: Rewrite `bin/setup-toolchain.sh` to fetch JavaFX jmods**
+
+jlink needs JavaFX as **jmods**, which Maven does not publish — they come from
+Gluon. Keep the staged-extraction discipline of the version this replaces: a
+half-extracted tree must never be promoted, and the fast path must only trigger
+on a tree that was verified complete.
+
+```bash
+#!/usr/bin/env bash
+# Fetch the JavaFX jmods jlink needs into ~/.local/share/reliquary-toolchain.
+# Prints the jmods directory to use. Idempotent.
+set -euo pipefail
+
+FX_VERSION="${FX_VERSION:-26.0.2}"
+ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/reliquary-toolchain"
+DEST="$ROOT/javafx-jmods-$FX_VERSION"
+
+# a complete tree has the three modules we link against
+verified() {
+  [ -f "$1/javafx.base.jmod" ] && [ -f "$1/javafx.graphics.jmod" ] && [ -f "$1/javafx.controls.jmod" ]
+}
+
+if verified "$DEST"; then echo "$DEST"; exit 0; fi
+
+mkdir -p "$ROOT"
+tmp=$(mktemp -d); stage=$(mktemp -d "$ROOT/.staging-XXXXXX")
+trap 'rm -rf "$tmp" "$stage"' EXIT
+
+url="https://download2.gluonhq.com/openjfx/${FX_VERSION}/openjfx-${FX_VERSION}_linux-x64_bin-jmods.zip"
+curl -fsSL "$url" -o "$tmp/fx.zip"
+unzip -q "$tmp/fx.zip" -d "$tmp/x"
+
+# the zip nests the jmods one directory down; find it rather than assume
+src=$(dirname "$(find "$tmp/x" -name 'javafx.base.jmod' -print -quit)")
+[ -n "$src" ] || { echo "no javafx.base.jmod in $url" >&2; exit 1; }
+mv "$src"/*.jmod "$stage/"
+
+verified "$stage" || { echo "staged jmods incomplete" >&2; exit 1; }
+rm -rf "$DEST"; mv "$stage" "$DEST"
+echo "$DEST"
+```
+
+- [ ] **Step 7: Run it and confirm the jmods land**
+
+Run: `./bin/setup-toolchain.sh && ls $(./bin/setup-toolchain.sh)`
+Expected: prints a path; the directory holds `javafx.base.jmod`,
+`javafx.graphics.jmod`, `javafx.controls.jmod` and friends. Run it twice to
+confirm the fast path.
+
+- [ ] **Step 8: Write `bin/package.sh`**
+
+```bash
+#!/usr/bin/env bash
+# Build a self-contained application image with jlink + jpackage.
+set -euo pipefail
+
+JDK="${JAVA_HOME:-/usr/lib/jvm/java-26-openjdk}"
+FX_JMODS="$(./bin/setup-toolchain.sh)"
+JAR=target/lib/reliquary.jar
+
+[ -f "$JAR" ] || { echo "no $JAR -- run: clojure -T:build uber" >&2; exit 1; }
+
+rm -rf target/runtime target/app
+
+# Derive the JDK modules the jar actually needs rather than guessing.
+# Clojure reflects, so --ignore-missing-deps is required.
+MODS=$("$JDK/bin/jdeps" --ignore-missing-deps --print-module-deps --multi-release 26 "$JAR")
+echo "jdeps resolved: $MODS" >&2
+
+"$JDK/bin/jlink" \
+  --module-path "$JDK/jmods:$FX_JMODS" \
+  --add-modules "$MODS,javafx.base,javafx.graphics,javafx.controls" \
+  --strip-debug --no-header-files --no-man-pages --compress=zip-6 \
+  --output target/runtime
+
+"$JDK/bin/jpackage" \
+  --type app-image \
+  --name Reliquary \
+  --input target/lib \
+  --main-jar reliquary.jar \
+  --runtime-image target/runtime \
+  --dest target/app
+
+du -sh target/runtime target/app
+```
+
+- [ ] **Step 9: Package and run the packaged app**
+
+Run:
+```
+chmod +x bin/package.sh && ./bin/package.sh
+xvfb-run -a ./target/app/Reliquary/bin/Reliquary
+```
+Expected: prints `SPIKE-OK ticks=5` and exits 0.
+
+If it fails with "JavaFX runtime components are missing" or an unresolved
+javafx module, add
+`--java-options=--add-modules=javafx.base,javafx.graphics,javafx.controls` to
+the jpackage invocation and record that you needed it.
+
+**A failure here is a finding, not a blocker.** Record it precisely and stop —
+do not go hunting through jpackage internals.
+
+- [ ] **Step 10: Measure and record**
+
+Write `docs/superpowers/spikes/2026-08-15-jlink-jpackage.md` covering, with real
+numbers:
+
+- uberjar size
+- jlink runtime image size
+- **total packaged app-image size** — the number to compare against Task 3's
+  81.1 MB native binary (which was 82 MB including its 8 loose `.so` files)
+- the module list `jdeps` resolved
+- cold-start wall time of the packaged binary (`time` it)
+- whether `--add-modules` was needed at runtime
+- whether it is a single self-contained directory that runs with no JDK installed
+
+State plainly whether this beats the native-image result on size, and note that
+it is not yet carrying the Steam client, protobuf, zxing or fonts — the same
+caveat that applied to Task 3's number, so the comparison stays honest.
+
+- [ ] **Step 11: Amend Task 3's findings doc with the escape hatch it missed**
+
+Task 3's review found that `cljfx.api`'s own docstring documents a
+`cljfx.skip-javafx-initialization` Java property aimed at exactly the AOT case,
+and the spike never tried it. The reviewer independently confirmed it would not
+have changed the outcome — `cljfx.mutator`, `cljfx.prop` and `cljfx.lifecycle`
+each carry a top-level `(set! *warn-on-reflection* true)` that blocks build-time
+initialisation regardless of that flag. Do **not** re-run the retired GraalVM
+toolchain to test it. Append a short, clearly-labelled note to
+`docs/superpowers/spikes/2026-08-15-cljfx-native.md` recording: that the flag
+exists, that it addresses only the `Platform/startup` half of the pincer, that
+the top-level `set!` calls are unaffected by it, and that this was verified by
+reading cljfx 1.10.10's sources rather than by experiment.
+
+The findings document is the justification for a project-shaping decision. It
+should not claim two independent blockers while omitting that one of them has a
+documented off-switch.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add -A
+git commit -m "Drop GraalVM for jlink + jpackage, which cljfx survives"
 ```
 
 ---
