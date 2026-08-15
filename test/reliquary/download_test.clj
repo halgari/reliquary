@@ -270,6 +270,36 @@
               (is (not (.exists (io/file dest "a.bin")))
                   "the space check must fire before any file is created"))))))))
 
+(deftest a-usable-space-of-zero-is-treated-as-unknown-not-full
+  (testing "getUsableSpace reports 0 on some FUSE, overlay and network
+            filesystems -- not \"no space\", genuinely unknown. Downloading
+            to a NAS is a normal destination for this app, and refusing every
+            download there with a false \"disk full\" would cost the user
+            the feature entirely."
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host _hits]
+            (with-redefs [download/usable-space (fn [_] 0)]
+              (let [snap (download/execute! (ctx-for host dest all-chunks) {:workers 3})]
+                (is (= :done (:stage snap))
+                    "an unknown usable space must not block a download that would have fit")))))))))
+
+(deftest the-space-check-still-fires-against-a-real-usable-space-report
+  (testing "a genuine (non-zero) figure that is smaller than the plan needs
+            must still be caught -- the zero-means-unknown carve-out must not
+            silently swallow the real case"
+    (with-tmp
+      (fn [dest]
+        (with-fixture-server
+          (fn [host hits]
+            (with-redefs [download/usable-space (fn [_] 1)] ;; 1 byte, real and tiny
+              (let [ctx (ctx-for host dest all-chunks)]
+                (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not enough disk space"
+                                      (download/execute! ctx {:workers 3})))
+                (is (empty? @hits)
+                    "a real, too-small figure must still stop the run before any chunk is fetched")))))))))
+
 (deftest a-worker-failure-raises-and-leaves-the-disk-alone
   (testing "a 404 chunk is a failed download, not a silently short file"
     (with-tmp

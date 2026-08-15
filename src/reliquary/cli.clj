@@ -14,7 +14,8 @@
             [reliquary.error :as error]
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
-            [reliquary.steam.qr :as qr]))
+            [reliquary.steam.qr :as qr])
+  (:import (java.util.concurrent CountDownLatch TimeUnit)))
 
 (defn exit-code-for
   "The CLI's exit-code contract, as promised in reliquary.error's docstring."
@@ -154,8 +155,13 @@
   "Poll `ctx`'s snapshot onto one rewriting line while `execute!` runs on this
    thread, whatever it returns or throws. Always leaves a final progress line
    and a trailing newline, so a failure's stack trace (printed by -main)
-   starts on its own line."
-  [ctx]
+   starts on its own line.
+
+   `done-latch` counts down in the `finally`, AFTER `execute!` has returned or
+   thrown -- which is after its own `finally` has flushed the progress file.
+   That ordering, not a thread join, is what a Ctrl-C shutdown hook waits on:
+   see `download` below for why joining the main thread deadlocks the JVM."
+  [ctx ^CountDownLatch done-latch]
   (let [stop?   (atom false)
         printer (doto (Thread. (fn []
                                   (while (not @stop?)
@@ -169,33 +175,50 @@
       (finally
         (reset! stop? true)
         (print-progress! (download/snapshot ctx))
-        (println)))))
+        (println)
+        (.countDown done-latch)))))
 
 (defn download
   "Resolve `appid`/`version-id` against the catalog, open a Steam session,
    and run the download. The appid/version-id pair is checked BEFORE the
    session opens, so a typo costs nothing but a catalog lookup.
 
-   Ctrl-C sets the engine's cancel flag via a shutdown hook and waits for this
-   thread to actually stop, so an interrupted run flushes its progress file
-   and resumes on the next invocation instead of losing work."
+   Ctrl-C sets the engine's cancel flag via a shutdown hook, so an
+   interrupted run flushes its progress file and resumes on the next
+   invocation instead of losing work.
+
+   The hook does NOT join the main thread -- that deadlocks the JVM. Per
+   Runtime#exit's documented contract, once shutdown hooks are running, any
+   OTHER thread's call to System/exit blocks indefinitely. -main always ends
+   with System/exit on the main thread, so a hook that joins the main thread
+   forms a cycle: the hook waits for main to finish, main finishes and calls
+   System/exit, that call blocks because shutdown is already under way, so
+   main never returns from it, so the join never returns, so the hook never
+   completes, so the JVM never halts. The process hangs until SIGKILL.
+
+   The fix is a CountDownLatch instead of a join: `run-download!`'s `finally`
+   counts it down once the progress flush is done, and the hook awaits that
+   latch (bounded, so a wedged download thread cannot hang Ctrl-C forever)
+   instead of the thread itself. Once the hook returns, the JVM halts
+   regardless of what the main thread is doing -- so main blocking forever in
+   System/exit becomes harmless instead of fatal."
   [args]
   (let [{:keys [game version dest]} (parse (into ["download"] args))
         session (session/open!)]
     (try
       (println "Resolving" (:title game) (:label version)
                (str "(" (gb (:bytes version)) ")") "to" (str dest) "...")
-      (let [rv          (download/resolve-version session game version)
-            ctx         (download/make-ctx
-                         (assoc rv :dest dest :appid (:appid game) :version-id (:id version)))
-            main-thread (Thread/currentThread)
-            hook        (Thread. (fn []
-                                    (download/cancel! ctx)
-                                    (.join main-thread))
-                                  "reliquary-cancel")]
+      (let [rv         (download/resolve-version session game version)
+            ctx        (download/make-ctx
+                        (assoc rv :dest dest :appid (:appid game) :version-id (:id version)))
+            done-latch (CountDownLatch. 1)
+            hook       (Thread. (fn []
+                                   (download/cancel! ctx)
+                                   (.await done-latch 10 TimeUnit/SECONDS))
+                                 "reliquary-cancel")]
         (.addShutdownHook (Runtime/getRuntime) hook)
         (try
-          (let [snap (run-download! ctx)]
+          (let [snap (run-download! ctx done-latch)]
             (case (:stage snap)
               :done      (do (println "Download complete:" (str dest)) 0)
               :cancelled (do (println "Cancelled -- rerun the same command to resume.") 130)

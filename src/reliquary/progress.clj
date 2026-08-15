@@ -11,6 +11,7 @@
 
    A corrupt or missing file reads as {} -- an empty progress map costs a
    re-download, while a raise costs the user the whole install."
+  (:refer-clojure :exclude [load])
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io])
   (:import (java.io File)

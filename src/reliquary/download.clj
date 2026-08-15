@@ -170,8 +170,13 @@
   "The usable space on `f`'s filesystem. `File/getUsableSpace` answers 0 for a
    path that does not exist yet -- not \"unknown\", 0 -- so a fresh download
    into a not-yet-created destination would misreport as a full disk unless
-   this walks up to the nearest ancestor that actually exists."
-  ^long [^File f]
+   this walks up to the nearest ancestor that actually exists.
+
+   Deliberately NOT ^long: a primitive return hint compiles callers to invoke
+   this var via a primitive interface that a with-redefs replacement does not
+   implement, so tests could not redefine it. This runs once per download,
+   not per chunk, so the boxing cost is immaterial."
+  [^File f]
   (loop [f f]
     (if (or (nil? f) (.exists f))
       (if f (.getUsableSpace f) 0)
@@ -182,10 +187,18 @@
    requested. `setLength` (used below to size every file) is `ftruncate`: it
    creates a SPARSE file that claims no real blocks until written, so without
    this check a genuinely full disk still fails at 94% -- the exact outcome
-   preallocation exists to prevent."
+   preallocation exists to prevent.
+
+   `getUsableSpace` reports 0 on some FUSE, overlay and network filesystems --
+   not \"no space\", genuinely UNKNOWN. Downloading to a NAS is a normal
+   destination for this app, not an edge case, so a reported 0 skips the
+   check rather than failing it: a missed check costs a late failure on a
+   truly full disk (preallocate! still catches path/permission problems, and
+   an actually-full disk still fails during the write), but treating unknown
+   as full would cost the user the feature entirely on every such mount."
   [^File dest ^long needed]
   (let [avail (usable-space dest)]
-    (when (< avail needed)
+    (when (and (pos? avail) (< avail needed))
       (error/raise :io
                    (str "not enough disk space at " (.getPath dest) ": need "
                         needed " bytes, only " avail " available")
