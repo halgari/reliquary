@@ -70,19 +70,89 @@
     (is (thrown? clojure.lang.ExceptionInfo
                  (plan/build (manifest (entry nil 10 "s" [["c" 0 10]])))))))
 
+;; --- review round 1 fixes -----------------------------------------------
+
+(deftest a-non-numeric-uint64-field-is-a-categorized-error
+  (testing "Long/parseLong must not be allowed to escape as a raw NumberFormatException"
+    (let [ex (try (plan/build (manifest (entry "a" "not-a-number" "s" [["c" 0 10]])))
+                  nil
+                  (catch clojure.lang.ExceptionInfo e e))]
+      (is (some? ex))
+      (is (= :incorrect (:reliquary/error (ex-data ex))))
+      (is (= "not-a-number" (:value (ex-data ex)))))))
+
+(deftest an-out-of-range-uint64-field-is-a-categorized-error
+  (testing "a legal uint64 >= 2^63 overflows Long/parseLong; a hostile or unusual manifest can carry one"
+    (let [huge "99999999999999999999"
+          ex   (try (plan/build (manifest (entry "a" 10 "s" [["c" huge 10]])))
+                    nil
+                    (catch clojure.lang.ExceptionInfo e e))]
+      (is (some? ex))
+      (is (= :incorrect (:reliquary/error (ex-data ex))))
+      (is (= huge (:value (ex-data ex)))))))
+
+(deftest chunks-are-ordered-by-offset-not-by-manifest-order
+  (testing ":index is what the resume file records, so it must follow offset order, not list order"
+    (let [p  (plan/build (manifest (entry "a.bsa" 30 "sha-a"
+                                          [["c2" 20 10] ["c0" 0 10] ["c1" 10 10]])))
+          cs (-> p :files first :chunks)]
+      (is (= [0 10 20] (mapv :offset cs)))
+      (is (= [0 1 2] (mapv :index cs)))
+      (is (= ["c0" "c1" "c2"] (mapv :id cs))))))
+
+(deftest an-empty-or-dot-path-is-rejected
+  (testing "both resolve to the destination directory itself, not to a real file"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "" 10 "s" [["c" 0 10]])))))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "." 10 "s" [["c" 0 10]])))))))
+
+(deftest a-nul-byte-in-the-path-is-rejected
+  (testing "a NUL byte would crash the writer uncategorized rather than error cleanly"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry (str "a" (char 0) "b") 10 "s" [["c" 0 10]])))))))
+
+(deftest an-empty-sha-content-never-matches-another-empty-sha-content
+  (testing "an empty digest must behave like a missing one, or unrelated files collapse into copies"
+    (let [p (plan/build (manifest (entry "a.bsa" 10 "" [["c0" 0 10]])
+                                  (entry "b.bsa" 10 "" [["c1" 0 10]])))]
+      (is (= ["a.bsa" "b.bsa"] (mapv :path (:files p))) "both remain real files")
+      (is (= [] (:copies p))))))
+
+(deftest same-sha-content-at-two-different-sizes-is-rejected
+  (testing "identical content cannot have two lengths -- this is a self-contradictory manifest, not a copy hint"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (plan/build (manifest (entry "a.bsa" 10 "same" [["c0" 0 10]])
+                                       (entry "b.bsa" 20 "same" [["c1" 0 20]])))))))
+
 ;; --- properties ---------------------------------------------------------
 
-(def ^:private gen-file
-  (gen/let [n      (gen/such-that seq gen/string-alphanumeric)
-            sizes  (gen/vector (gen/choose 1 5000) 1 8)]
+;; Names are generated distinctly (gen/vector-distinct) across every file in
+;; one manifest. Two independently-random gen/such-that names CAN collide at
+;; small sizes (single alphanumeric characters aren't rare), and since Finding
+;; 6's fix now rejects two entries that share a sha-content at different
+;; sizes, a same-name collision -- which produces the same "sha-<n>" for two
+;; files that this generator otherwise gives different random sizes -- would
+;; make these properties spuriously ERROR on an unrelated, valid rejection
+;; rather than exercise the tiling logic they exist to check.
+(defn- gen-file-named [n]
+  (gen/let [sizes (gen/vector (gen/choose 1 5000) 1 8)]
     (let [offsets (reductions + 0 sizes)
           total   (reduce + sizes)]
       (entry n total (str "sha-" n)
              (mapv (fn [i off len] [(str "c" n i) off len])
                    (range) offsets sizes)))))
 
+(defn- gen-names [lo hi]
+  (gen/vector-distinct (gen/such-that seq gen/string-alphanumeric)
+                       {:min-elements lo :max-elements hi}))
+
+(defn- gen-files [lo hi]
+  (gen/bind (gen-names lo hi)
+            (fn [names] (apply gen/tuple (map gen-file-named names)))))
+
 (defspec chunks-tile-every-file-exactly 80
-  (prop/for-all [files (gen/vector gen-file 1 6)]
+  (prop/for-all [files (gen-files 1 6)]
     (let [p (plan/build [{:depot-id 1 :key-hex "k" :files files}])]
       (every? (fn [f]
                 (let [cs (:chunks f)]
@@ -93,13 +163,49 @@
               (:files p)))))
 
 (defspec download-bytes-equals-the-sum-of-fetched-chunks 80
-  (prop/for-all [files (gen/vector gen-file 1 6)]
+  (prop/for-all [files (gen-files 1 6)]
     (let [p (plan/build [{:depot-id 1 :key-hex "k" :files files}])]
       (= (:download-bytes p)
          (reduce + 0 (for [f (:files p) c (:chunks f)] (:cb-original c)))))))
 
 (defspec total-chunks-matches-the-fetch-list 80
-  (prop/for-all [files (gen/vector gen-file 1 6)]
+  (prop/for-all [files (gen-files 1 6)]
     (let [p (plan/build [{:depot-id 1 :key-hex "k" :files files}])]
       (= (:total-chunks p) (plan/chunk-count p)
          (count (for [f (:files p) c (:chunks f)] c))))))
+
+;; gen-file-named always hands `build` chunks already in offset order
+;; (offsets are built via `reductions` over the same seq the chunks are
+;; constructed from), and none of the three properties above ever compares a
+;; chunk's returned :offset back to what the *manifest* declared for that
+;; specific :id -- they only check that the returned chunks are
+;; self-consistently contiguous, and that cb-original sums match. Both of
+;; those hold trivially for ANY cumulative-sum construction, in any order,
+;; over any set of lengths -- so an implementation that ignores :offset
+;; entirely and just cumulative-sums :cb-original in list order passes all
+;; three above. This generator shuffles the chunk list independently of
+;; declared offset, and the property below checks each id's offset against
+;; what was actually declared, so an implementation that ignores :offset
+;; cannot pass it.
+(defn- gen-file-shuffled-named [n]
+  (gen/let [sizes (gen/vector (gen/choose 1 5000) 1 8)]
+    (let [offsets  (reductions + 0 sizes)
+          total    (reduce + sizes)
+          declared (mapv (fn [i off len] [(str "c" n i) off len])
+                         (range) offsets sizes)]
+      (gen/fmap (fn [shuffled]
+                  {:file     (entry n total (str "sha-" n) shuffled)
+                   :expected (into {} (map (fn [[id off _]] [id off])) declared)})
+                (gen/shuffle declared)))))
+
+(defn- gen-files-shuffled [lo hi]
+  (gen/bind (gen-names lo hi)
+            (fn [names] (apply gen/tuple (map gen-file-shuffled-named names)))))
+
+(defspec chunk-offsets-match-what-the-manifest-declared 80
+  (prop/for-all [specs (gen-files-shuffled 1 6)]
+    (let [p (plan/build [{:depot-id 1 :key-hex "k" :files (mapv :file specs)}])]
+      (every? true?
+              (map (fn [{:keys [expected]} f]
+                     (every? (fn [c] (= (:offset c) (get expected (:id c)))) (:chunks f)))
+                   specs (:files p))))))
