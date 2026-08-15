@@ -180,3 +180,56 @@ Two facts should feed that decision:
   bundle (jlink/jpackage), cljfx is not implicated at all.
 - The size figure of 81.1 MB is for the *empty* case and already exceeds the
   spec's ceiling. Whichever rung is chosen, the 40–80 MB target needs revisiting.
+
+---
+
+## Addendum (added in Task 4): `cljfx.skip-javafx-initialization` exists, and
+## would not have saved this
+
+Reviewing this document turned up an escape hatch it never mentioned. `cljfx.api`
+documents a `cljfx.skip-javafx-initialization` Java property aimed at exactly
+this case — its own docstring says "for AOT-compilation you might need to skip
+JavaFX initialization completely". The spike never tried it, and a findings
+document that justifies dropping a toolchain should not claim two independent
+blockers while omitting that one of them ships with a documented off-switch.
+
+It would not have changed the outcome. **This was verified by reading cljfx
+1.10.10's sources, not by experiment** — the GraalVM toolchain was retired in
+Task 4 and was deliberately not resurrected to test it.
+
+What the flag does, in `cljfx/api.clj`:
+
+```clojure
+(defonce initialized
+  (when-not (Boolean/getBoolean "cljfx.skip-javafx-initialization")
+    (platform/initialize)))
+```
+
+That is the whole of it. It guards **Jaw 1, reason 1 only** — the
+`Platform/startup` call that produced `Unable to open DISPLAY`. Setting it would
+have removed that failure.
+
+It does nothing about **Jaw 1, reason 2**. `(set! *warn-on-reflection* true)` at
+the top level is not in `cljfx.api` and is not conditional on anything; it sits
+in five separate namespaces:
+
+```
+cljfx/coerce.clj:34    cljfx/renderer.clj:6    cljfx/prop.clj:9
+cljfx/lifecycle.clj:19 cljfx/mutator.clj:12
+```
+
+(Attempt 3 in the log above already hit `cljfx.lifecycle` on this, and Attempt 6
+hit `cljfx.mutator` and `cljfx.prop` as well — in Attempt 6 the
+`*warn-on-reflection*` failures were reported *alongside* the display failure,
+not behind it, so removing the display failure would simply have left them.)
+
+Under build-time class initialisation there is no thread binding frame, so each
+of those throws `Can't change/establish root binding of: *warn-on-reflection*
+with set` regardless of whether JavaFX was ever started. And Jaw 2 —
+`--initialize-at-run-time` defeating AOT class loading — is untouched by the
+property as well, since it is a property of how native-image loads AOT'd Clojure,
+not of cljfx's JavaFX startup.
+
+So the correct reading of this spike is unchanged, with one correction: the
+display half of Jaw 1 had a supported workaround the spike did not try, and the
+`set!` half did not.

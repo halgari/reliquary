@@ -4,9 +4,9 @@
 
         ;; UI
         cljfx/cljfx                          {:mvn/version "1.10.10"}
-        org.openjfx/javafx-base$linux        {:mvn/version "25.0.4"}
-        org.openjfx/javafx-graphics$linux    {:mvn/version "25.0.4"}
-        org.openjfx/javafx-controls$linux    {:mvn/version "25.0.4"}
+        org.openjfx/javafx-base$linux        {:mvn/version "26.0.2"}
+        org.openjfx/javafx-graphics$linux    {:mvn/version "26.0.2"}
+        org.openjfx/javafx-controls$linux    {:mvn/version "26.0.2"}
 
         ;; Steam
         com.google.protobuf/protobuf-java    {:mvn/version "4.35.1"}
@@ -14,10 +14,7 @@
         org.tukaani/xz                       {:mvn/version "1.12"}
 
         ;; catalog
-        org.clojure/data.json                {:mvn/version "2.5.2"}
-
-        ;; native-image support
-        com.github.clj-easy/graal-build-time {:mvn/version "1.0.6"}}
+        org.clojure/data.json                {:mvn/version "2.5.2"}}
 
  :aliases
  {:test
@@ -33,8 +30,7 @@
   {:extra-paths ["test" "test/resources" "spike"]
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"]}
 
-  ;; AOT compile every namespace into classes/ for native-image
-  :aot
-  {:extra-paths ["spike"]
-   :jvm-opts    ["-Dclojure.compiler.direct-linking=true"]
-   :exec-fn     clojure.core/compile}}}
+  :build
+  {:extra-paths ["."]
+   :extra-deps  {io.github.clojure/tools.build {:mvn/version "0.10.14"}}
+   :ns-default  build}}}

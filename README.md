@@ -8,8 +8,17 @@ Not associated with or endorsed by Valve Corporation or Steam.
 
 ## Building
 
-    ./bin/setup-toolchain.sh          # GraalVM CE for JDK 25
-    clojure -M:test                   # tests
+Needs JDK 26 (`JAVA_HOME`, or `/usr/lib/jvm/java-26-openjdk`) and the Clojure CLI.
+
+    clojure -M:test                          # tests
+
+    ./bin/setup-toolchain.sh                 # JavaFX jmods, for jlink
+    clojure -T:build uber :omit-javafx true  # target/lib/reliquary.jar
+    ./bin/package.sh                         # target/app/Reliquary/bin/Reliquary
+
+`clojure -T:build uber` without `:omit-javafx` produces a fatter jar that runs
+under a plain `java -jar`. `bin/package.sh` does not need that, because its
+jlink runtime supplies JavaFX as modules.
 
 ## License
 

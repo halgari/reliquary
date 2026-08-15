@@ -1,45 +1,42 @@
 #!/usr/bin/env bash
-# Fetch GraalVM CE for JDK 25 into ~/.local/share/reliquary-toolchain.
-# Prints the JAVA_HOME to use. Idempotent.
+# Fetch the JavaFX jmods jlink needs into ~/.local/share/reliquary-toolchain.
+# Prints the jmods directory to use. Idempotent.
+#
+# Maven publishes JavaFX as plain jars; jlink cannot link those. The jmods
+# come from Gluon and are the only reason this script exists.
 set -euo pipefail
 
-GRAAL_TAG="${GRAAL_TAG:-jdk-25.0.2}"
+FX_VERSION="${FX_VERSION:-26.0.2}"
 ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/reliquary-toolchain"
-DEST="$ROOT/$GRAAL_TAG"
+DEST="$ROOT/javafx-jmods-$FX_VERSION"
 
-# Fast path: only trust an existing DEST if it actually runs, not merely if
-# bin/native-image is present. Presence alone doesn't prove the tree was
-# fully extracted (e.g. an interrupted tar could leave bin/native-image
-# written but lib/ missing); running --version is a cheap, real exercise of
-# the installed tree.
-if [ -x "$DEST/bin/native-image" ] && "$DEST/bin/native-image" --version >/dev/null 2>&1; then
-  echo "$DEST"
-  exit 0
-fi
+# A complete tree has the three modules we link against. The fast path must
+# only fire on a tree that passes this, so an interrupted extraction can
+# never masquerade as an installed toolchain.
+verified() {
+  [ -f "$1/javafx.base.jmod" ] && [ -f "$1/javafx.graphics.jmod" ] && [ -f "$1/javafx.controls.jmod" ]
+}
+
+if verified "$DEST"; then echo "$DEST"; exit 0; fi
 
 mkdir -p "$ROOT"
-url=$(curl -fsSL "https://api.github.com/repos/graalvm/graalvm-ce-builds/releases/tags/$GRAAL_TAG" \
-      | grep -oP '"browser_download_url": "\K[^"]*linux-x64_bin\.tar\.gz(?=")' | head -1)
-
-if [ -z "$url" ]; then
-  echo "no linux-x64 asset on release $GRAAL_TAG" >&2
-  exit 1
-fi
-
 tmp=$(mktemp -d)
+# Stage inside ROOT so the promoting mv is a same-filesystem rename, i.e. atomic.
 stage=$(mktemp -d "$ROOT/.staging-XXXXXX")
 trap 'rm -rf "$tmp" "$stage"' EXIT
-curl -fsSL "$url" -o "$tmp/graal.tar.gz"
 
-# Extract into a staging dir alongside DEST (same filesystem as ROOT, so the
-# final move is atomic) and only verify + promote it to DEST once extraction
-# and the sanity check both succeed. A half-extracted tree must never be
-# visible at DEST.
-tar -xzf "$tmp/graal.tar.gz" -C "$stage" --strip-components=1
+url="https://download2.gluonhq.com/openjfx/${FX_VERSION}/openjfx-${FX_VERSION}_linux-x64_bin-jmods.zip"
+curl -fsSL "$url" -o "$tmp/fx.zip"
+unzip -q "$tmp/fx.zip" -d "$tmp/x"
 
-"$stage/bin/native-image" --version >&2
+# The zip nests the jmods one directory down; find it rather than assume.
+found=$(find "$tmp/x" -name 'javafx.base.jmod' -print -quit)
+[ -n "$found" ] || { echo "no javafx.base.jmod in $url" >&2; exit 1; }
+mv "$(dirname "$found")"/*.jmod "$stage/"
 
+# Verify the staged tree before it is visible at DEST -- a half-extracted
+# tree must never be promoted.
+verified "$stage" || { echo "staged jmods incomplete" >&2; exit 1; }
 rm -rf "$DEST"
 mv "$stage" "$DEST"
-
 echo "$DEST"
