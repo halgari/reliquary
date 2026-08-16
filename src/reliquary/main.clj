@@ -17,6 +17,7 @@
             [reliquary.steam.auth :as auth]
             [reliquary.ui.app :as app]
             [reliquary.ui.login :as login]
+            [reliquary.ui.signed-in :as signed-in]
             [reliquary.ui.theme :as theme])
   (:import (javafx.application Platform)))
 
@@ -49,8 +50,19 @@
       (catch clojure.lang.ExceptionInfo e
         (fx-run! #(swap! state assoc :error (ex-message e)))))))
 
-(defn view [state]
-  (app/view (assoc state :content (login/view state))))
+(defn view
+  "Dispatch on whether the user is signed in.
+
+   This used to render `login/view` unconditionally, which produced the bug a
+   user reported as \"I logged in via the QR code but the app doesn't move
+   on\": approving the QR set `:qr-state :approved` and then left the user on
+   the login screen forever, and RESTARTING with a valid token skipped
+   `start-login!` entirely, so the screen showed a blank QR card still asking
+   to be scanned. One missing branch, two broken states."
+  [state]
+  (app/view (assoc state :content (if (:signed-in? state)
+                                    (signed-in/view state)
+                                    (login/view state)))))
 
 (defn sign-out!
   "The title bar's Sign out button, wired here rather than left nil: a

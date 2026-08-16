@@ -134,3 +134,24 @@
           (remove-watch state ::probe)
           (is (empty? @violations)
               "every mutation start-login! made to state must have happened inside fx-run!"))))))
+
+;; --- regression: the app must not show the login screen once signed in -----
+;; Reported live: "I logged in via the QR code but the app doesn't move on."
+;; `view` rendered login/view unconditionally, so a signed-in start showed a
+;; BLANK QR card reading "Waiting for approval on your device" -- asking the
+;; user to scan a challenge that was never fetched.
+
+(deftest a-signed-in-state-does-not-render-the-login-screen
+  (testing "signed in with no challenge url -- the restart case that was broken"
+    (let [s (pr-str (main/view {:signed-in? true :status-line "someone"
+                                :challenge-url nil :qr-state nil}))]
+      (is (not (str/includes? s "Waiting for approval on your device"))
+          "a signed-in user must never be told to scan a code")
+      (is (not (str/includes? s "Scan to sign in")))
+      (is (str/includes? s "someone")
+          "the signed-in screen should say who is signed in"))))
+
+(deftest the-login-screen-still-renders-when-not-signed-in
+  (let [s (pr-str (main/view {:signed-in? false :challenge-url "https://s.team/q/1/2"
+                              :qr-state :waiting}))]
+    (is (str/includes? s "Scan to sign in"))))
