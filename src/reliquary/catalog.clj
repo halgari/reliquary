@@ -8,11 +8,19 @@
    Reliquary offers cannot come from live metadata. They come from here: a JSON
    document bundled with the binary and refreshed from a URL at startup.
 
+   The document is EDN, not JSON: it is Clojure data consumed by Clojure, so
+   it is stored as Clojure data -- read with `clojure.edn/read-string`, no
+   parser dependency, keywords rather than stringly-typed keys.
+
+   `edn/read-string` is used rather than `read`: it does not eval, so a hostile
+   document fetched from the network cannot execute anything. Reader tags are
+   rejected by default for the same reason.
+
    Three sources, newest `generated` wins: the bundled copy (always present),
    the last good fetch (cached on disk), and today's fetch. Every failure mode
    degrades to an older catalog rather than to an error -- an app that will not
    start because a GitHub URL was slow is a worse app."
-  (:require [clojure.data.json :as json]
+  (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [reliquary.config :as config])
   (:import (java.io File InputStream)
@@ -69,8 +77,8 @@
    nothing actionable to report."
   [^String s]
   (try
-    (let [c (json/read-str s :key-fn keyword)]
-      (when (= schema-version (:schema-version c))
+    (let [c (edn/read-string s)]
+      (when (and (map? c) (= schema-version (:schema-version c)))
         (Instant/parse (:generated c))            ; throws if unparseable
         (let [games (into [] (keep norm-game) (:games c))]
           ;; a document with no usable game is not a catalog
@@ -83,8 +91,8 @@
 (defn- read-catalog [^File f]
   (when (and f (.isFile f)) (parse (slurp f))))
 
-(defn bundled [] (some-> (io/resource "catalog.json") slurp parse))
-(defn- cache-file ^File [] (io/file (config/data-dir) "catalog.json"))
+(defn bundled [] (some-> (io/resource "catalog.edn") slurp parse))
+(defn- cache-file ^File [] (io/file (config/data-dir) "catalog.edn"))
 (defn cached [] (read-catalog (cache-file)))
 
 (defn newest

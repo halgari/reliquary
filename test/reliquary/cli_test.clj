@@ -41,14 +41,23 @@
     (is (str/includes? out "1_63_legacy_patch") "the historical branches must be offered")
     (is (str/includes? out "1_5_97") "Skyrim SE's community downgrade target")))
 
-(deftest a-version-with-no-size-says-unknown-not-zero
-  (testing "community-sourced versions genuinely lack a size; 0.0 GB would be a lie"
+(deftest sizes-render-honestly
+  (testing "no real size may round down to 0.0 GB and read as unknown"
+    ;; substring matching is wrong here -- "110.0 GB" contains "0.0 GB".
+    ;; Anchor on the whole size field instead.
     (let [out (with-out-str (cli/run ["list"]))]
-      (is (str/includes? out "size unknown"))
-      ;; substring matching is wrong here -- "110.0 GB" contains "0.0 GB".
-      ;; Anchor on the whole size field instead.
-      (is (not-any? #(re-find #"(?:^|\s)0\.0 GB" %) (str/split-lines out))
-          "a real size must never round down to 0.0 GB and read as unknown"))))
+      (is (not-any? #(re-find #"(?:^|\s)0\.0 GB" %) (str/split-lines out)))))
+
+  (testing "an unknown size still says so -- the rule outlives the data"
+    ;; Every catalog version now has a real size: the ones community downgrade
+    ;; guides never published were resolved once against Steam's own manifests
+    ;; by tool/catalog/resolve_sizes.clj. So this asserts the FORMATTER's rule
+    ;; directly rather than hunting the catalog for a zero that no longer
+    ;; exists -- a version added tomorrow without a size must still render
+    ;; "size unknown" and never "0.0 GB".
+    (is (= "size unknown" (#'cli/gb 0)))
+    (is (= "size unknown" (#'cli/gb nil)))
+    (is (= "12.7 GB" (#'cli/gb 13628807699)))))
 
 (deftest download-requires-a-known-appid-and-version
   (with-hermetic-config

@@ -1,173 +1,303 @@
 {
   "appid": 489830,
-  "source_notes": "Skyrim Special Edition (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from community downgrade guides -- SKSE and most native-code mods break on every executable update, so the modding community has documented exact depot/manifest triples for every notable version since the Anniversary Edition (AE) launched in Nov 2021. Depot 489831 = main game content ('MAIN2' in some guides), 489832 = a second content depot ('MAIN'), 489833 = the executable ('EXE'). A fourth depot, 489838, carries optional Russian localization and was not recorded here (out of scope). Two classes of source were used: (1) individually-authored Steam Community guides, each verified by direct WebFetch of the guide page, and (2) the Nexus Mods article 'Steam Manifest List for Skyrim' (nexusmods.com/skyrimspecialedition/articles/6536), a maintained table the author says is sourced from steamdb.info manifest histories -- fetched here via a Wayback Machine snapshot (web.archive.org, capture 2025-07-31) because Nexus Mods 403s direct curl/WebFetch from this environment. Confidence 'high' below means the Nexus article's numbers were independently corroborated by at least one separately-authored Steam Community guide with no shared authorship; 'low' means the Nexus article is the only source found (searches turned up no second independent source, including checks of the Nexus 'Unofficial Downgrade Patcher' mod page comments, r/skyrimmods, and Nexus/STEP forum threads, none of which quoted the raw manifest IDs). No conflicts were found between sources for any version recorded here -- all agreeing sources matched exactly. CORRECTION APPLIED: this run originally discarded the entire 1.6.342 entry because its depot-489831 manifest ('349141704917442044') is 18 digits and the initial brief said manifest GIDs must be 19-20 digits. That digit-count rule was wrong -- a manifest GID is any decimal value that fits a uint64 (1-20 digits), and 18-digit values occur legitimately roughly 1 time in 20. After the coordinator corrected the rule, 1.6.342 was restored below (still confidence 'low', single-sourced, unaffected in substance by the correction). This was the only manifest ID affected by the bad rule in this run -- no other candidate was discarded for being too short. Release dates are taken from the same Nexus article and are single-sourced (not independently cross-checked); build IDs were not obtainable without steamdb.info, which this task explicitly excludes, so 'build' is null throughout.",
+  "source_notes": "Skyrim Special Edition (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from community downgrade guides -- SKSE and most native-code mods break on every executable update, so the modding community has documented exact depot\/manifest triples for every notable version since the Anniversary Edition (AE) launched in Nov 2021. Depot 489831 = main game content ('MAIN2' in some guides), 489832 = a second content depot ('MAIN'), 489833 = the executable ('EXE'). A fourth depot, 489838, carries optional Russian localization and was not recorded here (out of scope). Two classes of source were used: (1) individually-authored Steam Community guides, each verified by direct WebFetch of the guide page, and (2) the Nexus Mods article 'Steam Manifest List for Skyrim' (nexusmods.com\/skyrimspecialedition\/articles\/6536), a maintained table the author says is sourced from steamdb.info manifest histories -- fetched here via a Wayback Machine snapshot (web.archive.org, capture 2025-07-31) because Nexus Mods 403s direct curl\/WebFetch from this environment. Confidence 'high' below means the Nexus article's numbers were independently corroborated by at least one separately-authored Steam Community guide with no shared authorship; 'low' means the Nexus article is the only source found (searches turned up no second independent source, including checks of the Nexus 'Unofficial Downgrade Patcher' mod page comments, r\/skyrimmods, and Nexus\/STEP forum threads, none of which quoted the raw manifest IDs). No conflicts were found between sources for any version recorded here -- all agreeing sources matched exactly. CORRECTION APPLIED: this run originally discarded the entire 1.6.342 entry because its depot-489831 manifest ('349141704917442044') is 18 digits and the initial brief said manifest GIDs must be 19-20 digits. That digit-count rule was wrong -- a manifest GID is any decimal value that fits a uint64 (1-20 digits), and 18-digit values occur legitimately roughly 1 time in 20. After the coordinator corrected the rule, 1.6.342 was restored below (still confidence 'low', single-sourced, unaffected in substance by the correction). This was the only manifest ID affected by the bad rule in this run -- no other candidate was discarded for being too short. Release dates are taken from the same Nexus article and are single-sourced (not independently cross-checked); build IDs were not obtainable without steamdb.info, which this task explicitly excludes, so 'build' is null throughout.",
   "versions": [
     {
-      "id": "1_5_97",
-      "label": "1.5.97 -- pre-Anniversary Edition (SKSE-stable, most sought-after downgrade target)",
-      "build": null,
       "date": "2019-11-20",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "7848722008564294070", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "8702665189575304780", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "2289561010626853674", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "7848722008564294070",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "8702665189575304780",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "2289561010626853674",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3185468658",
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=2805551737",
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3185468658",
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=2805551737",
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "high",
-      "note": "All three depot/manifest pairs agree exactly across two independently-authored Steam Community guides and the Nexus manifest-list article."
+      "note": "All three depot\/manifest pairs agree exactly across two independently-authored Steam Community guides and the Nexus manifest-list article.",
+      "build": null,
+      "label": "1.5.97 -- pre-Anniversary Edition (SKSE-stable, most sought-after downgrade target)",
+      "id": "1_5_97",
+      "bytes": 13628807699,
+      "confidence": "high"
     },
     {
-      "id": "1_6_317",
+      "date": "2021-11-11",
+      "depots": [
+        {
+          "depot-id": 489831,
+          "manifest-gid": "8893533186410323048",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "7231497621745539234",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "5887811902658527321",
+          "label": "Skyrim SE exe"
+        }
+      ],
+      "sources": [
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
+      ],
+      "note": "Single source only (Nexus manifest-list article). No second independent source found.",
+      "build": null,
       "label": "1.6.317 -- initial Anniversary Edition release",
-      "build": null,
-      "date": "2021-11-11",
-      "depots": [
-        {"depot-id": 489831, "manifest-gid": "8893533186410323048", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "7231497621745539234", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "5887811902658527321", "label": "Skyrim SE exe"}
-      ],
-      "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
-      ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). No second independent source found."
+      "id": "1_6_317",
+      "bytes": 13730835105,
+      "confidence": "low"
     },
     {
-      "id": "1_6_318",
+      "date": "2021-11-11",
+      "depots": [
+        {
+          "depot-id": 489831,
+          "manifest-gid": "1985552842565684891",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "5260954425794414274",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "6964426252826681862",
+          "label": "Skyrim SE exe"
+        }
+      ],
+      "sources": [
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
+      ],
+      "note": "Single source only (Nexus manifest-list article). No second independent source found.",
+      "build": null,
       "label": "1.6.318 -- AE hotfix",
-      "build": null,
-      "date": "2021-11-11",
-      "depots": [
-        {"depot-id": 489831, "manifest-gid": "1985552842565684891", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "5260954425794414274", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "6964426252826681862", "label": "Skyrim SE exe"}
-      ],
-      "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
-      ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). No second independent source found."
+      "id": "1_6_318",
+      "bytes": 15317170732,
+      "confidence": "low"
     },
     {
-      "id": "1_6_323",
-      "label": "1.6.323 -- early AE patch",
-      "build": null,
       "date": "2021-11-22",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "6913241376784585188", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "6077137133470860357", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "2414608533287116506", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "6913241376784585188",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "6077137133470860357",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "2414608533287116506",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). No second independent source found."
+      "note": "Single source only (Nexus manifest-list article). No second independent source found.",
+      "build": null,
+      "label": "1.6.323 -- early AE patch",
+      "id": "1_6_323",
+      "bytes": 15317264590,
+      "confidence": "low"
     },
     {
-      "id": "1_6_342",
-      "label": "1.6.342 -- AE patch",
-      "build": null,
       "date": "2021-12-13",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "349141704917442044", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "2337986449035143556", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "5357951305619261097", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "349141704917442044",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "2337986449035143556",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "5357951305619261097",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). The 489831 manifest here is only 18 digits, but that is a legitimate uint64 value (well under 2^63), not a truncation -- an early version of this catalog run wrongly discarded this entire version under an incorrect 19-20-digit-only rule; it was restored after the rule was corrected to '1-20 digit decimal that fits a uint64'. No second independent source was found for any of its three manifests, hence still low confidence."
+      "note": "Single source only (Nexus manifest-list article). The 489831 manifest here is only 18 digits, but that is a legitimate uint64 value (well under 2^63), not a truncation -- an early version of this catalog run wrongly discarded this entire version under an incorrect 19-20-digit-only rule; it was restored after the rule was corrected to '1-20 digit decimal that fits a uint64'. No second independent source was found for any of its three manifests, hence still low confidence.",
+      "build": null,
+      "label": "1.6.342 -- AE patch",
+      "id": "1_6_342",
+      "bytes": 15317165631,
+      "confidence": "low"
     },
     {
-      "id": "1_6_353",
-      "label": "1.6.353 -- widely-cited early AE downgrade target",
-      "build": null,
       "date": "2022-01-06",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "7089166303853251347", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "1476684358338706955", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "4570833277049890269", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "7089166303853251347",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "1476684358338706955",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "4570833277049890269",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=2863796283",
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=2863796283",
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "high",
-      "note": "The Steam Community guide's numbers come from a comment (user 'Nanarchy') that is not itself version-labeled, but it matches the guide's own 'current AE' exe manifest (4570833277049890269) which independently matches the Nexus article's dated 1.6.353 entry; all three depot pairs agree exactly with the Nexus article."
+      "note": "The Steam Community guide's numbers come from a comment (user 'Nanarchy') that is not itself version-labeled, but it matches the guide's own 'current AE' exe manifest (4570833277049890269) which independently matches the Nexus article's dated 1.6.353 entry; all three depot pairs agree exactly with the Nexus article.",
+      "build": null,
+      "label": "1.6.353 -- widely-cited early AE downgrade target",
+      "id": "1_6_353",
+      "bytes": 15317364810,
+      "confidence": "high"
     },
     {
-      "id": "1_6_629",
-      "label": "1.6.629 -- brief AE patch just before 1.6.640",
-      "build": null,
       "date": "2022-09-15",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "3660787314279169352", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "2756691988703496654", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "8453224879269405640", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "3660787314279169352",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "2756691988703496654",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "8453224879269405640",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). Note depots 489831/489832 are IDENTICAL to the 1.6.640 entry below -- only the exe (489833) changed between these two closely-spaced releases, per the same source."
+      "note": "Single source only (Nexus manifest-list article). Note depots 489831\/489832 are IDENTICAL to the 1.6.640 entry below -- only the exe (489833) changed between these two closely-spaced releases, per the same source.",
+      "build": null,
+      "label": "1.6.629 -- brief AE patch just before 1.6.640",
+      "id": "1_6_629",
+      "bytes": 15345521094,
+      "confidence": "low"
     },
     {
-      "id": "1_6_640",
-      "label": "1.6.640 -- widely-used AE target",
-      "build": null,
       "date": "2022-09-20",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "3660787314279169352", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "2756691988703496654", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "5291801952219815735", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "3660787314279169352",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "2756691988703496654",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "5291801952219815735",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=2805551737",
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3123747068",
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3151412388",
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=2805551737",
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3123747068",
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3151412388",
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "high",
-      "note": "All three depot/manifest pairs agree exactly across three independently-authored Steam Community guides and the Nexus manifest-list article."
+      "note": "All three depot\/manifest pairs agree exactly across three independently-authored Steam Community guides and the Nexus manifest-list article.",
+      "build": null,
+      "label": "1.6.640 -- widely-used AE target",
+      "id": "1_6_640",
+      "bytes": 15345519558,
+      "confidence": "high"
     },
     {
-      "id": "1_6_1130",
-      "label": "1.6.1130 -- late AE build preceding 1.6.1170",
-      "build": null,
       "date": "2023-12-05",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "3737743381894105176", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "4341968404481569190", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "2442187225363891157", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "3737743381894105176",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "4341968404481569190",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "2442187225363891157",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3123747068",
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3123747068",
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "high",
-      "note": "All three depot/manifest pairs agree exactly between an independently-authored Steam Community guide and the Nexus manifest-list article."
+      "note": "All three depot\/manifest pairs agree exactly between an independently-authored Steam Community guide and the Nexus manifest-list article.",
+      "build": null,
+      "label": "1.6.1130 -- late AE build preceding 1.6.1170",
+      "id": "1_6_1130",
+      "bytes": 16095467175,
+      "confidence": "high"
     },
     {
-      "id": "1_6_1170",
-      "label": "1.6.1170 -- current AE build as of writing",
-      "build": null,
       "date": "2024-01-17",
       "depots": [
-        {"depot-id": 489831, "manifest-gid": "8442952117333549665", "label": "Skyrim SE main content"},
-        {"depot-id": 489832, "manifest-gid": "8042843504692938467", "label": "Skyrim SE content 2"},
-        {"depot-id": 489833, "manifest-gid": "1914580699073641964", "label": "Skyrim SE exe"}
+        {
+          "depot-id": 489831,
+          "manifest-gid": "8442952117333549665",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "8042843504692938467",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "1914580699073641964",
+          "label": "Skyrim SE exe"
+        }
       ],
       "sources": [
-        "https://web.archive.org/web/20250731141231/https://www.nexusmods.com/skyrimspecialedition/articles/6536"
+        "https:\/\/web.archive.org\/web\/20250731141231\/https:\/\/www.nexusmods.com\/skyrimspecialedition\/articles\/6536"
       ],
-      "confidence": "low",
-      "note": "Single source only (Nexus manifest-list article). Searched Nexus forums, r/skyrimmods, GitHub, and STEP forums for a second independent source and found none quoting the raw manifest IDs. Since 1.6.1170 is reportedly still the CURRENT public branch build, it may also be retrievable directly via PICS rather than needing this historical record -- worth double-checking against live PICS data before relying on this entry."
+      "note": "Single source only (Nexus manifest-list article). Searched Nexus forums, r\/skyrimmods, GitHub, and STEP forums for a second independent source and found none quoting the raw manifest IDs. Since 1.6.1170 is reportedly still the CURRENT public branch build, it may also be retrievable directly via PICS rather than needing this historical record -- worth double-checking against live PICS data before relying on this entry.",
+      "build": null,
+      "label": "1.6.1170 -- current AE build as of writing",
+      "id": "1_6_1170",
+      "bytes": 16095731388,
+      "confidence": "low"
     }
   ]
 }

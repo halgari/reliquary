@@ -29,11 +29,15 @@
   (str "http://127.0.0.1:" (.getPort (.getAddress ^HttpServer server)) path))
 
 (def ^:private minimal
-  "{\"schema-version\":1,\"generated\":\"2026-01-01T00:00:00Z\",
-    \"games\":[{\"appid\":220,\"title\":\"HL2\",\"studio\":\"Valve\",
-                \"versions\":[{\"id\":\"public\",\"label\":\"L\",\"branch\":\"public\",
-                               \"build\":\"1\",\"date\":\"2026-01-01\",\"bytes\":10,
-                               \"depots\":[{\"depot-id\":221,\"manifest-gid\":\"77\"}]}]}]}")
+  "The catalog is EDN, so the fixtures are EDN. Kept as a STRING rather than a
+   literal map because `parse` takes the raw document text -- that is what
+   arrives off disk and off the network, and parsing is what is under test."
+  (pr-str {:schema-version 1
+           :generated "2026-01-01T00:00:00Z"
+           :games [{:appid 220 :title "HL2" :studio "Valve"
+                    :versions [{:id "public" :label "L" :branch "public"
+                                :build "1" :date "2026-01-01" :bytes 10
+                                :depots [{:depot-id 221 :manifest-gid "77"}]}]}]}))
 
 (deftest parses-a-minimal-catalog
   (let [c (catalog/parse minimal)
@@ -52,18 +56,19 @@
     (is (nil? (-> g :art :capsule)))))
 
 (deftest a-future-schema-version-is-ignored-not-an-error
-  (is (nil? (catalog/parse (str/replace minimal "\"schema-version\":1" "\"schema-version\":99")))
+  (is (nil? (catalog/parse (str/replace minimal ":schema-version 1" ":schema-version 99")))
       "an old binary must keep working when the catalog moves ahead"))
 
 (deftest malformed-json-is-nil
-  (is (nil? (catalog/parse "{not json")))
+  (is (nil? (catalog/parse "{:unbalanced")))
   (is (nil? (catalog/parse ""))))
 
 (deftest a-game-missing-required-fields-is-rejected
-  (is (nil? (catalog/parse "{\"schema-version\":1,\"generated\":\"2026-01-01T00:00:00Z\",\"games\":[{\"title\":\"no appid\"}]}"))))
+  (is (nil? (catalog/parse (pr-str {:schema-version 1 :generated "2026-01-01T00:00:00Z"
+                       :games [{:title "no appid"}]})))))
 
 (deftest a-version-with-no-depots-is-rejected
-  (is (nil? (catalog/parse (str/replace minimal "\"depots\":[{\"depot-id\":221,\"manifest-gid\":\"77\"}]" "\"depots\":[]")))
+  (is (nil? (catalog/parse (str/replace minimal ":depots [{:depot-id 221, :manifest-gid \"77\"}]" ":depots []")))
       "a version we cannot fetch is worse than a version we do not offer"))
 
 (deftest newest-wins-and-skips-nils
@@ -75,7 +80,7 @@
 
 (deftest the-bundled-catalog-is-valid
   (let [c (catalog/bundled)]
-    (is (some? c) "resources/catalog.json must parse — it is the offline fallback")
+    (is (some? c) "resources/catalog.edn must parse — it is the offline fallback")
     (is (= 1 (:schema-version c)))
     (is (seq (catalog/games c)))
     (is (every? (fn [g] (and (:appid g) (:title g) (seq (:versions g))))
@@ -95,7 +100,7 @@
       (binding [config/*data-dir* d]
         (is (= (:generated (catalog/bundled)) (:generated (catalog/load!)))
             "with no cache, the bundled copy is what loads")
-        (spit (io/file d "catalog.json")
+        (spit (io/file d "catalog.edn")
               (str/replace minimal "2026-01-01T00:00:00Z" "2099-01-01T00:00:00Z"))
         (is (= "2099-01-01T00:00:00Z" (:generated (catalog/load!)))))
       (finally (run! io/delete-file (reverse (file-seq d)))))))
@@ -104,7 +109,7 @@
   (let [d (.toFile (Files/createTempDirectory "reliquary-cat" (make-array FileAttribute 0)))]
     (try
       (binding [config/*data-dir* d]
-        (spit (io/file d "catalog.json") "{ broken")
+        (spit (io/file d "catalog.edn") "{ broken")
         (is (= (:generated (catalog/bundled)) (:generated (catalog/load!)))))
       (finally (run! io/delete-file (reverse (file-seq d)))))))
 
@@ -162,12 +167,12 @@
   ;; unlike every other test in this namespace, it deliberately binds
   ;; NEITHER *config-dir* nor *data-dir* -- because refresh! writes from a
   ;; raw Thread, a binding here would not even reach it. What has to save
-  ;; the real ~/.local/share/reliquary/catalog.json is the
+  ;; the real ~/.local/share/reliquary/catalog.edn is the
   ;; reliquary.data-dir JVM property the :test alias sets, consulted
   ;; directly by config/data-dir with no thread-locality involved at all.
   (let [real-data-dir (io/file (System/getProperty "user.home") ".local" "share" "reliquary")
         fresh-json    (str/replace minimal "2026-01-01T00:00:00Z" "2099-06-01T00:00:00Z")
-        cache-file    (io/file (config/data-dir) "catalog.json")]
+        cache-file    (io/file (config/data-dir) "catalog.edn")]
     (try
       ;; a previous run of this exact test is idempotent content, but delete
       ;; first anyway so the freshness comparison inside refresh! can never
@@ -189,8 +194,8 @@
             (str "with no dynamic binding in scope, refresh!'s write must still land under "
                  "target/test-state via the JVM property, not wherever XDG_DATA_HOME/$HOME "
                  "would otherwise point -- got: " cache-path)))
-      (is (not (.exists (io/file real-data-dir "catalog.json")))
-          "the real ~/.local/share/reliquary/catalog.json must remain untouched")
+      (is (not (.exists (io/file real-data-dir "catalog.edn")))
+          "the real ~/.local/share/reliquary/catalog.edn must remain untouched")
       ;; this test's whole point is proving the sysprop path is reachable and
       ;; writable -- but that makes target/test-state/data a shared,
       ;; process-wide location any other test using the DEFAULT (unbound)
