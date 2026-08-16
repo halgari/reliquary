@@ -34,6 +34,11 @@
                "--sun-misc-unsafe-memory-access=allow"]
    :main-opts ["-m" "reliquary.cli"]}
 
+  :app
+  {:jvm-opts  ["--enable-native-access=ALL-UNNAMED"
+               "--sun-misc-unsafe-memory-access=allow"]
+   :main-opts ["-m" "reliquary.main"]}
+
   :dev
   {:extra-paths ["test" "test/resources" "spike"]
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"]}
