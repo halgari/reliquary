@@ -65,3 +65,61 @@
               (config/write-config! {:a 2})
               (is (= 1 (count (filter #(.isFile %) (.listFiles d))))
                   "no temp file left behind"))))
+
+;; ---- the reliquary.test marker: an absent path property must throw, not
+;; ---- silently fall through to the real XDG path ----
+
+(defn- with-sysprops
+  "Runs `f` with each `name` in `prop-map` set to its value (or cleared, if
+   the value is nil), restoring every property's ORIGINAL value afterward --
+   these are real, global JVM properties, not thread-local state, so a test
+   that mutates them must always put them back."
+  [prop-map f]
+  (let [orig (into {} (map (fn [[k _]] [k (System/getProperty k)])) prop-map)]
+    (try
+      (doseq [[k v] prop-map]
+        (if v (System/setProperty k v) (System/clearProperty k)))
+      (f)
+      (finally
+        (doseq [[k v] orig]
+          (if v (System/setProperty k v) (System/clearProperty k)))))))
+
+(deftest clearing-config-dir-under-the-test-marker-throws
+  (testing "reliquary.test is already set for this whole suite (the :test
+            alias sets it) -- clearing JUST reliquary.config-dir here is
+            exactly what a runtime (System/clearProperty
+            \"reliquary.config-dir\") would produce. Nothing calls that
+            today, but the property being merely absent must never be
+            silently safe: it must throw, not fall through to the real
+            ~/.config/reliquary."
+    (with-sysprops {"reliquary.config-dir" nil}
+      (fn []
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                               #"reliquary\.test is set but reliquary\.config-dir is absent"
+                               (config/config-dir)))))))
+
+(deftest clearing-data-dir-under-the-test-marker-throws
+  (with-sysprops {"reliquary.data-dir" nil}
+    (fn []
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                             #"reliquary\.test is set but reliquary\.data-dir is absent"
+                             (config/data-dir))))))
+
+(deftest production-with-no-marker-and-no-properties-is-unchanged
+  (testing "outside a test context -- no reliquary.test marker at all, which
+            is the case for production, :cli, :app, and the packaged binary,
+            none of which ever set it -- an absent path property must NOT
+            throw. It must resolve to the ordinary XDG path exactly as it
+            did before this whole wave of fixes."
+    (with-sysprops {"reliquary.test" nil "reliquary.config-dir" nil "reliquary.data-dir" nil}
+      (fn []
+        (let [expected-config (io/file (or (not-empty (System/getenv "XDG_CONFIG_HOME"))
+                                           (str (System/getProperty "user.home") "/.config"))
+                                       "reliquary")
+              expected-data   (io/file (or (not-empty (System/getenv "XDG_DATA_HOME"))
+                                          (str (System/getProperty "user.home") "/.local/share"))
+                                       "reliquary")]
+          (is (= expected-config (config/config-dir))
+              "no marker, no property: normal XDG resolution, no throw")
+          (is (= expected-data (config/data-dir))
+              "no marker, no property: normal XDG resolution, no throw"))))))

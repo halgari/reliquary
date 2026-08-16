@@ -26,8 +26,12 @@
    ;; ~/.config/reliquary and ~/.local/share/reliquary unreachable from this
    ;; JVM at all, for every thread including ones no test fixture ever binds
    ;; -- catalog/refresh! writes its cache from a raw Thread, where a dynamic
-   ;; `binding` in a test never applies. See reliquary.config/prop-dir.
+   ;; `binding` in a test never applies. reliquary.test is the marker that
+   ;; makes an ABSENT or later-cleared path property fail loudly instead of
+   ;; silently falling through to the real path -- see
+   ;; reliquary.config/prop-dir-or-die.
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"
+                 "-Dreliquary.test=true"
                  "-Dreliquary.config-dir=target/test-state/config"
                  "-Dreliquary.data-dir=target/test-state/data"]
    :main-opts   ["-m" "cognitect.test-runner"]
