@@ -108,30 +108,94 @@
         (is (= (:generated (catalog/bundled)) (:generated (catalog/load!)))))
       (finally (run! io/delete-file (reverse (file-seq d)))))))
 
+(defn- with-tmp-data-dir
+  "Binds *data-dir* to a throwaway temp directory for `f`'s dynamic extent.
+
+   Hygiene only where `catalog/refresh!` is concerned: refresh! writes its
+   cache from a raw Thread, and a `binding` never crosses that -- what
+   actually keeps refresh!'s write off real user state is the
+   reliquary.data-dir JVM property the :test alias sets (consulted by
+   config/data-dir itself, not by anything thread-local). This binding still
+   matters for any call made directly on the calling thread, e.g. `load!`,
+   so every test in this namespace stays hermetic the same way regardless of
+   which path a given assertion happens to exercise."
+  [f]
+  (let [d (.toFile (Files/createTempDirectory "reliquary-cat" (make-array FileAttribute 0)))]
+    (try (binding [config/*data-dir* d] (f))
+         (finally (run! io/delete-file (reverse (file-seq d)))))))
+
 (deftest refresh-runs-on-a-daemon-thread
   ;; the handler sleeps before responding, so the refresh thread is still
   ;; alive when we inspect it; the body is invalid JSON, so the fetch stops at
-  ;; `parse` once it does respond and never reaches the cache-write step --
-  ;; safe to run without a *data-dir* override, since no thread-local binding
-  ;; would reach this background thread anyway.
-  (let [server (local-http-server "/slow" 200 (.getBytes "not json" "UTF-8") 2000)]
-    (try
-      (catalog/refresh! (server-url server "/slow") (fn [_] nil))
-      (Thread/sleep 300) ;; give the thread time to start and register itself
-      (let [t (first (filter #(= "reliquary-catalog-refresh" (.getName ^Thread %))
-                              (keys (Thread/getAllStackTraces))))]
-        (is (some? t) "the refresh thread should be observable while the fetch is in flight")
-        (is (true? (.isDaemon ^Thread t))
-            "a non-daemon thread would hold the JVM open for up to ~30s after the window closes"))
-      (finally (.stop ^HttpServer server 0)))))
+  ;; `parse` once it does respond and never reaches the cache-write step.
+  (with-tmp-data-dir
+    (fn []
+      (let [server (local-http-server "/slow" 200 (.getBytes "not json" "UTF-8") 2000)]
+        (try
+          (catalog/refresh! (server-url server "/slow") (fn [_] nil))
+          (Thread/sleep 300) ;; give the thread time to start and register itself
+          (let [t (first (filter #(= "reliquary-catalog-refresh" (.getName ^Thread %))
+                                  (keys (Thread/getAllStackTraces))))]
+            (is (some? t) "the refresh thread should be observable while the fetch is in flight")
+            (is (true? (.isDaemon ^Thread t))
+                "a non-daemon thread would hold the JVM open for up to ~30s after the window closes"))
+          (finally (.stop ^HttpServer server 0)))))))
 
 (deftest an-oversized-response-is-discarded-without-calling-on-done
-  (let [big    (byte-array (inc catalog/max-catalog-bytes) (byte 65))
-        server (local-http-server "/big" 200 big)]
+  (with-tmp-data-dir
+    (fn []
+      (let [big    (byte-array (inc catalog/max-catalog-bytes) (byte 65))
+            server (local-http-server "/big" 200 big)]
+        (try
+          (let [called (atom false)]
+            (catalog/refresh! (server-url server "/big") (fn [_] (reset! called true)))
+            (Thread/sleep 1500)
+            (is (false? @called)
+                "a body over max-catalog-bytes must be discarded like any other refresh failure"))
+          (finally (.stop ^HttpServer server 0)))))))
+
+(deftest a-successful-refresh-writes-under-the-test-property-not-real-home
+  ;; THE test finding 1 exists to prove: this is the one where refresh!
+  ;; actually succeeds -- valid JSON, newer than what's loaded, under the
+  ;; size cap -- so it reaches the cache-write step the two tests above
+  ;; dodge entirely (one via invalid JSON, one via an oversized body). And
+  ;; unlike every other test in this namespace, it deliberately binds
+  ;; NEITHER *config-dir* nor *data-dir* -- because refresh! writes from a
+  ;; raw Thread, a binding here would not even reach it. What has to save
+  ;; the real ~/.local/share/reliquary/catalog.json is the
+  ;; reliquary.data-dir JVM property the :test alias sets, consulted
+  ;; directly by config/data-dir with no thread-locality involved at all.
+  (let [real-data-dir (io/file (System/getProperty "user.home") ".local" "share" "reliquary")
+        fresh-json    (str/replace minimal "2026-01-01T00:00:00Z" "2099-06-01T00:00:00Z")
+        cache-file    (io/file (config/data-dir) "catalog.json")]
     (try
-      (let [called (atom false)]
-        (catalog/refresh! (server-url server "/big") (fn [_] (reset! called true)))
-        (Thread/sleep 1500)
-        (is (false? @called)
-            "a body over max-catalog-bytes must be discarded like any other refresh failure"))
-      (finally (.stop ^HttpServer server 0)))))
+      ;; a previous run of this exact test is idempotent content, but delete
+      ;; first anyway so the freshness comparison inside refresh! can never
+      ;; be defeated by a stale file left over from a different run.
+      (io/delete-file cache-file true)
+      (let [server (local-http-server "/fresh" 200 (.getBytes fresh-json "UTF-8"))]
+        (try
+          (let [received (promise)]
+            (catalog/refresh! (server-url server "/fresh") (fn [c] (deliver received c)))
+            (let [c (deref received 5000 :timeout)]
+              (is (not= :timeout c) "refresh! should have called on-done with the fresh catalog")
+              (is (= "2099-06-01T00:00:00Z" (:generated c)))))
+          (finally (.stop ^HttpServer server 0))))
+      (is (.exists cache-file)
+          "the cache file must exist where config/data-dir says it does")
+      (let [cache-path (.getCanonicalPath cache-file)
+            under-test (.getCanonicalPath (io/file "target" "test-state"))]
+        (is (str/starts-with? cache-path under-test)
+            (str "with no dynamic binding in scope, refresh!'s write must still land under "
+                 "target/test-state via the JVM property, not wherever XDG_DATA_HOME/$HOME "
+                 "would otherwise point -- got: " cache-path)))
+      (is (not (.exists (io/file real-data-dir "catalog.json")))
+          "the real ~/.local/share/reliquary/catalog.json must remain untouched")
+      ;; this test's whole point is proving the sysprop path is reachable and
+      ;; writable -- but that makes target/test-state/data a shared,
+      ;; process-wide location any other test using the DEFAULT (unbound)
+      ;; data-dir also reads from (e.g. cli-test's use of catalog/load!).
+      ;; Leaving a fabricated, artificially-future-dated catalog sitting
+      ;; there would silently shadow the bundled catalog for every test that
+      ;; runs after this one in the same JVM. Clean up regardless of outcome.
+      (finally (io/delete-file cache-file true)))))

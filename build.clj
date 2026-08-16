@@ -49,7 +49,7 @@
    :omit-javafx true drops the bundled JavaFX jars. Use it only for a jar
    destined for bin/package.sh, whose jlink runtime carries JavaFX as
    modules; the resulting jar will not run under a plain `java -jar`."
-  [{:keys [main omit-javafx] :or {main 'reliquary.spike.fx-window}}]
+  [{:keys [main omit-javafx] :or {main 'reliquary.main}}]
   (b/delete {:path class-dir})
   (b/copy-dir {:src-dirs ["resources"] :target-dir class-dir})
   (b/compile-clj {:basis      @basis

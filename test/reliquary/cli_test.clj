@@ -89,7 +89,7 @@
   (let [d (.toFile (java.nio.file.Files/createTempDirectory
                     "reliquary-cli" (make-array java.nio.file.attribute.FileAttribute 0)))]
     (try
-      (binding [config/*config-dir* d]
+      (binding [config/*config-dir* d config/*data-dir* d]
         (with-redefs [auth/login-qr! (fn [on-event]
                                        (on-event {:type :qr :challenge-url "https://s.team/q/1/2"})
                                        {:refresh-token "SECRET-JWT-VALUE"
