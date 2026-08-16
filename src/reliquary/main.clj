@@ -13,6 +13,7 @@
   (:gen-class)
   (:require [cljfx.api :as fx]
             [reliquary.config :as config]
+            [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
             [reliquary.ui.app :as app]
             [reliquary.ui.login :as login]
@@ -63,13 +64,43 @@
         :challenge-url nil :qr-state :waiting)
   (start-login! state))
 
+(defn usable-token
+  "config/token's value, but only when it is not expired as of `now-secs` --
+   presence on disk is not the same thing as usability. An expired token used
+   to be enough to land -main on a signed-in screen whose QR panel never
+   fetches anything and whose only working control is Sign out: a broken
+   screen dressed up as a good one. session/expired? is pure and offline (it
+   only reads the JWT's own exp claim), so this costs nothing to check before
+   ever mounting a window."
+  [now-secs]
+  (when-let [t (config/token)]
+    (when-not (session/expired? (:refresh-token t) now-secs)
+      t)))
+
+(defn initial-state
+  "The renderer's starting state map, built before `fx/mount-renderer` ever
+   runs. `:on-sign-out` is populated here -- not by a later `swap!` -- for a
+   concrete reason: app/title-bar renders a Sign out button unconditionally
+   whenever `:signed-in?` is true, wired to `:on-action on-sign-out`, and
+   cljfx cannot coerce a nil handler. A first render with `:signed-in? true`
+   and no `:on-sign-out` crashes the renderer -- this is not hypothetical, it
+   is the exact bug main_test.clj's
+   `the-initial-state-always-wires-a-sign-out-handler` guards, caught live
+   while proving the QR flow against real Steam. Building the whole map in
+   one function, called with the not-yet-populated `state` atom already in
+   hand, is what makes that wiring a thing a plain unit test can assert on
+   without mounting a real Stage."
+  [state signed-in]
+  {:screen :login
+   :status-line (if signed-in (:account signed-in) "not signed in")
+   :signed-in? (boolean signed-in)
+   :on-sign-out (fn [_] (sign-out! state))})
+
 (defn -main [& _]
   (theme/load-fonts!)
-  (let [signed-in (config/token)
-        state (atom {:screen :login
-                     :status-line (if signed-in (:account signed-in) "not signed in")
-                     :signed-in? (boolean signed-in)})]
-    (swap! state assoc :on-sign-out (fn [_] (sign-out! state)))
+  (let [signed-in (usable-token (quot (System/currentTimeMillis) 1000))
+        state (atom nil)]
+    (reset! state (initial-state state signed-in))
     (let [renderer (fx/create-renderer :middleware (fx/wrap-map-desc #'view))]
       (fx/mount-renderer state renderer)
       (when-not signed-in

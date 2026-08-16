@@ -3,12 +3,21 @@
 (ns reliquary.main-test
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [reliquary.config :as config]
             [reliquary.error :as error]
             [reliquary.main :as main]
             [reliquary.steam.auth :as auth])
-  (:import (java.nio.file Files)))
+  (:import (java.nio.file Files)
+           (java.util Base64)))
+
+(defn- jwt
+  "A minimal, unsigned-but-well-formed Steam-shaped JWT carrying only `exp`,
+   built the same way steam.auth-test does -- enough for
+   reliquary.session/expired? to read, nothing more."
+  [exp]
+  (let [enc #(.encodeToString (Base64/getUrlEncoder) (.getBytes ^String % "UTF-8"))]
+    (str (enc "{}") "." (enc (str "{\"sub\":\"1\",\"exp\":" exp "}")) ".sig")))
 
 ;; The first test below does NOT stub config/save-token! -- start-login!
 ;; really does call it. Without this isolation it would write a literal
@@ -69,3 +78,59 @@
                       main/fx-run! (fn [f] (f))]
           @(main/start-login! state)
           (is (str/includes? (str (:error @state)) "steam is down")))))))
+
+(deftest the-initial-state-always-wires-a-sign-out-handler
+  (testing "app/title-bar renders a Sign out button unconditionally whenever
+            :signed-in? is true, wired to :on-action on-sign-out -- cljfx
+            cannot coerce a nil handler, so a missing wiring here is not a
+            style nit, it is the exact crash caught live while proving the
+            QR flow against real Steam. This asserts the wiring directly,
+            without mounting a real Stage, so removing it fails a plain unit
+            test instead of only a manual run."
+    (is (fn? (:on-sign-out (main/initial-state (atom {}) {:refresh-token "x" :account "a"})))
+        "signed-in state must carry a real handler")
+    (is (fn? (:on-sign-out (main/initial-state (atom {}) nil)))
+        "wired unconditionally -- the atom's shape must not depend on this")))
+
+(deftest an-expired-token-is-not-usable
+  (with-tmp
+    (fn []
+      (config/save-token! {:refresh-token (jwt 1) :account "someone"})
+      (is (nil? (main/usable-token (quot (System/currentTimeMillis) 1000)))
+          "presence on disk is not enough -- an expired token must not produce a signed-in state")
+      (is (false? (:signed-in? (main/initial-state (atom {}) (main/usable-token
+                                                               (quot (System/currentTimeMillis) 1000)))))
+          "an expired token must land on the login screen, not a broken signed-in one"))))
+
+(deftest a-valid-unexpired-token-is-usable
+  (with-tmp
+    (fn []
+      (config/save-token! {:refresh-token (jwt 4102444800) :account "someone"}) ; year 2100
+      (is (some? (main/usable-token (quot (System/currentTimeMillis) 1000)))
+          "a token that has not yet expired is exactly what \"usable\" means"))))
+
+(deftest every-state-mutation-during-start-login-goes-through-fx-run
+  (testing "the four other tests above all replace fx-run! with identity, so
+            none of them prove marshalling actually happens -- a start-login!
+            that mutated `state` directly, bypassing fx-run!, would still
+            pass every one of them. This watches the atom itself and records
+            whether a change ever landed outside fx-run!'s dynamic extent."
+    (with-tmp
+      (fn []
+        (let [state (atom {})
+              in-fx-run? (atom false)
+              violations (atom [])]
+          (add-watch state ::probe
+                     (fn [_ _ _ _]
+                       (when-not @in-fx-run?
+                         (swap! violations conj @state))))
+          (with-redefs [auth/login-qr! (fn [on-event]
+                                          (on-event {:type :qr :challenge-url "https://s.team/q/9"})
+                                          {:refresh-token "SECRET" :account "someone"})
+                        main/fx-run! (fn [f]
+                                       (reset! in-fx-run? true)
+                                       (try (f) (finally (reset! in-fx-run? false))))]
+            @(main/start-login! state))
+          (remove-watch state ::probe)
+          (is (empty? @violations)
+              "every mutation start-login! made to state must have happened inside fx-run!"))))))

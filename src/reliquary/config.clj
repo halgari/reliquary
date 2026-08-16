@@ -24,8 +24,60 @@
 (def ^:dynamic *config-dir* nil)
 (def ^:dynamic *data-dir* nil)
 
-(defn config-dir ^File [] (or *config-dir* (xdg "XDG_CONFIG_HOME" "/.config")))
-(defn data-dir   ^File [] (or *data-dir*   (xdg "XDG_DATA_HOME"   "/.local/share")))
+(defn- prop-dir
+  "The directory named by JVM property `prop-name`, or nil.
+
+   This is the safety net a `binding` cannot be: `catalog/refresh!` writes
+   the cache from a raw `Thread`, and dynamic bindings do not cross a raw
+   thread. A JVM system property is not thread-local -- it is visible to
+   every thread in the process, including one this namespace never sees
+   started -- so it is the one redirect mechanism that actually reaches
+   there. The :test alias sets reliquary.config-dir / reliquary.data-dir to
+   somewhere under target/test-state, which makes the real paths
+   unreachable from a test JVM regardless of which namespace's fixture
+   discipline does or doesn't bind *config-dir*/*data-dir*."
+  [prop-name]
+  (some-> (System/getProperty prop-name) not-empty io/file))
+
+(defn- guard-against-the-real-path!
+  "The loud backstop for `prop-dir`: refuse to resolve onto (or into, or
+   out from) the REAL default directory this OS would hand back with no
+   override at all -- the one place an actual Steam refresh token can
+   live. A misconfigured property is a mistake in test setup, not a
+   licence to risk the user's credential; this makes that mistake fail the
+   build instead of silently overwriting one.
+
+   Deliberately scoped to landing on the real default path, not merely
+   living under $HOME: this checkout itself lives under $HOME on plenty of
+   real machines (this one included), and target/test-state -- exactly
+   where the :test alias points `resolved` -- is unavoidably a descendant
+   of $HOME too. A literal 'nothing under $HOME' rule would make the suite
+   unrunnable from a checkout like this one; the actual hazard is landing
+   on the specific path the real credentials live in, and that is what
+   this checks."
+  [^File resolved ^File real-default]
+  (let [resolved-path (.getCanonicalPath resolved)
+        real-path     (.getCanonicalPath real-default)]
+    (when (or (= resolved-path real-path)
+              (.startsWith resolved-path (str real-path File/separator))
+              (.startsWith real-path (str resolved-path File/separator)))
+      (throw (ex-info
+              (str "reliquary.config-dir/data-dir test override resolves onto the real "
+                   "config/data path -- refusing to risk the stored credential")
+              {:resolved resolved-path :real real-path}))))
+  resolved)
+
+(defn config-dir ^File []
+  (or *config-dir*
+      (when-let [p (prop-dir "reliquary.config-dir")]
+        (guard-against-the-real-path! p (xdg "XDG_CONFIG_HOME" "/.config")))
+      (xdg "XDG_CONFIG_HOME" "/.config")))
+
+(defn data-dir ^File []
+  (or *data-dir*
+      (when-let [p (prop-dir "reliquary.data-dir")]
+        (guard-against-the-real-path! p (xdg "XDG_DATA_HOME" "/.local/share")))
+      (xdg "XDG_DATA_HOME" "/.local/share")))
 
 (defn- config-file ^File [] (io/file (config-dir) "config.edn"))
 
