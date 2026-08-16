@@ -21,3 +21,14 @@
 
 (deftest the-window-carries-the-app-name
   (is (= "Reliquary" (:title (app/view {:screen :login})))))
+
+(deftest the-wordmark-tracking-is-pinned
+  (testing "tracked-text's docstring names the cost: this is no longer the string \"RELIQUARY\",
+            so a screen reader spells it out letter by letter -- pinning it here means the next
+            person to \"tidy up\" the odd-looking spaced string cannot silently drop the tracking"
+    (let [tracked (#'app/tracked-text "RELIQUARY")]
+      (is (= (clojure.string/join "\u2009" "RELIQUARY") tracked)
+          "U+2009 THIN SPACE between every glyph, exactly")
+      (is (not= "RELIQUARY" tracked))
+      (is (str/includes? (pr-str (app/title-bar {})) tracked)
+          "the title bar actually renders the tracked string, not just computes it"))))

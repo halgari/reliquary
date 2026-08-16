@@ -22,7 +22,16 @@
 (defn- tracked-text
   "JavaFX has no CSS `letter-spacing`, so `.2em` tracking on the wordmark is
    achieved by spacing the characters themselves -- inserting a thin space
-   (U+2009) between each glyph -- rather than dropping the tracking."
+   (U+2009) between each glyph -- rather than dropping the tracking.
+
+   This has real costs, because the rendered label's text is no longer the
+   string \"RELIQUARY\": exact-match assertions against it must account for
+   the inserted thin spaces, copy/pasting the wordmark yields a
+   thin-space-separated string rather than the word, and -- the one that
+   matters most -- a screen reader spells the word out letter by letter
+   instead of reading it as \"Reliquary\". Whoever wires up accessibility
+   later needs an accessible-text override here; this function alone is not
+   screen-reader-safe."
   [s]
   (str/join " " (map str s)))
 

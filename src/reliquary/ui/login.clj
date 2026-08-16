@@ -77,7 +77,7 @@
         (field {:label "Password" :value password :on-change on-password :secret? true}))
       {:fx/type :button :text "Sign in" :disable (not ready?)
        :on-action (or on-submit (fn [_]))
-       :min-height 42
+       :min-height 42 :max-width Double/MAX_VALUE
        :style (theme/style (if ready?
                               {:-fx-background-color (:gold c) :-fx-text-fill (:bg c)
                                :-fx-background-radius 3 :-fx-font-size 14}
@@ -133,17 +133,34 @@
        :style (theme/style {:-fx-font-size 12 :-fx-text-fill (:text-muted c)
                              :-fx-text-alignment "center"})}]}))
 
+(defn- half
+  "Pins a panel to an equal, content-independent share of the split.
+
+   `:h-box/hgrow :always` alone is not enough: HBox first sizes every child
+   to its own preferred width, then distributes only the LEFTOVER space to
+   growing children. Two children whose preferred widths differ -- e.g. the
+   right panel widening because the Guard-code caption is longer than
+   \"Password\" -- come out different sizes even with matching hgrow, and the
+   divider visibly jumps sideways when the panel switches. Flattening
+   `:min-width`/`:pref-width` to 0 removes the content-driven floor, so the
+   only thing left to size the child is the even hgrow split; unbounded
+   `:max-width` lets it actually take that share instead of capping out at
+   its (now-zero) preferred width."
+  [desc]
+  (assoc desc :h-box/hgrow :always
+              :min-width 0 :pref-width 0 :max-width Double/MAX_VALUE))
+
 (defn view
   "The two halves, split by a hairline that fades at both ends -- a 1px region
    with a vertical gradient from transparent through `line` and back."
   [state]
   {:fx/type :h-box
    :children
-   [(assoc (qr-panel state) :h-box/hgrow :always)
+   [(half (qr-panel state))
     {:fx/type :region
      :min-width 1 :max-width 1
      :style (theme/style
              {:-fx-background-color
               (str "linear-gradient(to bottom, transparent, " (:line c)
                    " 20%, " (:line c) " 80%, transparent)")})}
-    (assoc (credential-panel state) :h-box/hgrow :always)]})
+    (half (credential-panel state))]})
