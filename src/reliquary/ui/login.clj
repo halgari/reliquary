@@ -111,13 +111,22 @@
                             :on-created #(when challenge-url (draw-qr! % challenge-url))
                             :desc {:fx/type :canvas :width qr-box :height qr-box}}]
                    approved?
+                   ;; The mockup's own values, not a re-guess: a LIGHT
+                   ;; 92%-opaque overlay (rgba(242,237,227,.92)) with
+                   ;; near-black text (:bg, #0C0C0C). The card underneath is
+                   ;; already the same light #F2F0EE, so this reads as the
+                   ;; card itself going opaque -- not an odd bright patch
+                   ;; dropped on a dark window. It also keeps the pulsing
+                   ;; dot below as the ONLY gold element in this region
+                   ;; (Gilt: one gold element per screen region); an earlier
+                   ;; draft used gold text here too and doubled up.
                    (conj {:fx/type :v-box :alignment :center
-                          :style (theme/style {:-fx-background-color "rgba(12,12,12,0.82)"
+                          :style (theme/style {:-fx-background-color "rgba(242,237,227,0.92)"
                                                 :-fx-background-radius 6})
                           :children [{:fx/type :label :text "APPROVED"
                                       :style (theme/style {:-fx-font-family (theme/mono-font)
                                                             :-fx-font-size 13
-                                                            :-fx-text-fill (:gold c)})}]}))}
+                                                            :-fx-text-fill (:bg c)})}]}))}
       {:fx/type :h-box :alignment :center :spacing 9
        :children [{:fx/type :region
                    :min-width 7 :min-height 7 :max-width 7 :max-height 7
@@ -150,17 +159,42 @@
   (assoc desc :h-box/hgrow :always
               :min-width 0 :pref-width 0 :max-width Double/MAX_VALUE))
 
+(defn- error-strip
+  "A failed sign-in attempt (Task 5's `start-login!` catches Steam's
+   ExceptionInfo and puts `(ex-message e)` here). Gilt is explicit: gold text
+   on `surface`, never a red banner -- an error is not an emergency, it is
+   information. Spans the full width beneath both halves rather than sitting
+   under just one panel, because a failure here can originate from either
+   side: the QR poll (Steam unreachable, challenge expired) or the credential
+   submit (bad password, rejected code). `:error` today is a plain message
+   string, not a {:message :code} map, so it renders in the UI font
+   throughout; a future caller that wants to show a distinct Steam error code
+   alongside the prose should render that portion in `theme/mono-font`, per
+   Gilt's \"gold text on surface with a mono code\", rather than growing new
+   parsing logic in here to split a plain string apart."
+  [message]
+  {:fx/type :h-box :alignment :center-left
+   :padding {:top 14 :bottom 14 :left 24 :right 24}
+   :style (theme/style {:-fx-background-color (:surface c)})
+   :children [{:fx/type :label :text message :wrap-text true
+               :style (theme/style {:-fx-text-fill (:gold c) :-fx-font-size 13})}]})
+
 (defn view
   "The two halves, split by a hairline that fades at both ends -- a 1px region
-   with a vertical gradient from transparent through `line` and back."
-  [state]
-  {:fx/type :h-box
-   :children
-   [(half (qr-panel state))
-    {:fx/type :region
-     :min-width 1 :max-width 1
-     :style (theme/style
-             {:-fx-background-color
-              (str "linear-gradient(to bottom, transparent, " (:line c)
-                   " 20%, " (:line c) " 80%, transparent)")})}
-    (half (credential-panel state))]})
+   with a vertical gradient from transparent through `line` and back -- plus,
+   when `:error` is set, a strip beneath both spanning the full width."
+  [{:keys [error] :as state}]
+  (let [split {:fx/type :h-box
+               :children
+               [(half (qr-panel state))
+                {:fx/type :region
+                 :min-width 1 :max-width 1
+                 :style (theme/style
+                         {:-fx-background-color
+                          (str "linear-gradient(to bottom, transparent, " (:line c)
+                               " 20%, " (:line c) " 80%, transparent)")})}
+                (half (credential-panel state))]}]
+    (if error
+      {:fx/type :v-box
+       :children [split (error-strip error)]}
+      split)))
