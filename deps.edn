@@ -50,6 +50,13 @@
                "--sun-misc-unsafe-memory-access=allow"]
    :main-opts ["-m" "reliquary.main"]}
 
+  ;; the catalog generator: needs a live Steam session to resolve the install
+  ;; size of versions that community downgrade guides never published.
+  :catalog-tool
+  {:extra-paths ["tool/catalog"]
+   :jvm-opts    ["--enable-native-access=ALL-UNNAMED"
+                 "--sun-misc-unsafe-memory-access=allow"]}
+
   :dev
   {:extra-paths ["test" "test/resources" "spike"]
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"]}

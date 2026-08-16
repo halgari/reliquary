@@ -16,7 +16,7 @@
            (javax.imageio ImageIO)))
 
 (def ^:private game
-  ;; A real catalog game (resources/catalog.json, appid 1086940) with real
+  ;; A real catalog game (resources/catalog.edn, appid 1086940) with real
   ;; quotes and a real screenshot list, per the task brief: "the quote must
   ;; still be readable ... use a real game in your renders."
   {:appid 1086940

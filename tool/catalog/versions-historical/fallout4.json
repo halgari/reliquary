@@ -1,71 +1,219 @@
 {
   "appid": 377160,
-  "source_notes": "Fallout 4 (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from downgrade guides written by the modding community, who need exact depot/manifest pairs because F4SE breaks on every binary update. Three community-canonical eras exist: 1.10.163 (pre-'next-gen', stable for ~7 years, F4SE 0.6.23), 1.10.984 (the 'next-gen update', released in two steps on 2024-04-25 as 1.10.980 then hotfixed 2024-05-13 to 1.10.984, F4SE 0.7.2), and 1.11.221 (current, post 'Anniversary Update'/Creations Menu update of 2025-11-10 plus follow-up patches, F4SE 0.7.8 per https://f4se.silverlock.org/ as of 2026-08). 1.11.221 is CURRENT and retrievable via PICS directly, so it is intentionally omitted here. 1.10.980 (the original next-gen build, distinct from its 1.10.984 hotfix) and 1.10.984's precise transient predecessor 1.11.137 ('Creations Menu'/Patch 1, 2025-11-10 to ~2025-11-21) were NOT separately recoverable: every downgrade guide found treats 980/984 as interchangeable (F4SE required no update between them) and none published depot manifests for 1.11.137 specifically, since it was superseded within about two weeks by 1.11.221 -- so no downgrade demand for it ever arose. 1.10.163's exact release date was not confirmed (multiple pre-next-gen point patches existed over 2016-2022; the modding community treats the whole pre-2024-04-25 state as one target and no guide dated the specific 1.10.163 build). depot 377161 = base game 'content_a', 377162 = exe, 377163 = 'content_b', 377164-377168/393881-393884/393891/393899 = per-language depots (377164=English), 435870/435871 = Automatron (base/English), 435880 = Wasteland Workshop, 435881/435882 = Far Harbor, 480630/480631 = Contraptions/Vault-Tec Workshop, 393885/393895 = Nuka-World depots, 435872-435878/435888/490650 = per-language DLC depots. Depot/manifest labels taken verbatim from the Steam Community guides that annotate each download_depot line.",
+  "source_notes": "Fallout 4 (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from downgrade guides written by the modding community, who need exact depot\/manifest pairs because F4SE breaks on every binary update. Three community-canonical eras exist: 1.10.163 (pre-'next-gen', stable for ~7 years, F4SE 0.6.23), 1.10.984 (the 'next-gen update', released in two steps on 2024-04-25 as 1.10.980 then hotfixed 2024-05-13 to 1.10.984, F4SE 0.7.2), and 1.11.221 (current, post 'Anniversary Update'\/Creations Menu update of 2025-11-10 plus follow-up patches, F4SE 0.7.8 per https:\/\/f4se.silverlock.org\/ as of 2026-08). 1.11.221 is CURRENT and retrievable via PICS directly, so it is intentionally omitted here. 1.10.980 (the original next-gen build, distinct from its 1.10.984 hotfix) and 1.10.984's precise transient predecessor 1.11.137 ('Creations Menu'\/Patch 1, 2025-11-10 to ~2025-11-21) were NOT separately recoverable: every downgrade guide found treats 980\/984 as interchangeable (F4SE required no update between them) and none published depot manifests for 1.11.137 specifically, since it was superseded within about two weeks by 1.11.221 -- so no downgrade demand for it ever arose. 1.10.163's exact release date was not confirmed (multiple pre-next-gen point patches existed over 2016-2022; the modding community treats the whole pre-2024-04-25 state as one target and no guide dated the specific 1.10.163 build). depot 377161 = base game 'content_a', 377162 = exe, 377163 = 'content_b', 377164-377168\/393881-393884\/393891\/393899 = per-language depots (377164=English), 435870\/435871 = Automatron (base\/English), 435880 = Wasteland Workshop, 435881\/435882 = Far Harbor, 480630\/480631 = Contraptions\/Vault-Tec Workshop, 393885\/393895 = Nuka-World depots, 435872-435878\/435888\/490650 = per-language DLC depots. Depot\/manifest labels taken verbatim from the Steam Community guides that annotate each download_depot line.",
   "versions": [
     {
-      "id": "1_10_163",
-      "label": "1.10.163 - pre-next-gen (F4SE-stable)",
-      "build": null,
       "date": null,
       "depots": [
-        {"depot-id": 377161, "manifest-gid": "7497069378349273908", "label": "Fallout 4 content_a"},
-        {"depot-id": 377162, "manifest-gid": "5847529232406005096", "label": "Fallout 4 exe"},
-        {"depot-id": 377163, "manifest-gid": "5819088023757897745", "label": "Fallout 4 content_b"},
-        {"depot-id": 377164, "manifest-gid": "2178106366609958945", "label": "Fallout 4 english"},
-        {"depot-id": 435870, "manifest-gid": "1691678129192680960", "label": "Automatron"},
-        {"depot-id": 435871, "manifest-gid": "5106118861901111234", "label": "Automatron english"},
-        {"depot-id": 435880, "manifest-gid": "1255562923187931216", "label": "Wasteland Workshop"},
-        {"depot-id": 435881, "manifest-gid": "1207717296920736193", "label": "Far Harbor"},
-        {"depot-id": 435882, "manifest-gid": "8482181819175811242", "label": "Far Harbor (2)"},
-        {"depot-id": 480630, "manifest-gid": "5527412439359349504", "label": "Contraptions Workshop"},
-        {"depot-id": 480631, "manifest-gid": "6588493486198824788", "label": "Vault-Tec Workshop"},
-        {"depot-id": 393885, "manifest-gid": "5000262035721758737", "label": "Nuka-World"},
-        {"depot-id": 393895, "manifest-gid": "7677765994120765493", "label": "Nuka-World (2)"},
-        {"depot-id": 377165, "manifest-gid": "7549549550652702123", "label": "Fallout 4 french"},
-        {"depot-id": 377166, "manifest-gid": "6854162778963425477", "label": "Fallout 4 german"},
-        {"depot-id": 377167, "manifest-gid": "783101348965844295", "label": "Fallout 4 italian"},
-        {"depot-id": 377168, "manifest-gid": "7717372852115364102", "label": "Fallout 4 spanish"},
-        {"depot-id": 393881, "manifest-gid": "4735225695214536532", "label": "Fallout 4 russian"},
-        {"depot-id": 393882, "manifest-gid": "7540680803954664080", "label": "Fallout 4 portuguese-br"},
-        {"depot-id": 393884, "manifest-gid": "3455288010746962666", "label": "Fallout 4 japanese"},
-        {"depot-id": 404091, "manifest-gid": "6756984187996423348", "label": "Automatron japanese"},
-        {"depot-id": 435872, "manifest-gid": "5590419866095647350", "label": "Automatron french"},
-        {"depot-id": 435873, "manifest-gid": "2207548206398235202", "label": "Automatron german"},
-        {"depot-id": 435874, "manifest-gid": "9032251103390457158", "label": "Automatron italian"},
-        {"depot-id": 435875, "manifest-gid": "2953236065717816833", "label": "Automatron spanish"},
-        {"depot-id": 435877, "manifest-gid": "2675794883952625475", "label": "Automatron russian"},
-        {"depot-id": 435878, "manifest-gid": "8276750634369029613", "label": "Automatron portuguese-br"}
+        {
+          "depot-id": 377161,
+          "manifest-gid": "7497069378349273908",
+          "label": "Fallout 4 content_a"
+        },
+        {
+          "depot-id": 377162,
+          "manifest-gid": "5847529232406005096",
+          "label": "Fallout 4 exe"
+        },
+        {
+          "depot-id": 377163,
+          "manifest-gid": "5819088023757897745",
+          "label": "Fallout 4 content_b"
+        },
+        {
+          "depot-id": 377164,
+          "manifest-gid": "2178106366609958945",
+          "label": "Fallout 4 english"
+        },
+        {
+          "depot-id": 435870,
+          "manifest-gid": "1691678129192680960",
+          "label": "Automatron"
+        },
+        {
+          "depot-id": 435871,
+          "manifest-gid": "5106118861901111234",
+          "label": "Automatron english"
+        },
+        {
+          "depot-id": 435880,
+          "manifest-gid": "1255562923187931216",
+          "label": "Wasteland Workshop"
+        },
+        {
+          "depot-id": 435881,
+          "manifest-gid": "1207717296920736193",
+          "label": "Far Harbor"
+        },
+        {
+          "depot-id": 435882,
+          "manifest-gid": "8482181819175811242",
+          "label": "Far Harbor (2)"
+        },
+        {
+          "depot-id": 480630,
+          "manifest-gid": "5527412439359349504",
+          "label": "Contraptions Workshop"
+        },
+        {
+          "depot-id": 480631,
+          "manifest-gid": "6588493486198824788",
+          "label": "Vault-Tec Workshop"
+        },
+        {
+          "depot-id": 393885,
+          "manifest-gid": "5000262035721758737",
+          "label": "Nuka-World"
+        },
+        {
+          "depot-id": 393895,
+          "manifest-gid": "7677765994120765493",
+          "label": "Nuka-World (2)"
+        },
+        {
+          "depot-id": 377165,
+          "manifest-gid": "7549549550652702123",
+          "label": "Fallout 4 french"
+        },
+        {
+          "depot-id": 377166,
+          "manifest-gid": "6854162778963425477",
+          "label": "Fallout 4 german"
+        },
+        {
+          "depot-id": 377167,
+          "manifest-gid": "783101348965844295",
+          "label": "Fallout 4 italian"
+        },
+        {
+          "depot-id": 377168,
+          "manifest-gid": "7717372852115364102",
+          "label": "Fallout 4 spanish"
+        },
+        {
+          "depot-id": 393881,
+          "manifest-gid": "4735225695214536532",
+          "label": "Fallout 4 russian"
+        },
+        {
+          "depot-id": 393882,
+          "manifest-gid": "7540680803954664080",
+          "label": "Fallout 4 portuguese-br"
+        },
+        {
+          "depot-id": 393884,
+          "manifest-gid": "3455288010746962666",
+          "label": "Fallout 4 japanese"
+        },
+        {
+          "depot-id": 404091,
+          "manifest-gid": "6756984187996423348",
+          "label": "Automatron japanese"
+        },
+        {
+          "depot-id": 435872,
+          "manifest-gid": "5590419866095647350",
+          "label": "Automatron french"
+        },
+        {
+          "depot-id": 435873,
+          "manifest-gid": "2207548206398235202",
+          "label": "Automatron german"
+        },
+        {
+          "depot-id": 435874,
+          "manifest-gid": "9032251103390457158",
+          "label": "Automatron italian"
+        },
+        {
+          "depot-id": 435875,
+          "manifest-gid": "2953236065717816833",
+          "label": "Automatron spanish"
+        },
+        {
+          "depot-id": 435877,
+          "manifest-gid": "2675794883952625475",
+          "label": "Automatron russian"
+        },
+        {
+          "depot-id": 435878,
+          "manifest-gid": "8276750634369029613",
+          "label": "Automatron portuguese-br"
+        }
       ],
       "sources": [
-        "https://raw.githubusercontent.com/PangoRules/fallout-4-downgrader/main/downgrade_fo4.zsh",
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3232095313",
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3247930923",
-        "https://www.sportskeeda.com/esports/fallout-4-anniversary-edition-downgrade-rollback"
+        "https:\/\/raw.githubusercontent.com\/PangoRules\/fallout-4-downgrader\/main\/downgrade_fo4.zsh",
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3232095313",
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3247930923",
+        "https:\/\/www.sportskeeda.com\/esports\/fallout-4-anniversary-edition-downgrade-rollback"
       ],
-      "confidence": "high",
-      "note": "Base game (377161-377164), Automatron (435870/435871), and Wasteland Workshop (435880) manifests independently corroborated by 4 separate sources (a GitHub script, two Steam Community guides by different authors, and a games-journalism article), all in exact agreement. Other DLC/language depots corroborated by at least 2 of these sources except where flagged low above."
+      "note": "Base game (377161-377164), Automatron (435870\/435871), and Wasteland Workshop (435880) manifests independently corroborated by 4 separate sources (a GitHub script, two Steam Community guides by different authors, and a games-journalism article), all in exact agreement. Other DLC\/language depots corroborated by at least 2 of these sources except where flagged low above.",
+      "build": null,
+      "label": "1.10.163 - pre-next-gen (F4SE-stable)",
+      "id": "1_10_163",
+      "bytes": 84783989454,
+      "confidence": "high"
     },
     {
-      "id": "1_10_984",
-      "label": "1.10.984 - next-gen update 2 (F4SE 0.7.2, pre-Anniversary)",
-      "build": null,
       "date": "2024-05-13",
       "depots": [
-        {"depot-id": 377161, "manifest-gid": "7332110922360867314", "label": "Fallout 4 content_a"},
-        {"depot-id": 377162, "manifest-gid": "5698952341602575696", "label": "Fallout 4 exe"},
-        {"depot-id": 377163, "manifest-gid": "8681102885670959037", "label": "Fallout 4 content_b"},
-        {"depot-id": 435871, "manifest-gid": "7785009542965564688", "label": "Automatron english"},
-        {"depot-id": 435880, "manifest-gid": "366079256218893805", "label": "Wasteland Workshop"},
-        {"depot-id": 377164, "manifest-gid": "8492427313392140315", "label": "Fallout 4 english", "confidence": "low", "note": "single source (sportskeeda) only"},
-        {"depot-id": 435870, "manifest-gid": "1213339795579796878", "label": "Automatron", "confidence": "low", "note": "single source (sportskeeda) only"},
-        {"depot-id": 393885, "manifest-gid": "5000262035721758737", "label": "Nuka-World", "confidence": "low", "note": "single source (steamcommunity guide 3604110005) listing it under 1.10.984; identical value to the 1.10.163 manifest for the same depot, so it is plausible this depot simply never changed rather than being a distinct 984-era manifest -- recorded as-is but not independently corroborated in the 984 context"}
+        {
+          "depot-id": 377161,
+          "manifest-gid": "7332110922360867314",
+          "label": "Fallout 4 content_a"
+        },
+        {
+          "depot-id": 377162,
+          "manifest-gid": "5698952341602575696",
+          "label": "Fallout 4 exe"
+        },
+        {
+          "depot-id": 377163,
+          "manifest-gid": "8681102885670959037",
+          "label": "Fallout 4 content_b"
+        },
+        {
+          "depot-id": 435871,
+          "manifest-gid": "7785009542965564688",
+          "label": "Automatron english"
+        },
+        {
+          "depot-id": 435880,
+          "manifest-gid": "366079256218893805",
+          "label": "Wasteland Workshop"
+        },
+        {
+          "depot-id": 377164,
+          "manifest-gid": "8492427313392140315",
+          "label": "Fallout 4 english",
+          "confidence": "low",
+          "note": "single source (sportskeeda) only"
+        },
+        {
+          "depot-id": 435870,
+          "manifest-gid": "1213339795579796878",
+          "label": "Automatron",
+          "confidence": "low",
+          "note": "single source (sportskeeda) only"
+        },
+        {
+          "depot-id": 393885,
+          "manifest-gid": "5000262035721758737",
+          "label": "Nuka-World",
+          "confidence": "low",
+          "note": "single source (steamcommunity guide 3604110005) listing it under 1.10.984; identical value to the 1.10.163 manifest for the same depot, so it is plausible this depot simply never changed rather than being a distinct 984-era manifest -- recorded as-is but not independently corroborated in the 984 context"
+        }
       ],
       "sources": [
-        "https://steamcommunity.com/sharedfiles/filedetails/?id=3604110005",
-        "https://www.sportskeeda.com/esports/fallout-4-anniversary-edition-downgrade-rollback"
+        "https:\/\/steamcommunity.com\/sharedfiles\/filedetails\/?id=3604110005",
+        "https:\/\/www.sportskeeda.com\/esports\/fallout-4-anniversary-edition-downgrade-rollback"
       ],
-      "confidence": "high",
-      "note": "1.10.984 was the game's version from 2024-05-13 until the 2025-11-10 Anniversary/Creations Menu update; base game depots (377161-377163) and Automatron-english/Wasteland-Workshop manifests agree exactly between a Steam Community downgrade guide (posted Nov 2025) and an independent games-journalism article (Sportskeeda, Nov 2025) written after the Anniversary update shipped. English-language and base-Automatron depots, and the Nuka-World depot, are single-sourced and flagged low individually."
+      "note": "1.10.984 was the game's version from 2024-05-13 until the 2025-11-10 Anniversary\/Creations Menu update; base game depots (377161-377163) and Automatron-english\/Wasteland-Workshop manifests agree exactly between a Steam Community downgrade guide (posted Nov 2025) and an independent games-journalism article (Sportskeeda, Nov 2025) written after the Anniversary update shipped. English-language and base-Automatron depots, and the Nuka-World depot, are single-sourced and flagged low individually.",
+      "build": null,
+      "label": "1.10.984 - next-gen update 2 (F4SE 0.7.2, pre-Anniversary)",
+      "id": "1_10_984",
+      "bytes": 31289015478,
+      "confidence": "high"
     }
   ]
 }
