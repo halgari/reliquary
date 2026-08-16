@@ -70,7 +70,15 @@
     "size unknown"))
 
 (defn build-label
-  "'build N', or 'build unknown' when `build` is empty/nil -- the same
+  "DEPRECATED, unused by the view. Kept only so the catalog's `:build` field
+   has a renderer if one is ever wanted again.
+
+   The version row no longer shows a build id: it is Valve's own ordinal for a
+   build, not the version the user is choosing and not what identifies the
+   content, and it was blank on nine of Skyrim SE's ten rows. The release date
+   says more and every version has one.
+
+   'build N', or 'build unknown' when `build` is empty/nil -- the same
    community-sourced gap as `size-label`, for the build number instead of
    the byte count."
   [build]
@@ -254,7 +262,7 @@
                                        :-fx-font-size 13
                                        :-fx-text-fill (:text c)})}]}
     {:fx/type :h-box
-     :children [{:fx/type :label :text (str (build-label (:build version)) " · " (:date version))
+     :children [{:fx/type :label :text (str (:date version))
                  :style (theme/style {:-fx-font-family (theme/mono-font)
                                        :-fx-font-size 11
                                        :-fx-text-fill (:text-muted c)})}

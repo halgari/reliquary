@@ -19,14 +19,17 @@
     (is (str/includes? s "The Elder Scrolls V: Skyrim Special Edition is ready"))
     (is (str/includes? s "/install/skyrim"))
     (is (str/includes? s "Latest — public"))
-    (is (str/includes? s "build 13189953"))
+    (is (not (str/includes? s "build"))
+        "the build id is Valve's own ordinal, not the version the user chose --
+         it was removed from every screen deliberately")
     (is (str/includes? s "27.7 GB verified"))))
 
 (deftest a-version-with-no-known-build-or-size-says-so-rather-than-lying
   (testing "community-sourced catalog versions -- e.g. Skyrim SE's 1.5.97 -- genuinely
             lack these fields; bytes 0 / build \"\" must never render as \"0.0 GB\""
     (let [s (pr-str (done/view {:game game :version unknown-version :path "/install/skyrim"}))]
-      (is (str/includes? s "build unknown"))
+      (is (not (str/includes? s "build"))
+        "no build id, so no 'build unknown' either")
       (is (str/includes? s "size unknown"))
       (is (not (str/includes? s "0.0 GB"))))))
 

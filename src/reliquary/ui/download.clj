@@ -68,10 +68,6 @@
   [n]
   (if (and (finite-num? n) (pos? n)) (fmt-bytes n) "size unknown"))
 
-(defn- fmt-build
-  [build]
-  (if (seq (str build)) (str "build " build) "build unknown"))
-
 (defn- fmt-rate
   [bps]
   (let [bps (if (and (finite-num? bps) (pos? bps)) (double bps) 0.0)]
@@ -162,7 +158,7 @@
        :style (theme/style {:-fx-font-family (theme/ui-bold-font) :-fx-font-size 25
                              :-fx-text-fill (:text c)})}
       {:fx/type :label
-       :text (str (:label version) " · " (fmt-build (:build version)) " · "
+       :text (str (:label version) " · "
                   (fmt-size (:bytes version)))
        :max-width header-text-width
        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12

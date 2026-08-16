@@ -73,16 +73,13 @@
 ;; versions genuinely do not know their build or their size, and rendering
 ;; that as "" or "0.0 GB" would be a lie the user acts on.
 
-(defn- fmt-build [build]
-  (if (seq build) (str "build " build) "build unknown"))
-
 (defn- fmt-size [bytes]
   (if (and bytes (pos? bytes))
     (str (format "%.1f GB" (/ (double bytes) (* 1024.0 1024 1024))) " verified")
     "size unknown"))
 
 (defn- meta-line [version]
-  (str (:label version) " · " (fmt-build (:build version)) " · " (fmt-size (:bytes version))))
+  (str (:label version) " · " (fmt-size (:bytes version))))
 
 ;; ---------------------------------------------------------------------------
 ;; pieces

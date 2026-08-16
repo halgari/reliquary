@@ -94,9 +94,11 @@
       (println)
       (println (format "%-8s %s" (str (:appid g)) (:title g)))
       (doseq [v (:versions g)]
+        ;; No build id. It is Valve's own ordinal for a build -- not the
+        ;; version the user is choosing, and not what identifies the content.
+        ;; The release date says more and every version has one.
         (println (format "   %-26s %-14s %s"
-                         (:id v) (gb (:bytes v))
-                         (if (seq (:build v)) (str "build " (:build v)) "build unknown")))))
+                         (:id v) (gb (:bytes v)) (or (:date v) "")))))
     0))
 
 (defn parse
