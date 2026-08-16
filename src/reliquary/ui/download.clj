@@ -183,6 +183,12 @@
 (def ^:private spark-recent 5)
 (def ^:private spark-bar-w (/ (- spark-w (* (dec spark-n) spark-gap)) spark-n))
 
+(def ^:private spark-gutter
+  "The mockup's gap between the sparkline and the time/percent group. Wide
+   enough that a 34px clock -- `59:59` is as wide as this gets -- never
+   crowds the last bar."
+  26.0)
+
 (defn- padded-samples
   "Exactly `spark-n` values, oldest first: real samples on the right, zero
    padding on the left for whatever history doesn't exist yet. Never
@@ -209,10 +215,23 @@
      :style (theme/style {:-fx-background-color colour})}))
 
 (defn- sparkline
+  "48 bars in exactly `spark-w` pixels.
+
+   `:snap-to-pixel false` is what actually keeps that promise, and it is not
+   a nicety. A bar is 3.458px wide (260 minus 47 two-pixel gaps, over 48),
+   and JavaFX rounds every child up to a whole pixel by default -- 4px each,
+   so the row lays out at 48*4 + 47*2 = 286px. HBox treats a children-derived
+   min width as a floor that beats `:max-width`, so the box silently grew
+   26px past its declared 260 and the last bars ran INTO the `Time remaining`
+   clock beside it. That is the collision that shipped in the first live
+   screenshot. Turning snapping off honours the fractional width and the row
+   measures 260px, which is what every other number on this row was sized
+   against."
   [samples paused?]
   (let [padded (padded-samples samples)
         peak   (apply max 0.0 padded)]
     {:fx/type :h-box
+     :snap-to-pixel false
      :min-width spark-w :max-width spark-w
      :min-height spark-h :max-height spark-h
      :alignment :bottom-left
@@ -282,12 +301,16 @@
    header into and the right-hand group would stay glued to the title."
   [game version snapshot paused?]
   {:fx/type :h-box
-   :spacing 32
+   :spacing spark-gutter
    :alignment :bottom-left
    :children [(header game version snapshot)
               {:fx/type :region :h-box/hgrow :always :min-width 12}
+              ;; the throughput block is pinned to the sparkline's own width,
+              ;; so nothing inside it can push the clock right of it -- the
+              ;; spacing below is then a real gap rather than a hope
               {:fx/type :v-box
                :spacing 6
+               :min-width spark-w :max-width spark-w
                :children [(throughput-caption (:samples snapshot))
                           (sparkline (:samples snapshot) paused?)]}
               (time-remaining-column snapshot paused?)
@@ -344,12 +367,34 @@
     (try (let [u (.getUrl image)] (when (seq u) u))
          (catch Exception _ nil))))
 
+(def ^:private scrim
+  "The mockup's caption scrim: transparent at the top of the caption block,
+   solid `bg` by 42% of it.
+
+   Not decoration. A screenshot is arbitrary third-party artwork, and
+   Stardew Valley's farm scene -- bright greens and oranges, the brightest
+   art in this catalog -- put near-white 21px text on top of near-white
+   pixels. The quote is one of the few things a user actually reads during a
+   twenty-minute download, and a scrim tuned against a dark screenshot fails
+   completely against a bright one, so this is opaque enough to read against
+   the worst case rather than the average one."
+  (str "linear-gradient(to bottom, "
+       "rgba(12,12,12,0) 0%, "
+       "rgba(12,12,12,0.93) 42%, "
+       "rgba(12,12,12,0.97) 100%)"))
+
+(def ^:private chip-backing
+  "Backing for the small chips that sit ON the artwork rather than under the
+   scrim. Same problem as the quote: `SHOT 01 / 06` in muted grey over a
+   bright sky is unreadable, and there is no scrim up there to help."
+  "rgba(12,12,12,0.9)")
+
 (defn- shot-chip
   [idx total]
   {:fx/type :label :text (format "SHOT %02d / %02d" (inc idx) total)
    :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 10
-                         :-fx-text-fill (:text-muted c)
-                         :-fx-background-color "rgba(12,12,12,0.6)"
+                         :-fx-text-fill (:text c)
+                         :-fx-background-color chip-backing
                          :-fx-background-radius 3
                          :-fx-padding "3 6 3 6"})})
 
@@ -357,6 +402,12 @@
   [total idx]
   {:fx/type :h-box
    :spacing 6
+   :alignment :center
+   :padding {:top 5 :bottom 5 :left 7 :right 7}
+   ;; the dots ride on the artwork too, and #383838 on a bright sky is
+   ;; invisible -- they get the same backing the chip does
+   :style (theme/style {:-fx-background-color chip-backing
+                         :-fx-background-radius 8})
    :children (vec (for [i (range total)]
                      {:fx/type :region
                       :min-width 6 :max-width 6 :min-height 6 :max-height 6
@@ -398,12 +449,26 @@
         idx      (if (pos? total) (mod (long (or shot-index 0)) total) 0)
         image    (when (pos? total) (screenshot-fn game idx))
         url      (image-url image)
+        caption  (quote-block game stage quote-index)
+        caption  (if url
+                   ;; over artwork the caption gets the scrim, and it spans
+                   ;; the full width of the panel rather than the text's own
+                   ;; box: a scrim that stops where the text stops reads as a
+                   ;; grey rectangle pasted on a photo.
+                   {:fx/type :v-box
+                    :padding {:top 64 :bottom 20 :left 24 :right 24}
+                    :style (theme/style {:-fx-background-color scrim
+                                          :-fx-background-radius "0 0 6 6"})
+                    :children [caption]}
+                   caption)
         overlay
         {:fx/type :anchor-pane
          :children
-         (cond-> [(assoc (quote-block game stage quote-index)
-                          :anchor-pane/left 24.0 :anchor-pane/right 24.0
-                          :anchor-pane/bottom 20.0)]
+         (cond-> [(if url
+                    (assoc caption :anchor-pane/left 0.0 :anchor-pane/right 0.0
+                           :anchor-pane/bottom 0.0)
+                    (assoc caption :anchor-pane/left 24.0 :anchor-pane/right 24.0
+                           :anchor-pane/bottom 20.0))]
            url (conj (assoc (shot-chip idx total)
                              :anchor-pane/left 14.0 :anchor-pane/top 14.0))
            url (conj (assoc (shot-dots total idx)
@@ -420,9 +485,12 @@
                                :-fx-background-size "cover"
                                :-fx-background-position "center center"
                                :-fx-background-repeat "no-repeat"})}
+        ;; a gentle vignette over the whole image; the caption's own scrim
+        ;; below is what makes the text readable, and stacking two heavy
+        ;; gradients would just black out the artwork the panel exists to show
         {:fx/type :region
          :style (theme/style {:-fx-background-color
-                               "linear-gradient(to bottom, transparent 45%, rgba(12,12,12,0.92) 100%)"})}
+                               "linear-gradient(to bottom, transparent 50%, rgba(12,12,12,0.45) 100%)"})}
         overlay]
        [overlay])}))
 

@@ -221,6 +221,40 @@
   (is (some? (download/view {:snapshot (snap {}) :game game :version version
                               :quote-index 999999}))))
 
+(deftest the-sparkline-cannot-overflow-its-260px-box
+  (testing "a bar is 3.458px wide and JavaFX rounds every child up to a whole
+            pixel by default, laying 48 bars out at 286px -- and HBox lets a
+            children-derived min width beat :max-width, so the row grew past
+            its declared width and the last bars ran into the clock. That is
+            the collision the first live screenshot shipped with."
+    (let [spark (#'download/sparkline [1.0 2.0 3.0] false)]
+      (is (false? (:snap-to-pixel spark))
+          "fractional bar widths must be honoured, or the row is 26px too wide")
+      (is (= 260.0 (:max-width spark)))
+      (is (= 260.0 (:min-width spark)))
+      (is (= 48 (count (:children spark))))
+      (is (<= (+ (* 48 (:min-width (first (:children spark))))
+                 (* 47 (:spacing spark)))
+              260.0)
+          "48 bars plus 47 gaps must fit inside the declared width")))
+  (testing "the block around it is pinned to the same width, so the gap before
+            the clock is a real gap"
+    (let [row   (first (:children (download/view {:snapshot (snap {}) :game game
+                                                  :version version})))
+          block (nth (:children row) 2)]
+      (is (= 260.0 (:max-width block)))
+      (is (= 26.0 (:spacing row)) "the mockup's gutter before time/percent"))))
+
+(deftest few-samples-pad-left-rather-than-stretching
+  (testing "an early download has three samples; they belong at the RIGHT of
+            the sparkline with zero-height padding behind them"
+    (let [spark (#'download/sparkline [1000.0 2000.0 4000.0] false)
+          hs    (mapv :min-height (:children spark))]
+      (is (= 48 (count hs)))
+      (is (every? zero? (take 45 hs)) "45 empty bars, oldest first")
+      (is (every? pos? (drop 45 hs)) "the three real samples are the newest")
+      (is (= 43.0 (last hs)) "the peak sample fills the full bar height"))))
+
 (deftest the-default-screenshot-fn-renders-the-artwork-unavailable-fallback
   (testing "no :screenshot-fn at all -> (constantly nil) -> flat surface, never a broken image"
     (let [s (pr-str (download/view {:snapshot (snap {}) :game game :version version}))]
@@ -237,6 +271,28 @@
         img (BufferedImage. 8 8 BufferedImage/TYPE_INT_RGB)]
     (ImageIO/write img "jpg" f)
     f))
+
+(deftest the-caption-over-artwork-carries-a-scrim-and-the-chips-a-backing
+  (testing "Stardew's farm scene -- the brightest art in this catalog -- put
+            near-white 21px text on near-white pixels in the first live
+            screenshot. A scrim tuned against a dark screenshot fails
+            completely against a bright one, so the caption block gets the
+            mockup's gradient and the two chips that ride ON the artwork,
+            above any scrim, get their own backing."
+    (let [f     (tiny-jpg-file)
+          image (Image. (.toString (.toURI f)))
+          s     (pr-str (download/view {:snapshot (snap {}) :game game :version version
+                                        :screenshot-fn (fn [_ _] image)}))]
+      (is (str/includes? s "rgba(12,12,12,0.93) 42%")
+          "the caption scrim: transparent at the top, solid bg by 42%")
+      (is (str/includes? s "rgba(12,12,12,0.9)")
+          "the SHOT chip and the shot dots are backed against bright art")
+      (is (str/includes? s (:text theme/color))
+          "the chip label is full-strength text, not muted, over artwork")))
+  (testing "with no artwork there is nothing to scrim -- the flat surface
+            panel must not be darkened for no reason"
+    (let [s (pr-str (download/view {:snapshot (snap {}) :game game :version version}))]
+      (is (not (str/includes? s "rgba(12,12,12,0.93)"))))))
 
 (deftest a-real-screenshot-with-a-url-renders-as-a-background-image
   (let [f     (tiny-jpg-file)
