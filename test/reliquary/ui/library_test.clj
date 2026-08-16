@@ -72,21 +72,45 @@
   (is (= "build unknown" (library/build-label nil)))
   (is (= "build 13189953" (library/build-label "13189953"))))
 
-(deftest the-download-button-is-disabled-until-a-version-is-selected
-  (let [no-selection (library/view {:games games :selected-appid 100})
-        buttons      (find-nodes no-selection :button)
-        download-btn (first (filter #(str/starts-with? (:text %) "Download") buttons))]
-    (is (some? download-btn))
-    (is (true? (:disable download-btn)))
-    (is (= "Download" (:text download-btn))))
+(defn- primary-button
+  "The side panel's full-width primary button -- the one that is 44px tall.
+   Found by height rather than by label, because the label is exactly what
+   these tests are about and a filter on it would beg the question."
+  [desc]
+  (first (filter #(= 44 (:min-height %)) (find-nodes desc :button))))
 
-  (let [with-selection (library/view {:games games :selected-appid 100
-                                       :selected-version-id "public"})
-        buttons        (find-nodes with-selection :button)
-        download-btn   (first (filter #(str/starts-with? (:text %) "Download") buttons))]
-    (is (some? download-btn))
-    (is (not (:disable download-btn)))
-    (is (= "Download 0.5 GB" (:text download-btn)))))
+(deftest the-download-button-says-what-it-will-actually-do
+  (testing "no version selected -- 'Download' alongside a disabled style still
+            reads as an offer, and the answer to 'download what?' is nothing"
+    (let [btn (primary-button (library/view {:games games :selected-appid 100}))]
+      (is (some? btn))
+      (is (true? (:disable btn)))
+      (is (= "Select a version" (:text btn)))))
+
+  (testing "a selected version whose size the catalog knows names the size"
+    (let [btn (primary-button (library/view {:games games :selected-appid 200
+                                              :selected-version-id "public"}))]
+      (is (some? btn))
+      (is (not (:disable btn)))
+      (is (= "Download 27.7 GB" (:text btn)))))
+
+  (testing "a selected version whose size is genuinely unknown (bytes 0, which
+            this catalog really contains) says just 'Download' -- never
+            'Download size unknown', which is what pasting size-label's
+            not-a-size answer into a sentence needing a size produced"
+    (let [btn (primary-button (library/view {:games games :selected-appid 200
+                                              :selected-version-id "1_5_97"}))]
+      (is (some? btn))
+      (is (not (:disable btn)))
+      (is (= "Download" (:text btn)))
+      (is (not (str/includes? (:text btn) "size unknown")))))
+
+  (testing "the label function directly, since the button style keys off the
+            same three cases"
+    (is (= "Select a version" (library/download-button-label nil)))
+    (is (= "Download 1.0 GB" (library/download-button-label {:bytes (* 1024 1024 1024)})))
+    (is (= "Download" (library/download-button-label {:bytes 0})))
+    (is (= "Download" (library/download-button-label {})))))
 
 (deftest the-side-panel-only-appears-for-a-real-selection
   (testing "no selection -> no side panel, single grid child"

@@ -74,6 +74,44 @@
       (is (not (str/includes? paused (:gold theme/color)))))))
 
 ;; ---------------------------------------------------------------------------
+;; the header row: title left, measurements right, ONE row
+
+(deftest the-header-row-puts-the-title-left-and-the-measurements-right
+  (testing "these four blocks were stacked against the left edge, which left
+            the right half of a 1100px window empty; the mockup puts the
+            title left, taking the free space, with the sparkline, time
+            remaining and complete right-aligned opposite it"
+    (let [desc (download/view {:snapshot (snap {:bytes-done 5 :bytes-total 10})
+                               :game game :version version})
+          row  (first (:children desc))
+          kids (:children row)
+          s    (pr-str row)]
+      (is (= :h-box (:fx/type row)) "one row, not two stacked blocks")
+      (is (str/includes? (pr-str (first kids)) "Baldur's Gate 3")
+          "the title block leads the row")
+      (is (some #(= :always (:h-box/hgrow %)) kids)
+          "a spacer takes the free space -- a Region's default max width is its
+           preferred width, so hgrow on the title block itself would not grow it")
+      (is (str/includes? s (str/join "\u2009" "THROUGHPUT"))
+          "tracked caps (thin spaces), as the mockup sets it")
+      (is (str/includes? s "Time remaining"))
+      (is (str/includes? s "Complete"))
+      (is (str/includes? (pr-str (last kids)) "Complete")
+          "Complete is the last thing on the row, hard against the right edge"))))
+
+(deftest a-long-title-ellipsises-rather-than-pushing-the-numbers-off-the-edge
+  (testing "shot/render! and the real window both CROP; an unbounded title --
+            this catalog carries `The Elder Scrolls IV: Oblivion(R) Game of
+            the Year Edition (2009)` -- would silently delete the percentage"
+    (let [long-game (assoc game :title "The Elder Scrolls IV: Oblivion® Game of the Year Edition (2009)")
+          desc      (download/view {:snapshot (snap {}) :game long-game :version version})
+          header    (first (:children (first (:children desc))))]
+      (is (= :v-box (:fx/type header)))
+      (is (number? (:max-width header)) "the title block is width-bounded")
+      (is (every? #(number? (:max-width %)) (rest (:children header)))
+          "and so are the title and meta labels, so JavaFX ellipsises instead of overflowing"))))
+
+;; ---------------------------------------------------------------------------
 ;; formatting: bytes, percentage, ETA
 
 (deftest byte-formatting-scales-and-never-lies-about-zero

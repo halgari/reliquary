@@ -279,10 +279,28 @@
                                      :-fx-font-size 12
                                      :-fx-text-fill (:text-muted c)})}]})
 
+(defn download-button-label
+  "What the primary button says, given the selected version (or nil).
+
+   Three cases, and the middle one is the bug this replaced: no version
+   selected reads `Select a version` -- a button labelled `Download`
+   alongside a disabled style still reads as an offer, and the user's next
+   question is 'download what?'. A version whose size the catalog knows
+   names it, since a 27.7 GB commitment is worth seeing before the click. A
+   version whose size is genuinely unknown -- `bytes` 0, which this catalog
+   really contains -- says just `Download`, never `Download size unknown`,
+   which the old code produced by pasting `size-label`'s not-a-size answer
+   into a sentence that needed a size."
+  [selected-version]
+  (cond
+    (nil? selected-version)                 "Select a version"
+    (pos? (or (:bytes selected-version) 0)) (str "Download " (size-label (:bytes selected-version)))
+    :else                                   "Download"))
+
 (defn- panel-footer
   [{:keys [folder selected-version on-change-folder on-download]}]
   (let [ready?   (some? selected-version)
-        btn-text (if ready? (str "Download " (size-label (:bytes selected-version))) "Download")]
+        btn-text (download-button-label selected-version)]
     {:fx/type :v-box :spacing 10
      :children
      [{:fx/type :label :text (tracked "Install to")

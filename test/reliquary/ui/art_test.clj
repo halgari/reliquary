@@ -139,7 +139,16 @@
   ;; about catalog/refresh!). What actually keeps this off the real
   ;; ~/.local/share/reliquary is the reliquary.data-dir JVM property the
   ;; :test alias sets, consulted directly by config/data-dir.
+  ;; The assertion is that THIS TEST RUN writes nothing there -- not that the
+  ;; directory has never existed. It used to be the latter, which held only
+  ;; until someone ran the real app on this machine for the first time
+  ;; (`clojure -M:app`, whose art cache legitimately lives exactly there) and
+  ;; then failed a green suite over a file no test wrote. What matters is
+  ;; that the test JVM cannot reach it, so the check is a before/after
+  ;; comparison of its contents.
   (let [real-data-dir (io/file (System/getProperty "user.home") ".local" "share" "reliquary" "art")
+        listing       (fn [] (into #{} (map #(.getPath ^java.io.File %)) (file-seq real-data-dir)))
+        before        (listing)
         bytes         (tiny-jpg-bytes)
         server        (local-http-server "/loc.jpg" 200 bytes)
         url           (server-url server "/loc.jpg")
@@ -154,8 +163,8 @@
         (is (str/starts-with? cache-path under-test)
             (str "art must be cached under target/test-state via config/data-dir, "
                  "not the real user data dir -- got: " cache-path)))
-      (is (not (.exists real-data-dir))
-          "the real ~/.local/share/reliquary/art must remain untouched")
+      (is (= before (listing))
+          "the real ~/.local/share/reliquary/art must be untouched by this run")
       (finally
         (.stop ^HttpServer server 0)
         (io/delete-file expected-file true)))))

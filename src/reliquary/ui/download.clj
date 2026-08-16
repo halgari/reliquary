@@ -134,22 +134,37 @@
 ;; ---------------------------------------------------------------------------
 ;; header
 
+(def ^:private header-text-width
+  "How much width the title/meta block may claim before it ellipsises.
+
+   The header shares one row with the sparkline (260) and the two stat
+   columns, which together need roughly 550px of the 1036px content width.
+   A title is not allowed to push them off the right edge -- and it really
+   could: this catalog carries `The Elder Scrolls IV: Oblivion® Game of the
+   Year Edition (2009)`, which sets to about 700px at 25px. `shot/render!`
+   and the real window both CROP rather than shrink, so an unbounded title
+   would silently delete the percentage instead of ellipsising itself."
+  440.0)
+
 (defn- header
   [game version snapshot]
   (let [stage  (or (:stage snapshot) :idle)
         kicker (track (if (paused? stage) "Paused" "Downloading"))]
     {:fx/type :v-box
      :spacing 4
+     :max-width header-text-width
      :children
      [{:fx/type :label :text kicker
        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                              :-fx-text-fill (:text-muted c)})}
       {:fx/type :label :text (or (:title game) "")
+       :max-width header-text-width
        :style (theme/style {:-fx-font-family (theme/ui-bold-font) :-fx-font-size 25
                              :-fx-text-fill (:text c)})}
       {:fx/type :label
        :text (str (:label version) " · " (fmt-build (:build version)) " · "
                   (fmt-size (:bytes version)))
+       :max-width header-text-width
        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
                              :-fx-text-fill (:text-muted c)})}]}))
 
@@ -251,12 +266,27 @@
                (fmt-percent (percent (:bytes-done snapshot) (:bytes-total snapshot)))
                (:gold c)))
 
-(defn- progress-row
-  [snapshot paused?]
+(defn- header-row
+  "Title on the left, measurements on the right, one row.
+
+   This used to be two stacked rows -- `header` and then a `progress-row`
+   holding the sparkline and both stat columns -- which left-packed all four
+   blocks against the same edge and wasted the whole right half of a
+   1100px-wide window. The mockup puts the game title on the left taking the
+   free space, with throughput / time remaining / complete right-aligned
+   opposite it.
+
+   The free space is a spacer Region with `:h-box/hgrow :always`, NOT hgrow
+   on the header itself: a Region's default max width is USE_COMPUTED_SIZE,
+   which resolves to its preferred width, so HBox has no room to grow the
+   header into and the right-hand group would stay glued to the title."
+  [game version snapshot paused?]
   {:fx/type :h-box
-   :spacing 48
+   :spacing 32
    :alignment :bottom-left
-   :children [{:fx/type :v-box
+   :children [(header game version snapshot)
+              {:fx/type :region :h-box/hgrow :always :min-width 12}
+              {:fx/type :v-box
                :spacing 6
                :children [(throughput-caption (:samples snapshot))
                           (sparkline (:samples snapshot) paused?)]}
@@ -481,8 +511,7 @@
      :children
      (vec
       (concat
-       [(header game version snapshot)
-        (progress-row snapshot paused)
+       [(header-row game version snapshot paused)
         (progress-bar (percent (:bytes-done snapshot) (:bytes-total snapshot)))
         (stats-line snapshot paused)
         (if error
