@@ -164,6 +164,24 @@
   (write-config! (assoc (read-config) :refresh-token refresh-token :account account))
   {:refresh-token refresh-token :account account})
 
+(defn folder
+  "The install folder the user last chose, or nil when they never have.
+
+   Deliberately not defaulted to anything here: a made-up default -- ~/Games,
+   the current directory -- would make the library screen show a path the
+   user never picked, next to a Download button that would then really write
+   there. `No folder selected` is the honest state, and the screen says so."
+  []
+  (let [v (:folder (read-config))]
+    (when (seq (str v)) (str v))))
+
+(defn save-folder!
+  "Remember `path` as the install folder, keeping every other setting --
+   above all the refresh token, which lives in the same file."
+  [path]
+  (write-config! (assoc (read-config) :folder (str path)))
+  (str path))
+
 (defn forget-token!
   "Drop the credentials, keeping every other setting."
   []

@@ -3,8 +3,41 @@
 (ns reliquary.main
   "The desktop entry point: opens a real window and drives it against real
    Steam. Everything below it -- the theme, the screenshot harness, the
-   window frame, the login screen, the engine -- is already proven; this is
+   window frame, the four screens, the engine -- is already proven; this is
    the wiring that makes them a running app.
+
+   ## The shape of the thing
+
+   One atom, one `view`, and a handful of `!`-suffixed functions that move
+   the atom. `view` dispatches on `:screen` (`:login`, `:library`,
+   `:download`, `:done`) and hands the whole state map to a screen namespace
+   that reads only the keys it documents. The screens are pure functions;
+   every side effect in the app lives in this namespace.
+
+   Every `:on-*` handler is built once, in `initial-state`, from the
+   not-yet-populated state atom -- see that function's docstring for why
+   that matters and which crash it prevents.
+
+   ## Threads
+
+   Three rules, all of them load-bearing:
+
+   1. **Nothing that can block runs on the FX thread.** Opening a Steam
+      session takes seconds and can fail; resolving a version is a dozen
+      network round trips; `execute!` runs for half an hour. All of them
+      run on threads created here, and the only thing they do to the state
+      atom is `fx-run!` a `swap!` back onto the FX thread.
+   2. **Every thread and executor created here is a daemon.** The JavaFX
+      Application Thread is not, so the JVM only exits after `Platform/exit`
+      -- and one non-daemon worker of ours would then keep the process alive
+      with no window on screen and no way to reach it. `future` is
+      deliberately not used anywhere in this namespace for exactly that
+      reason: Clojure's agent pool threads are not daemons and hold the JVM
+      open for up to a minute after the window closes.
+   3. **A failure downstream degrades a screen, never blocks one.** A
+      session that will not open leaves `:owned` nil, which `library/view`
+      reads as \"treat everything as owned\" -- an unmarked library beats a
+      library the user cannot reach.
 
    Deliberately does NOT require `reliquary.ui.shot`: that namespace sets
    `prism.lcdtext=false` at load time to make screenshots easier to review,
@@ -12,68 +45,440 @@
    rendering on a real monitor."
   (:gen-class)
   (:require [cljfx.api :as fx]
+            [clojure.java.io :as io]
+            [reliquary.catalog :as catalog]
             [reliquary.config :as config]
+            [reliquary.download :as download]
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
             [reliquary.ui.app :as app]
+            [reliquary.ui.art :as art]
+            [reliquary.ui.done :as done]
+            [reliquary.ui.download :as download-screen]
+            [reliquary.ui.library :as library]
             [reliquary.ui.login :as login]
-            [reliquary.ui.signed-in :as signed-in]
             [reliquary.ui.theme :as theme])
-  (:import (javafx.application Platform)))
+  (:import (java.io File)
+           (java.util.concurrent Executors ScheduledExecutorService ThreadFactory TimeUnit)
+           (java.util.concurrent.atomic AtomicLong)
+           (javafx.application Platform)
+           (javafx.stage DirectoryChooser)))
 
 (defn fx-run!
   "Marshal onto the FX thread. A var so tests can replace it with identity."
   [f]
   (Platform/runLater f))
 
-(defn start-login!
-  "Run the BLOCKING QR login on a background thread, marshalling its events
-   into `state`. Returns a future so callers (and tests) can await it.
+;; ---------------------------------------------------------------------------
+;; threads -- every one of them a daemon, see the namespace docstring
 
-   The refresh token deliberately never enters `state` -- a token in the state
-   atom is one careless render away from being on screen. It goes straight to
-   config/save-token!."
+(defn- daemon-factory ^ThreadFactory [prefix]
+  (let [n (AtomicLong. 0)]
+    (reify ThreadFactory
+      (newThread [_ r]
+        (doto (Thread. r (str prefix "-" (.incrementAndGet n)))
+          (.setDaemon true))))))
+
+(defn daemon!
+  "Run `f` on a new daemon thread named `name`, and return the thread."
+  ^Thread [^String name f]
+  (doto (Thread. ^Runnable f name)
+    (.setDaemon true)
+    (.start)))
+
+(defn- scheduler
+  "A single-threaded, daemon `ScheduledExecutorService`."
+  ^ScheduledExecutorService [prefix]
+  (Executors/newSingleThreadScheduledExecutor (daemon-factory prefix)))
+
+;; ---------------------------------------------------------------------------
+;; the two live handles that are not state: a Steam session and a running
+;; download's context. Neither belongs in the state atom -- one is an open
+;; socket and the other carries an AtomicBoolean, and both would be printed
+;; by any `pr-str` of the state a test or a log ever takes.
+
+(def ^:private session* (atom nil))
+(def ^:private ctx* (atom nil))
+(def ^:private poller* (atom nil))
+
+(defn open-session!
+  "The open Steam session, opening one on first ask. BLOCKING -- seconds, and
+   it can raise :unauthenticated -- so it is never called on the FX thread.
+
+   One session is reused for the whole run: ownership, version resolution
+   and every download go through the same logon, because logging on repeatedly
+   is both slow and something Steam rate-limits."
+  []
+  (locking session*
+    (or @session*
+        (reset! session* (session/open!)))))
+
+(defn close-session!
+  "Drop the session, if any. Used on sign-out: the next open! must not reuse
+   a logon that belongs to the account the user just signed out of."
+  []
+  (locking session*
+    (when-let [s @session*]
+      (try (session/close! s) (catch Exception _ nil))
+      (reset! session* nil))
+    nil))
+
+;; ---------------------------------------------------------------------------
+;; art -- `art/capsule` and `art/screenshot` read and decode a file per call,
+;; and `view` calls them on the FX thread on EVERY render. The download
+;; screen re-renders four times a second while a download runs, and decoding
+;; a 1920x1080 JPEG at that rate on the FX thread is a stutter the user sees.
+;; Non-nil results are memoized; nil is not, since nil only ever means "the
+;; background fetch has not landed yet" and must stay retryable.
+
+(def ^:private art-cache (atom {}))
+
+(defn- cached-art [k f]
+  (or (get @art-cache k)
+      (when-let [image (f)]
+        (swap! art-cache assoc k image)
+        image)))
+
+(defn capsule-image [game] (cached-art [:capsule (:appid game)] #(art/capsule game)))
+(defn screenshot-image [game n] (cached-art [:shot (:appid game) n] #(art/screenshot game n)))
+
+;; ---------------------------------------------------------------------------
+;; login
+
+(declare enter-library!)
+
+(defn start-login!
+  "Run the BLOCKING QR login on a daemon thread, marshalling its events into
+   `state`. Returns a promise so callers (and tests) can await it.
+
+   A daemon thread and a promise rather than a `future`: Clojure's agent
+   pool, which `future` uses, is not made of daemon threads and keeps the
+   JVM alive for up to a minute after the window closes.
+
+   The refresh token deliberately never enters `state` -- a token in the
+   state atom is one careless render away from being on screen. It goes
+   straight to config/save-token!."
   [state]
-  (future
-    (try
-      (let [result (auth/login-qr!
-                    (fn [event]
-                      (when (= :qr (:type event))
-                        (fx-run! #(swap! state assoc
-                                         :challenge-url (:challenge-url event)
-                                         :qr-state :waiting)))
-                      nil))]
-        (config/save-token! result)
-        (fx-run! #(swap! state assoc :qr-state :approved
-                         :signed-in? true
-                         :status-line (or (:account result) "signed in"))))
-      (catch clojure.lang.ExceptionInfo e
-        (fx-run! #(swap! state assoc :error (ex-message e)))))))
+  (let [p (promise)]
+    (daemon!
+     "reliquary-login"
+     (fn []
+       (try
+         (let [result (auth/login-qr!
+                       (fn [event]
+                         (when (= :qr (:type event))
+                           (fx-run! #(swap! state assoc
+                                            :challenge-url (:challenge-url event)
+                                            :qr-state :waiting)))
+                         nil))]
+           (config/save-token! result)
+           (fx-run! #(swap! state assoc :qr-state :approved
+                            :signed-in? true
+                            :status-line (or (:account result) "signed in")))
+           (enter-library! state))
+         (catch clojure.lang.ExceptionInfo e
+           (fx-run! #(swap! state assoc :error (ex-message e))))
+         (finally (deliver p :done)))))
+    p))
+
+;; ---------------------------------------------------------------------------
+;; the library screen
+
+(defn load-ownership!
+  "Populate `:owned` from the Steam session, on a daemon thread.
+
+   A failure -- no session, an expired token, Steam unreachable -- leaves
+   `:owned` nil, and `library/view` reads nil as \"treat every game as
+   owned\". That is the whole point: ownership marking is a courtesy (the
+   authority is Steam's answer to the depot-key request during a download),
+   and a library greyed out end to end because a socket did not open is a
+   worse app than a library that simply does not mark anything."
+  [state]
+  (daemon!
+   "reliquary-ownership"
+   (fn []
+     (let [owned (try (session/owned-appids (open-session!))
+                      (catch Throwable _ nil))]
+       (fx-run! #(swap! state assoc :owned owned))))))
+
+(defn- nudge-art!
+  "Re-render periodically for a short while after landing on the library.
+
+   Capsule art is fetched in the background and lands on disk seconds after
+   the grid first renders, but a cljfx renderer only re-renders when the
+   state map CHANGES -- so without this the grid would keep showing hatch
+   placeholders until the user happened to type in the filter box. Bumping a
+   counter is the smallest honest way to say \"the world may look different
+   now\". Twenty seconds is well past the point every capsule has landed;
+   the scheduler is a daemon and shuts itself down when the count runs out."
+  [state]
+  (let [sched (scheduler "reliquary-art-tick")
+        left  (AtomicLong. 20)]
+    (.scheduleAtFixedRate
+     sched
+     (fn []
+       (try
+         (if (pos? (.decrementAndGet left))
+           (fx-run! #(swap! state update :art-tick (fnil inc 0)))
+           (.shutdown sched))
+         (catch Throwable _ nil)))
+     1 1 TimeUnit/SECONDS)
+    sched))
+
+(defn enter-library!
+  "Land on the library screen: the catalog now, ownership and art when they
+   arrive. Safe to call from any thread -- every state change goes through
+   `fx-run!`."
+  [state]
+  (let [games (catalog/games (catalog/load!))]
+    (fx-run! #(swap! state assoc
+                     :screen :library
+                     :games games
+                     :snapshot nil
+                     :error nil))
+    (daemon! "reliquary-art-prefetch" (fn [] (run! art/prefetch! games)))
+    (load-ownership! state)
+    (nudge-art! state)
+    games))
+
+(defn selected-game
+  "The game `:selected-appid` names, or nil."
+  [{:keys [games selected-appid]}]
+  (when selected-appid
+    (first (filter #(= selected-appid (:appid %)) games))))
+
+(defn selected-version
+  "The version `:selected-version-id` names within the selected game, or nil."
+  [state]
+  (catalog/version (selected-game state) (:selected-version-id state)))
+
+(defn select-game!
+  "Selecting a DIFFERENT game clears the version selection: version ids are
+   only unique within a game (`public` exists for all of them), so carrying
+   one across would silently arm the download button for a version of a game
+   the user is no longer looking at."
+  [state appid]
+  (swap! state (fn [s]
+                 (cond-> (assoc s :selected-appid appid)
+                   (not= appid (:selected-appid s)) (assoc :selected-version-id nil)))))
+
+(defn select-version! [state version-id]
+  (swap! state assoc :selected-version-id version-id))
+
+(defn choose-folder!
+  "The `Change…` button: a real `DirectoryChooser`. Runs on the FX thread
+   (it is a window) and persists the choice, so the next launch starts where
+   the user left off. Returns the chosen path, or nil if they cancelled."
+  [state]
+  (let [chooser (DirectoryChooser.)
+        current (some-> ^String (:folder @state) io/file)]
+    (.setTitle chooser "Choose the install folder")
+    (when (and current (.isDirectory ^File current))
+      (.setInitialDirectory chooser current))
+    (when-let [dir (.showDialog chooser nil)]
+      (let [path (.getAbsolutePath ^File dir)]
+        (config/save-folder! path)
+        (swap! state assoc :folder path)
+        path))))
+
+;; ---------------------------------------------------------------------------
+;; the download screen
+
+(defn- start-snapshot
+  "What the download screen shows between the button press and the engine's
+   first real snapshot -- which is several seconds away, since resolving a
+   version is a dozen network round trips. `:bytes-total` comes from the
+   catalog so the size on screen does not jump once the plan lands."
+  [version]
+  {:stage :preparing :bytes-done 0 :bytes-total (or (:bytes version) 0)
+   :chunks-done 0 :chunks-total 0 :wire-bytes 0
+   :bytes-per-sec 0.0 :wire-bytes-per-sec 0.0 :samples [] :error nil})
+
+(defn stop-polling! []
+  (when-let [^ScheduledExecutorService s @poller*]
+    (.shutdownNow s)
+    (reset! poller* nil))
+  nil)
+
+(defn start-polling!
+  "Push `download/snapshot` into `state` every 250ms, from a DAEMON
+   scheduler, via `fx-run!`. 250ms is the engine's own sampling interval, so
+   this reads each sample once rather than showing the same numbers twice.
+
+   Every 32nd tick -- eight seconds -- also advances the stage panel's
+   screenshot and quote, which is what makes that panel rotate."
+  [state ctx]
+  (stop-polling!)
+  (let [sched (scheduler "reliquary-ui-poll")
+        ticks (AtomicLong. 0)]
+    (.scheduleAtFixedRate
+     sched
+     (fn []
+       (try
+         (let [n    (.incrementAndGet ticks)
+               snap (download/snapshot ctx)
+               turn (zero? (mod n 32))]
+           (fx-run! #(swap! state (fn [s]
+                                    (cond-> (assoc s :snapshot snap)
+                                      turn (update :shot-index (fnil inc 0))
+                                      turn (update :quote-index (fnil inc 0)))))))
+         (catch Throwable _ nil)))
+     250 250 TimeUnit/MILLISECONDS)
+    (reset! poller* sched)
+    sched))
+
+(defn interrupt!
+  "Put `state` into the download screen's interrupted state for `t`.
+
+   `execute!` guarantees an ExceptionInfo carrying `:reliquary/error`, and
+   `resolve-version` raises through the same helper, so the category is
+   normally right there in the ex-data; `:io` is the backstop for a
+   Throwable that somehow arrives without one. The user sees `ex-message`
+   and the category, never a stack trace -- and the last snapshot is kept so
+   the panel can still say how much is already on disk."
+  [state t]
+  (let [snapshot (or (some-> @ctx* download/snapshot) (:snapshot @state) {})
+        category (or (:reliquary/error (ex-data t)) :io)]
+    (fx-run! #(swap! state assoc
+                     :screen :download
+                     :snapshot (assoc snapshot
+                                      :stage :failed
+                                      :error {:category category
+                                              :message (or (ex-message t) (str t))})))))
+
+(defn run-download!
+  "Resolve `:game`/`:version` and run the engine into `:folder`, on a daemon
+   thread, with a poller feeding the screen.
+
+   This is also `Resume download`: a resume is just running the same
+   download again -- the engine's progress file is what makes that pick up
+   where it stopped rather than starting over, and it is bound to the
+   manifests of the build being fetched, so a resume against a moved
+   `public` is rejected rather than silently mixed."
+  [state]
+  (let [{:keys [game version folder]} @state
+        dest (io/file folder)]
+    ;; a stale ctx from an earlier run must not be what the interrupted
+    ;; state reports "kept on disk" from if THIS run fails before it has one
+    (reset! ctx* nil)
+    (fx-run! #(swap! state assoc
+                     :screen :download
+                     :path (.getPath dest)
+                     :opened? false
+                     :error nil
+                     :snapshot (start-snapshot version)))
+    (daemon!
+     "reliquary-download"
+     (fn []
+       (try
+         (let [session (open-session!)
+               ctx     (download/make-ctx
+                        (assoc (download/resolve-version session game version)
+                               :dest dest
+                               :appid (:appid game)
+                               :version-id (:id version)))]
+           (reset! ctx* ctx)
+           (start-polling! state ctx)
+           (let [snap (download/execute! ctx)]
+             (stop-polling!)
+             ;; a cancel is not a failure: it goes back to the library with
+             ;; everything it fetched still on disk, ready to resume.
+             (fx-run! #(swap! state assoc
+                              :snapshot snap
+                              :screen (if (= :cancelled (:stage snap)) :library :done)))))
+         (catch Throwable t
+           (stop-polling!)
+           (interrupt! state t)))))))
+
+(defn download-pressed!
+  "The library's primary button. A folder is required before anything can be
+   written, so an unset one opens the chooser rather than failing later with
+   a path the user never picked."
+  [state]
+  (let [s       @state
+        game    (selected-game s)
+        version (selected-version s)]
+    (when (and game version)
+      (when-let [folder (or (:folder s) (choose-folder! state))]
+        (swap! state assoc :game game :version version :folder folder)
+        (run-download! state)))))
+
+(defn cancel-download!
+  "The Cancel button. In-flight chunks finish rather than being torn out, so
+   the screen keeps updating for a moment after this returns; `execute!`
+   then hands back a `:cancelled` snapshot and `run-download!` goes back to
+   the library."
+  [_state]
+  (when-let [ctx @ctx*] (download/cancel! ctx))
+  nil)
+
+(defn back-to-library!
+  "`Back to library`, from the done screen and from the interrupted state."
+  [state]
+  (swap! state assoc :screen :library :snapshot nil :opened? false :error nil))
+
+(defn open-install-folder!
+  "The done screen's `Open folder`. `done/open-folder!` shells out to
+   `xdg-open` when java.awt.Desktop cannot do it, and waiting on a
+   subprocess is not something the FX thread may do -- so this runs on a
+   daemon thread and reports back through `fx-run!`. A failure is a gold
+   error line, never a crash."
+  [state]
+  (let [path (:path @state)]
+    (daemon! "reliquary-open-folder"
+             (fn []
+               (let [err (done/open-folder! path)]
+                 (fx-run! #(swap! state assoc :opened? (nil? err) :error err)))))))
+
+;; ---------------------------------------------------------------------------
+;; view
+
+(defn screen
+  "Dispatch on `:screen` -- `:login`, `:library`, `:download`, `:done` -- to
+   that screen's own root description, unframed.
+
+   Anything else, including a state with no `:screen` at all, renders the
+   login screen: the one screen that is safe to show without a session,
+   without a catalog and without a selection.
+
+   Each screen namespace is a pure function that reads only the keys it
+   documents, so the whole state map is handed to it as-is rather than being
+   picked apart here -- which keeps this dispatch honest and the screens
+   independently testable. `:capsule-fn` and `:screenshot-fn` ride in the
+   same map (wired in `initial-state`), so no screen ever has to know how
+   art gets fetched.
+
+   Separate from `view` so a test can instantiate a real screen through
+   `fx/create-component` without instantiating -- and therefore SHOWING -- a
+   `:stage`."
+  [state]
+  (case (:screen state)
+    :library  (library/view state)
+    :download (download-screen/view state)
+    :done     (done/view state)
+    (login/view state)))
 
 (defn view
-  "Dispatch on whether the user is signed in.
-
-   This used to render `login/view` unconditionally, which produced the bug a
-   user reported as \"I logged in via the QR code but the app doesn't move
-   on\": approving the QR set `:qr-state :approved` and then left the user on
-   the login screen forever, and RESTARTING with a valid token skipped
-   `start-login!` entirely, so the screen showed a blank QR card still asking
-   to be scanned. One missing branch, two broken states."
+  "The whole window: the frame from `ui/app`, wrapped around `screen`."
   [state]
-  (app/view (assoc state :content (if (:signed-in? state)
-                                    (signed-in/view state)
-                                    (login/view state)))))
+  (app/view (assoc state :content (screen state))))
 
 (defn sign-out!
   "The title bar's Sign out button, wired here rather than left nil: a
    signed-in state without this handler crashes the renderer the moment
    `:signed-in?` is true, because cljfx cannot coerce a nil :on-action.
-   Forgets the stored token and drops back to a fresh QR login."
+   Forgets the stored token, drops the Steam session (the next logon must
+   not reuse the one belonging to the account just signed out of), and drops
+   back to a fresh QR login."
   [state]
   (config/forget-token!)
+  (close-session!)
   (swap! state assoc
-        :signed-in? false :status-line "not signed in" :error nil
-        :challenge-url nil :qr-state :waiting)
+         :screen :login
+         :signed-in? false :status-line "not signed in" :error nil
+         :challenge-url nil :qr-state :waiting
+         :games [] :owned nil :selected-appid nil :selected-version-id nil
+         :snapshot nil)
   (start-login! state))
 
 (defn usable-token
@@ -91,29 +496,68 @@
 
 (defn initial-state
   "The renderer's starting state map, built before `fx/mount-renderer` ever
-   runs. `:on-sign-out` is populated here -- not by a later `swap!` -- for a
-   concrete reason: app/title-bar renders a Sign out button unconditionally
-   whenever `:signed-in?` is true, wired to `:on-action on-sign-out`, and
-   cljfx cannot coerce a nil handler. A first render with `:signed-in? true`
-   and no `:on-sign-out` crashes the renderer -- this is not hypothetical, it
-   is the exact bug main_test.clj's
+   runs. Every `:on-*` handler is populated here -- not by a later `swap!` --
+   for a concrete reason: app/title-bar renders a Sign out button
+   unconditionally whenever `:signed-in?` is true, wired to `:on-action
+   on-sign-out`, and cljfx cannot coerce a nil handler. A first render with
+   `:signed-in? true` and no `:on-sign-out` crashes the renderer -- this is
+   not hypothetical, it is the exact bug main_test.clj's
    `the-initial-state-always-wires-a-sign-out-handler` guards, caught live
    while proving the QR flow against real Steam. Building the whole map in
    one function, called with the not-yet-populated `state` atom already in
    hand, is what makes that wiring a thing a plain unit test can assert on
-   without mounting a real Stage."
+   without mounting a real Stage. The library's five handlers, the download
+   screen's three and the done screen's two are here for the same reason:
+   `library/view` defaults a missing handler to a no-op, which renders fine
+   and does nothing at all -- a screen that looks right and cannot be used.
+
+   A signed-in start lands on `:library` directly; `-main` then fills
+   `:games` and `:owned` in. `:folder` is whatever the user chose last time,
+   read back from config."
   [state signed-in]
-  {:screen :login
+  {:screen (if signed-in :library :login)
    :status-line (if signed-in (:account signed-in) "not signed in")
    :signed-in? (boolean signed-in)
-   :on-sign-out (fn [_] (sign-out! state))})
+   :games []
+   :owned nil
+   :query ""
+   :folder (config/folder)
+   :capsule-fn capsule-image
+   :screenshot-fn screenshot-image
+   :on-sign-out       (fn [_]  (sign-out! state))
+   :on-query-change   (fn [q]  (swap! state assoc :query q))
+   :on-select-game    (fn [id] (select-game! state id))
+   :on-select-version (fn [id] (select-version! state id))
+   :on-change-folder  (fn [_]  (choose-folder! state))
+   :on-download       (fn [_]  (download-pressed! state))
+   :on-cancel         (fn [_]  (cancel-download! state))
+   :on-retry          (fn [_]  (run-download! state))
+   :on-back           (fn [_]  (back-to-library! state))
+   :on-open           (fn [_]  (open-install-folder! state))})
 
-(defn -main [& _]
+(defn -main
+  "Open the window and hand back the state atom.
+
+   The return value is the app's whole live surface: `clojure -M:app`
+   discards it, but a REPL -- or the headless driver that proved this
+   wiring against real Steam -- needs a handle on the running app to watch
+   it move and to fire its buttons. Returning it costs nothing and is the
+   difference between an app that can be driven and one that can only be
+   watched."
+  [& _]
   (theme/load-fonts!)
+  ;; cljfx sets implicit exit to false when it starts the toolkit, which is
+  ;; right for a screenshot harness and wrong for an app: without this, the
+  ;; JavaFX Application Thread (non-daemon) survives the window closing and
+  ;; the process never exits. Every thread this namespace starts is a daemon
+  ;; precisely so that this one call is enough to make the app quit.
+  (Platform/setImplicitExit true)
   (let [signed-in (usable-token (quot (System/currentTimeMillis) 1000))
         state (atom nil)]
     (reset! state (initial-state state signed-in))
     (let [renderer (fx/create-renderer :middleware (fx/wrap-map-desc #'view))]
       (fx/mount-renderer state renderer)
-      (when-not signed-in
-        (start-login! state)))))
+      (if signed-in
+        (enter-library! state)
+        (start-login! state))
+      state)))
