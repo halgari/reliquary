@@ -4,7 +4,9 @@
   (:require [cljfx.api :as fx]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [reliquary.ui.done :as done]))
+            [reliquary.ui.anim :as anim]
+            [reliquary.ui.done :as done]
+            [reliquary.ui.theme :as theme]))
 
 (def ^:private game {:title "The Elder Scrolls V: Skyrim Special Edition"
                       :studio "Bethesda Game Studios"})
@@ -70,6 +72,42 @@
             either function returning false for that reason is fine; throwing is not"
     (is (boolean? (done/desktop-open! "/nonexistent/path/for/reliquary/tests")))
     (is (boolean? (done/xdg-open! "/nonexistent/path/for/reliquary/tests")))))
+
+;; ---------------------------------------------------------------------------
+;; the visual pass: ring bloom, halo, button gradient/glow, and the
+;; animate-false guarantee -- docs/design-delta-2026-08-17.md
+
+(deftest the-checkmark-ring-carries-an-amethyst-bloom-and-the-halo-is-mouse-transparent
+  (let [s (pr-str (done/view {:game game :version version :path "/x"}))]
+    (is (str/includes? s (theme/glow (:amethyst theme/color) {:blur 26 :spread -6 :alpha 0.9}))
+        "the ring's amethyst bloom, the exact value the ring's own style composes")
+    (is (str/includes? s "radial-gradient")
+        "the breathing halo behind the ring is a radial gradient")
+    (is (str/includes? s ":mouse-transparent true")
+        "the halo is pure decoration and must never steal a click")))
+
+(deftest the-open-folder-button-carries-the-button-gradient-and-a-gold-glow
+  (let [s (pr-str (done/view {:game game :version version :path "/x"}))]
+    (is (str/includes? s (:button theme/gradients)))
+    (is (str/includes? s (theme/glow (:gold theme/color) {:blur 22 :spread -10 :dy 6 :alpha 0.9}))
+        "the primary-button glow, the exact value Open folder's style composes")))
+
+(deftest animate-false-starts-neither-the-ring-entrance-nor-the-halo-breathe
+  (testing "ring-in!/breathe! only force their node's starting opacity to 0
+            /(from-opacity) INSIDE their own `(when *animate* ...)` guard --
+            so with *animate* false, a freshly-created node's opacity stays
+            at JavaFX's own default (1.0) rather than being forced low by an
+            animation that never started"
+    (let [opacity (fn [animate?]
+                    @(fx/on-fx-thread
+                       (binding [anim/*animate* animate?]
+                         (let [ring (fx/create-component (#'done/checkmark-ring))
+                               halo (fx/create-component (#'done/checkmark-halo))]
+                           [(.getOpacity (fx/instance ring))
+                            (.getOpacity (fx/instance halo))]))))]
+      (is (= [1.0 1.0] (opacity false)) "nothing started -> default opacity")
+      (is (= [0.0 0.35] (opacity true))
+          "ring-in! and breathe! both set their own starting opacity as their first act"))))
 
 (deftest the-view-actually-instantiates-real-javafx-nodes
   (testing "pr-str only checks description SHAPE and never builds a Node -- this

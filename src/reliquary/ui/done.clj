@@ -12,6 +12,7 @@
    a test can `with-redefs` them rather than needing a real windowing system
    or a real `xdg-open` binary on PATH."
   (:require [clojure.java.io :as io]
+            [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme])
   (:import (java.awt Desktop Desktop$Action)
            (java.util List)))
@@ -84,22 +85,58 @@
 ;; ---------------------------------------------------------------------------
 ;; pieces
 
-(defn- checkmark
+(def ^:private halo-size
+  "The done-ring halo: a 14px inset outward from the 54px ring, per the
+   design delta's `inset -14px` -- so 54 + 2*14 = 82px, centred behind the
+   ring in the same stack."
+  82.0)
+
+(defn- checkmark-halo
+  "The breathing amethyst halo behind the ring (design delta: `radial-
+   gradient(circle, rgba(125,107,145,.5), transparent 68%)` via `breathe!`).
+   Mouse-transparent -- it is pure decoration sitting behind a real ring,
+   and must never steal a click meant for whatever's near it."
+  []
+  (anim/with-anim
+    {:fx/type :region
+     :min-width halo-size :min-height halo-size
+     :max-width halo-size :max-height halo-size
+     :mouse-transparent true
+     :style (theme/style
+             {:-fx-background-radius (/ halo-size 2)
+              :-fx-background-color
+              (theme/radial-gradient {:radius 50}
+                                      ["rgba(125,107,145,0.5)" ["transparent" 68]])})}
+    (fn [node] (anim/breathe! node))))
+
+(defn- checkmark-ring
   "A 54px ring, 2px amethyst, with an amethyst check at 24px inside. Gilt's
    'completed' colour -- the one place amethyst, not gold, leads a screen
-   region."
+   region. Gains an amethyst bloom (`0 0 26px -6px rgba(125,107,145,.9)`)
+   and enters once via `ring-in!` (scale .6 -> 1.06 -> 1, an overshoot)."
+  []
+  (anim/with-anim
+    {:fx/type :stack-pane
+     :min-width 54 :min-height 54 :max-width 54 :max-height 54
+     :style (theme/style {:-fx-border-color (:amethyst c)
+                           :-fx-border-width 2
+                           :-fx-border-radius 27
+                           :-fx-background-radius 27
+                           :-fx-background-color "transparent"
+                           :-fx-effect (theme/glow (:amethyst c)
+                                                    {:blur 26 :spread -6 :alpha 0.9})})
+     :children [{:fx/type :label :text "✓"
+                 :style (theme/style {:-fx-font-family (theme/ui-bold-font)
+                                       :-fx-font-size 24
+                                       :-fx-text-fill (:amethyst c)})}]}
+    (fn [node] (anim/ring-in! node))))
+
+(defn- checkmark
+  "The halo behind, the ring in front -- same slot `view` always used, so no
+   caller needs to change."
   []
   {:fx/type :stack-pane
-   :min-width 54 :min-height 54 :max-width 54 :max-height 54
-   :style (theme/style {:-fx-border-color (:amethyst c)
-                         :-fx-border-width 2
-                         :-fx-border-radius 27
-                         :-fx-background-radius 27
-                         :-fx-background-color "transparent"})
-   :children [{:fx/type :label :text "✓"
-               :style (theme/style {:-fx-font-family (theme/ui-bold-font)
-                                     :-fx-font-size 24
-                                     :-fx-text-fill (:amethyst c)})}]})
+   :children [(checkmark-halo) (checkmark-ring)]})
 
 (defn- title-line [game]
   {:fx/type :label
@@ -137,11 +174,13 @@
    :children [{:fx/type :button :text "Open folder"
                :on-action (or on-open (fn [_]))
                :min-height 40 :min-width 160
-               :style (theme/style {:-fx-background-color (:gold c)
+               :style (theme/style {:-fx-background-color (:button theme/gradients)
                                      :-fx-text-fill (:bg c)
                                      :-fx-background-radius 3
                                      :-fx-font-family (theme/ui-semibold-font)
-                                     :-fx-font-size 14})}
+                                     :-fx-font-size 14
+                                     :-fx-effect (theme/glow (:gold c)
+                                                              {:blur 22 :spread -10 :dy 6 :alpha 0.9})})}
               {:fx/type :button :text "Back to library"
                :on-action (or on-back (fn [_]))
                :min-height 40 :min-width 160
