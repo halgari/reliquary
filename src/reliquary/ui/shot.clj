@@ -70,6 +70,7 @@
             [reliquary.ui.theme :as theme])
   (:import (java.awt.image BufferedImage)
            (javafx.scene Scene)
+           (javafx.scene.paint Color)
            (javafx.scene.image PixelFormat WritableImage)
            (javax.imageio ImageIO)))
 
@@ -123,6 +124,14 @@
              ;; screenshot that does not match the app is worse than no
              ;; screenshot, because it is the thing being reviewed.
              _         (.add (.getStylesheets scene) (theme/stylesheet))
+             ;; Paint the Scene with the app's background, because the real
+             ;; app does -- the Scene's default fill is WHITE. This is the
+             ;; belt to the stylesheet's braces: reliquary.css gives `.root`
+             ;; an opaque #0C0C0C, which is what actually fixed the inverted
+             ;; palette (Modena paints the root node #F4F4F4, on top of any
+             ;; scene fill). This line still matters for a root that IS
+             ;; transparent, where the scene fill is what shows through.
+             _         (.setFill scene (Color/web (theme/color :bg)))
              image     (WritableImage. (int width) (int height))]
          (.snapshot scene image)
          (ImageIO/write (fx-image->buffered-image image) "png" out)))
