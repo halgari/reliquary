@@ -253,6 +253,23 @@
       (is (not (str/includes? (:style btn) "linear-gradient")))
       (is (not (str/includes? (:style btn) "-fx-effect"))))))
 
+(deftest a-disabled-download-button-still-reads-as-a-button
+  ;; The side panel is `surface`, so a surface-filled disabled button had no
+  ;; visible bounds at all -- the reason text floated in the panel looking
+  ;; like a caption, and nothing said a button was there to become enabled.
+  ;; It must be visibly outlined and NOT filled with the panel's own colour.
+  (doseq [[label state] [["unowned"      {:games games :selected-appid 100
+                                          :selected-version-id "public" :owned #{}}]
+                         ["no version"   {:games games :selected-appid 100 :owned #{100}}]]]
+    (testing label
+      (let [btn (primary-button (library/view state))]
+        (is (true? (:disable btn)))
+        (is (str/includes? (:style btn) (str "-fx-border-color: " (theme/color :line)))
+            "an outline, so the button's bounds are visible")
+        (is (not (str/includes? (:style btn)
+                                 (str "-fx-background-color: " (theme/color :surface))))
+            "not filled with the side panel's own colour")))))
+
 (deftest an-enabled-download-button-gets-the-gradient-and-glow
   (let [btn (primary-button (library/view {:games games :selected-appid 200
                                             :selected-version-id "public" :owned #{200}}))]

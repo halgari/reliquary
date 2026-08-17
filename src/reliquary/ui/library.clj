@@ -466,17 +466,27 @@
        :min-height 44 :max-width Double/MAX_VALUE
        ;; Enabled: the gold :button gradient plus its bloom underneath.
        ;; Disabled -- BOTH "You don't own this game" and "Select a
-       ;; version" land here -- stays flat surface/text-muted with no
-       ;; :-fx-effect key at all, so there is no gradient and no glow to
-       ;; turn off; a disabled control must read as inert, not as the
-       ;; primary action dimmed.
+       ;; version" land here -- carries no :-fx-effect key at all, so there
+       ;; is no gradient and no glow to turn off; a disabled control must
+       ;; read as inert, not as the primary action dimmed.
+       ;;
+       ;; It is RECESSED (bg fill) and OUTLINED (line border), not filled
+       ;; with `surface`. The side panel is itself `surface`, so a
+       ;; surface-on-surface button had no visible bounds whatsoever: the
+       ;; reason text floated in the panel as though it were a caption, and
+       ;; nothing on screen said a button was there to become enabled once
+       ;; you picked a version or bought the game. The spec asks for "the
+       ;; download button disabled and a plain reason" -- that is a button
+       ;; you can see, holding the reason, not a reason on its own.
        :style (theme/style (if ready?
                               {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)
                                :-fx-background-radius 3 :-fx-font-size 14
                                :-fx-font-family (theme/ui-semibold-font)
                                :-fx-effect (theme/glow (:gold c)
                                                         {:blur 22 :spread -10 :dy 6 :alpha 0.9})}
-                              {:-fx-background-color (:surface c) :-fx-text-fill (:text-muted c)
+                              {:-fx-background-color (:bg c) :-fx-text-fill (:text-muted c)
+                               :-fx-border-color (:line c)
+                               :-fx-border-radius 3
                                :-fx-background-radius 3 :-fx-font-size 14}))}]}))
 
 (defn- side-panel
