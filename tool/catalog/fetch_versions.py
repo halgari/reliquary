@@ -8,7 +8,8 @@ Every branch Steam publishes becomes a version. Branches with pwdrequired are
 skipped -- we cannot fetch a manifest we have no password for, and offering a
 version that always fails is worse than not offering it.
 """
-import json, sys, urllib.request, datetime
+import json
+import os, sys, urllib.request, datetime
 
 UA = {"User-Agent": "reliquary-catalog/0.1"}
 
@@ -42,7 +43,19 @@ def wanted_language(cfg):
     lang = (cfg.get("language") or "").strip().lower()
     return (not lang) or lang == "english"
 
-def windows_depots(depots, branch):
+#: Depots Steam itself refuses to hand a key for, recorded by verify_depots.clj
+#: -- see its docstring. These are listed in a game's depot table with no
+#: marker of any kind and still belong to something the player did not buy: the
+#: Morrowind Soundtrack (a type=Music app), a Fallout: New Vegas depot owned by
+#: the separate `New Vegas PCR` SKU. One of the two has no static tell at all,
+#: so PICS cannot answer this and only Steam can.
+def license_denied(appid):
+    p = f"{os.path.dirname(os.path.abspath(__file__))}/license-denied-depots.json"
+    if not os.path.exists(p):
+        return set()
+    return set(json.load(open(p)).get(str(appid)) or [])
+
+def windows_depots(depots, branch, denied=frozenset()):
     """Depots this app installs on Windows that carry a manifest for `branch`."""
     out = []
     for k, v in depots.items():
@@ -56,6 +69,8 @@ def windows_depots(depots, branch):
             continue
         if not wanted_language(cfg):
             continue
+        if int(k) in denied:
+            continue
         m = (v.get("manifests") or {}).get(branch)
         if not m or not m.get("gid"):
             continue
@@ -66,13 +81,14 @@ def windows_depots(depots, branch):
 
 def versions_for(appid):
     app = pics(appid)
+    denied = license_denied(appid)
     depots = app.get("depots") or {}
     branches = depots.get("branches") or {}
     vs = []
     for name, b in sorted(branches.items(), key=lambda kv: -int(kv[1].get("timeupdated") or 0)):
         if b.get("pwdrequired"):
             continue
-        sel = windows_depots(depots, name)
+        sel = windows_depots(depots, name, denied)
         if not sel:
             continue
         ts = b.get("timeupdated")

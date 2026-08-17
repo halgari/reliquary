@@ -65,7 +65,7 @@
    "branch": "public",
    "build": "1510068",
    "date": "2018-05-08",
-   "bytes": 9896511981,
+   "bytes": 9539179509,
    "depots": [
     {
      "depot-id": 22381,
@@ -78,10 +78,6 @@
     {
      "depot-id": 22393,
      "manifest-gid": "8227935753987096201"
-    },
-    {
-     "depot-id": 22493,
-     "manifest-gid": "2502952557192596705"
     },
     {
      "depot-id": 72732,

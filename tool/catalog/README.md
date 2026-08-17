@@ -7,8 +7,15 @@ stringly-typed keys. (`edn/read-string`, never `read` — the document arrives
 off the network and must not be able to eval anything.)
 
     python3 tool/catalog/fetch_versions.py <domain>:<appid> ...   # -> versions/
+    clojure -M:catalog-tool -m verify-depots <domain>:<appid> ... # -> license-denied-depots.json
+    python3 tool/catalog/fetch_versions.py <domain>:<appid> ...   # again, now excluding those
     clojure -M:catalog-tool -m resolve-sizes <domain>:<appid> ... # -> real sizes
     python3 tool/catalog/assemble.py                             # -> resources/catalog.edn
+
+`verify_depots` needs a Steam session; the other steps do not. Its output
+persists, so it only has to be re-run when a game is added or Valve changes a
+depot table. `fetch_versions` runs twice because the first pass is what tells
+`verify_depots` which depots to ask about.
 
 | Source | What it gives | How |
 |---|---|---|
@@ -22,6 +29,36 @@ Not needed. `api.steamcmd.net/v1/info/<appid>` returns full PICS product info �
 depot ids, manifest GIDs, sizes, branches, build ids — with no auth. Verified
 against a manifest GID captured from live Steam by mauvi and committed as a test
 fixture: app 489830 depot 489831 -> `8442952117333549665`, exact match.
+
+## Depots that are in the depot table but not in the game
+
+Three kinds, and only the first two are visible in PICS.
+
+**Localizations.** Steam publishes one depot per language and we install
+English. These were 90% of Skyrim's download (36.5 GB of 40.7), 83% of
+Fallout: New Vegas's and 61% of Fallout 4's. They also COLLIDE -- a
+localization overwrites the base game's files by design, so Skyrim Special
+Edition ships `Skyrim_Default.ini` in its core depot and in all eight language
+depots, and `plan/build` refuses a download whose depots disagree about what
+belongs at a path. Dropping every depot with a language would be wrong:
+English is not always the unlabelled one. Fallout 4 keeps 3.8 GB of English
+voice in depot 377164. The rule is no language, OR english.
+
+**DLC and redistributables.** Marked plainly -- `dlcappid` + `optional`, or
+`depotfromapp` + `sharedinstall` -- and dropped on sight.
+
+**Separately-licensed extras with no marker at all.** This is what
+`verify_depots.clj` is for. `22320` lists depot `451410`, which is the
+Morrowind Soundtrack, a `type=Music` app; `22380` lists depot `22493`, which
+belongs to `Fallout: New Vegas PCR`, a different SKU. The first is detectable
+statically because the depot id is also its appid. The second is NOT: its PICS
+record is `{config: {language: english}, manifests: {...}}`, the same shape as
+depots 22382 and 72732, which are ordinary base-game content that works. Valve
+left it unmarked, so the only authority is Steam's answer to a key request.
+
+A refusal only counts when another depot on the SAME app was granted. All
+depots refused means the account does not own the game, and recording that
+would delete the game from the catalog for everybody.
 
 ## Two things that bite
 

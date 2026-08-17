@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-17T17:46:23Z"
+ :generated "2026-08-17T18:37:21Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -272,15 +272,13 @@
                     :branch "public"
                     :build "1510068"
                     :date "2018-05-08"
-                    :bytes 9896511981
+                    :bytes 9539179509
                     :depots [{:depot-id 22381
                              :manifest-gid "8327177303444281069"}
                             {:depot-id 22382
                              :manifest-gid "1869121858616960493"}
                             {:depot-id 22393
                              :manifest-gid "8227935753987096201"}
-                            {:depot-id 22493
-                             :manifest-gid "2502952557192596705"}
                             {:depot-id 72732
                              :manifest-gid "4131381354636064588"}
                             {:depot-id 72742
@@ -589,11 +587,9 @@
                     :branch "public"
                     :build "1510067"
                     :date "2018-05-08"
-                    :bytes 1247273953
+                    :bytes 1142479546
                     :depots [{:depot-id 22321
-                             :manifest-gid "1293785437610275498"}
-                            {:depot-id 451410
-                             :manifest-gid "5635087427908069289"}]}]}
+                             :manifest-gid "1293785437610275498"}]}]}
         {:appid 1716740
          :title "Starfield"
          :studio "Bethesda Game Studios"
