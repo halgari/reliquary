@@ -513,8 +513,26 @@
   "A soft light band, faked as *diagonal* purely by the gradient's own
    angle: `anim/sheen!`'s docstring explains why the CSS's -18deg skew is
    dropped rather than bolted on via a JavaFX `Shear` nobody asked for, so
-   the only diagonal cue left available is the gradient direction itself."
-  (theme/linear-gradient 20 ["rgba(242,240,238,0)"
+   the only diagonal cue left available WAS the gradient direction itself --
+   and it turns out not to be available either, so this band is straight.
+
+   The angle is measured from UP, clockwise, and it has to be exactly 90
+   (straight across) for the fade to run along the band's own 228px width
+   and reach zero at both edges. It started at 20 -- near-vertical -- which
+   faded top-to-bottom instead and left the alpha constant along every
+   horizontal row: a flat-topped slab with two hard vertical edges that
+   swept across the panel as a curtain.
+
+   Tilting it back toward horizontal does not fix that, it only shrinks it.
+   A tilted gradient's iso-lines cut across the rectangle, so two opposite
+   CORNERS always sit at non-zero alpha, and the region's straight edge
+   there is a visible seam. Measured against a surface base of 22 and a
+   peak of 41: at 72 the worst edge was 38, at 80 it was 32, at 85 it was
+   28, and only at 90 did every row read 22 at both edges. So the sheen is
+   a straight vertical band. The diagonal was already an approximation of
+   an approximation -- the mockup's -18deg skew was dropped before this --
+   and a clean sweep is worth more than a slanted one with seams."
+  (theme/linear-gradient 90 ["rgba(242,240,238,0)"
                               ["rgba(242,240,238,0.09)" 50]
                               "rgba(242,240,238,0)"]))
 
