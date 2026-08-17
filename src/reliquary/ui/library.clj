@@ -22,6 +22,7 @@
    never be treated differently from a game that simply has no art -- both
    render the same placeholder."
   (:require [clojure.string :as str]
+            [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme]))
 
 (def ^:private c theme/color)
@@ -154,6 +155,25 @@
                                      :-fx-background-radius 3
                                      :-fx-padding "3 8 3 8"})}]})
 
+(defn- capsule-sheen
+  "The 7%-white diagonal sheen laid over the art (design delta's
+   `:card-sheen` gradient). A plain `:region` with no children of its own --
+   it exists only to paint the gradient -- sized to match the art exactly and
+   `:mouse-transparent true` so it never steals the card's click.
+
+   Deliberately NOT given its own `:clip`: it is added as a sibling child
+   inside `capsule-art`'s stack-pane, which already clips everything it
+   contains to `top-rounded-clip`. Giving it a second, separate clip would
+   be redundant at best; forgetting to round it (a plain rectangle) would
+   reintroduce the square-corner bug the top-rounded clip exists to prevent.
+   Riding the parent's clip for free avoids that risk entirely."
+  []
+  {:fx/type :region
+   :mouse-transparent true
+   :min-width art-width :max-width art-width
+   :min-height card-height :max-height card-height
+   :style (theme/style {:-fx-background-color (:card-sheen theme/gradients)})})
+
 (defn- capsule-art
   "The card's art area: a real `Image` from `capsule-fn` when one resolves,
    else the placeholder -- never a broken-image glyph. `capsule-fn` is
@@ -172,7 +192,8 @@
                   {:fx/type :image-view :image image
                    :fit-width art-width :fit-height card-height
                    :preserve-ratio false}
-                  (capsule-placeholder))]}))
+                  (capsule-placeholder))
+                (capsule-sheen)]}))
 
 (defn- card
   "One grid tile.
@@ -218,33 +239,57 @@
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
                                                       :-fx-text-fill (:text-muted c)})}]})]
-    (cond-> {:fx/type :v-box
-             ;; A rounded background does NOT clip children in JavaFX --
-             ;; -fx-background-radius only rounds the fill that is painted
-             ;; behind them. The capsule art is an ImageView drawn on top, so
-             ;; without an explicit clip it keeps its square corners and
-             ;; visibly overhangs the card's rounded border. The clip is a
-             ;; rounded rectangle over the whole card; arc = 2 x radius,
-             ;; because JavaFX's arcWidth is the full width of the corner
-             ;; ellipse rather than its radius.
-             :clip {:fx/type :rectangle
-                    :width card-width :height card-total-height
-                    :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
-             :min-width card-width :max-width card-width
-             :min-height card-total-height :max-height card-total-height
-             :style (theme/style (cond-> {:-fx-background-color (:surface c)
-                                           :-fx-background-radius card-radius
-                                           :-fx-border-radius card-radius
-                                           :-fx-border-width 1
-                                           :-fx-border-color (if selected? (:gold c) (:line c))}
-                                    ;; dimmed, but not so far that it reads as
-                                    ;; inert -- these cards are clickable now
-                                    (not owned?) (assoc :-fx-opacity 0.7)))
-             :children [(capsule-art game capsule-fn)
-                        {:fx/type :v-box :spacing 4
-                         :padding {:top 8 :bottom 10 :left 10 :right 10}
-                         :children [title meta-row]}]}
-      :always (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))))
+    (-> (cond-> {:fx/type :v-box
+                 ;; A rounded background does NOT clip children in JavaFX --
+                 ;; -fx-background-radius only rounds the fill that is painted
+                 ;; behind them. The capsule art is an ImageView drawn on top, so
+                 ;; without an explicit clip it keeps its square corners and
+                 ;; visibly overhangs the card's rounded border. The clip is a
+                 ;; rounded rectangle over the whole card; arc = 2 x radius,
+                 ;; because JavaFX's arcWidth is the full width of the corner
+                 ;; ellipse rather than its radius.
+                 :clip {:fx/type :rectangle
+                        :width card-width :height card-total-height
+                        :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
+                 :min-width card-width :max-width card-width
+                 :min-height card-total-height :max-height card-total-height
+                 :style (theme/style
+                         (cond-> {:-fx-background-color (:surface c)
+                                  :-fx-background-radius card-radius
+                                  :-fx-border-radius card-radius
+                                  :-fx-border-width 1
+                                  :-fx-border-color (if selected? (:gold c) (:line c))}
+                           ;; dimmed, but not so far that it reads as
+                           ;; inert -- these cards are clickable now
+                           (not owned?) (assoc :-fx-opacity 0.7)
+                           ;; Selected card gets the ring's glow beneath it and
+                           ;; a 2px lift; the 1px gold ring itself is already
+                           ;; the :-fx-border-color swap above, so this only
+                           ;; adds what that border alone doesn't give.
+                           selected? (assoc :-fx-translate-y -2
+                                             :-fx-effect (theme/glow (:gold c)
+                                                                      {:blur 34 :spread -14
+                                                                       :dy 10 :alpha 0.6}))))
+                 :children [(capsule-art game capsule-fn)
+                            {:fx/type :v-box :spacing 4
+                             :padding {:top 8 :bottom 10 :left 10 :right 10}
+                             :children [title meta-row]}]}
+          :always (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))
+        ;; Fade + rise + settle, ONCE. cljfx's default :children diffing
+        ;; (cljfx.lifecycle/wrap-many with no :fx/key on these cards) keys
+        ;; each position by its plain index, so retyping the filter query
+        ;; -- which only ever shrinks the list or replaces trailing
+        ;; positions -- ADVANCES the existing Node at each surviving
+        ;; position instead of recreating it; :on-created (and so
+        ;; `rise-in!`) only fires for a position that did not exist before,
+        ;; i.e. the grid's first mount, or a position beyond the previous
+        ;; longest filtered list. Selecting a card changes no child count at
+        ;; all, so it never replays either. That is why this can hang off
+        ;; every card unconditionally without the grid strobing on
+        ;; keystrokes -- it only needs `with-anim` for consistency with the
+        ;; rest of the app (harmless here since it stops itself) and so the
+        ;; screenshot harness's `*animate*` false still suppresses it.
+        (anim/with-anim anim/rise-in!))))
 
 (defn- grid [{:keys [games selected-appid owned capsule-fn on-select-game]}]
   {:fx/type :flow-pane
@@ -314,17 +359,28 @@
    :spacing 4
    :padding {:top 10 :bottom 10 :left 12 :right 12}
    :on-mouse-clicked (fn [_] (on-select (:id version)))
-   :style (theme/style {:-fx-background-color (:surface c)
-                         :-fx-background-radius 3
-                         :-fx-border-radius 3
-                         :-fx-border-width 1
-                         :-fx-border-color (if selected? (:gold c) (:line c))})
+   :style (theme/style
+           (cond-> {:-fx-background-color (:surface c)
+                    :-fx-background-radius 3
+                    :-fx-border-radius 3
+                    :-fx-border-width 1
+                    :-fx-border-color (if selected? (:gold c) (:line c))}
+             ;; Soft gold glow behind the selected row -- the inset gold
+             ;; hairline itself is the :-fx-border-color swap above.
+             selected? (assoc :-fx-effect (theme/glow (:gold c)
+                                                        {:blur 20 :spread -12 :alpha 0.9}))))
    :children
    [{:fx/type :h-box :spacing 8 :alignment :center-left
      :children [{:fx/type :region
                  :min-width 9 :min-height 9 :max-width 9 :max-height 9
-                 :style (theme/style {:-fx-background-radius 5
-                                       :-fx-background-color (if selected? (:gold c) (:line-strong c))})}
+                 :style (theme/style
+                         (cond-> {:-fx-background-radius 5
+                                  :-fx-background-color (if selected? (:gold c) (:line-strong c))}
+                           ;; The version dot's point light -- a small, tight
+                           ;; glow so a selected row reads at a glance even
+                           ;; scrolled past the row's own gold border.
+                           selected? (assoc :-fx-effect (theme/glow (:gold c)
+                                                                     {:blur 12 :spread -1 :alpha 0.9}))))}
                 {:fx/type :label :text (:label version)
                  :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
                                        :-fx-font-size 13
@@ -408,11 +464,29 @@
        :disable (not ready?)
        :on-action on-download
        :min-height 44 :max-width Double/MAX_VALUE
+       ;; Enabled: the gold :button gradient plus its bloom underneath.
+       ;; Disabled -- BOTH "You don't own this game" and "Select a
+       ;; version" land here -- carries no :-fx-effect key at all, so there
+       ;; is no gradient and no glow to turn off; a disabled control must
+       ;; read as inert, not as the primary action dimmed.
+       ;;
+       ;; It is RECESSED (bg fill) and OUTLINED (line border), not filled
+       ;; with `surface`. The side panel is itself `surface`, so a
+       ;; surface-on-surface button had no visible bounds whatsoever: the
+       ;; reason text floated in the panel as though it were a caption, and
+       ;; nothing on screen said a button was there to become enabled once
+       ;; you picked a version or bought the game. The spec asks for "the
+       ;; download button disabled and a plain reason" -- that is a button
+       ;; you can see, holding the reason, not a reason on its own.
        :style (theme/style (if ready?
-                              {:-fx-background-color (:gold c) :-fx-text-fill (:bg c)
+                              {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)
                                :-fx-background-radius 3 :-fx-font-size 14
-                               :-fx-font-family (theme/ui-semibold-font)}
-                              {:-fx-background-color (:surface c) :-fx-text-fill (:text-muted c)
+                               :-fx-font-family (theme/ui-semibold-font)
+                               :-fx-effect (theme/glow (:gold c)
+                                                        {:blur 22 :spread -10 :dy 6 :alpha 0.9})}
+                              {:-fx-background-color (:bg c) :-fx-text-fill (:text-muted c)
+                               :-fx-border-color (:line c)
+                               :-fx-border-radius 3
                                :-fx-background-radius 3 :-fx-font-size 14}))}]}))
 
 (defn- side-panel

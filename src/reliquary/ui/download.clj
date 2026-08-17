@@ -23,9 +23,14 @@
    opinion on how art gets fetched or cached. Defaults to `(constantly nil)`
    so a caller that omits it renders the artwork-unavailable path rather than
    throwing."
-  (:require [clojure.string :as str]
+  (:require [cljfx.api :as fx]
+            [clojure.string :as str]
+            [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme])
-  (:import (javafx.scene.image Image)))
+  (:import (javafx.scene Node)
+           (javafx.scene.image Image)
+           (javafx.scene.layout Region)
+           (javafx.scene.shape Rectangle)))
 
 (def ^:private c theme/color)
 
@@ -177,7 +182,29 @@
 (def ^:private spark-n 48)
 (def ^:private spark-gap 2.0)
 (def ^:private spark-recent 5)
+(def ^:private spark-glow-n
+  "How many of the newest bars carry the tip glow (design delta: '...on the
+   last ~3')."
+  3)
 (def ^:private spark-bar-w (/ (- spark-w (* (dec spark-n) spark-gap)) spark-n))
+
+;; The CSS this screen was translated from puts `transition: height .16s
+;; linear` on every one of the 48 bars. Deliberately NOT reproduced here.
+;; `view` is polled and rebuilt on every snapshot tick -- ~4/s per the
+;; engine's poll interval -- and `sparkline` has no stable per-bar identity
+;; across those rebuilds: it is 48 freshly-built `:region` maps in a plain
+;; vector every call, with no `:fx/key`, so cljfx has nothing to diff a
+;; height *change* against; it just sees a new child list and a Timeline
+;; attached in a prior frame would already be targeting a Node cljfx is
+;; about to discard. Retrofitting stable identity (`:fx/key` per bar index)
+;; so a height Transition would even have something to animate FROM, then
+;; starting a fresh 160ms Transition on up to 48 Regions 4 times a second,
+;; is real, continuous cost on a node this small and this frequently
+;; rebuilt -- and the payoff is a 160ms ease on a bar that is about to be
+;; overwritten again in ~250ms anyway, well before a human eye would
+;; register the animation as anything other than a step. Stepping is
+;; perfectly readable for a sparkline; 48 Timelines built-and-discarded
+;; four times a second is not perfectly free. Chose the step.
 
 (def ^:private spark-gutter
   "The mockup's gap between the sparkline and the time/percent group. Wide
@@ -202,13 +229,19 @@
         pk      (if (and (finite-num? peak) (pos? (double peak))) (double peak) 1.0)
         h       (max 0.0 (min max-h (* max-h (/ v pk))))
         recent? (>= i (- spark-n spark-recent))
+        ;; the leading (newest, rightmost) few bars glow -- but never while
+        ;; paused, when every bar is already the flat line-strong grey and a
+        ;; gold glow on a grey bar would read as a bug, not a design choice
+        tip?    (and (not paused?) (>= i (- spark-n spark-glow-n)))
         colour  (cond paused? (:line-strong c)
                        recent? (:gold c)
                        :else   "rgba(194,163,95,0.38)")]
     {:fx/type :region
      :min-width spark-bar-w :max-width spark-bar-w
      :min-height h :max-height h
-     :style (theme/style {:-fx-background-color colour})}))
+     :style (theme/style (cond-> {:-fx-background-color colour}
+                            tip? (assoc :-fx-effect
+                                        (theme/glow (:gold c) {:blur 10 :spread -1 :alpha 0.8}))))}))
 
 (defn- sparkline
   "48 bars in exactly `spark-w` pixels.
@@ -255,7 +288,10 @@
 ;; time-remaining / complete columns, right of the sparkline
 
 (defn- stat-column
-  [label value colour]
+  "`:glow?` -- only the percent column gets the gold text-shadow haze
+   (design delta: `text-shadow: 0 0 22px rgba(194,163,95,.45)`); both
+   columns get tabular numerals so the digits stop jittering as they count."
+  [label value colour & [{:keys [glow?]}]]
   {:fx/type :v-box
    :spacing 6
    :children
@@ -263,8 +299,11 @@
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 10
                            :-fx-text-fill (:text-muted c)})}
     {:fx/type :label :text value
-     :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 34
-                           :-fx-text-fill colour})}]})
+     :style (theme/style
+             (cond-> {:-fx-font-family (theme/mono-font) :-fx-font-size 34
+                      :-fx-text-fill colour
+                      :-fx-font-features theme/tabular-nums}
+               glow? (assoc :-fx-effect (theme/glow (:gold c) {:blur 22 :alpha 0.45}))))}]})
 
 (defn- time-remaining-column
   [snapshot paused?]
@@ -279,7 +318,8 @@
   [snapshot]
   (stat-column "Complete"
                (fmt-percent (percent (:bytes-done snapshot) (:bytes-total snapshot)))
-               (:gold c)))
+               (:gold c)
+               {:glow? true}))
 
 (defn- header-row
   "Title on the left, measurements on the right, one row.
@@ -316,11 +356,16 @@
 ;; the 6px bar and the byte/speed/eta/stage line beneath it
 
 (defn- progress-bar
+  "Gold gradient fill under 100%, switching to the amethyst `:progress-done`
+   gradient (and an amethyst glow) once the bar is actually full -- the same
+   colour-by-state rule `progress-bar`'s caller already applies to the
+   Complete column and the done screen's ring."
   [pct]
-  (let [pct     (max 0.0 (min 100.0 (double pct)))
-        full?   (>= pct 100.0)
-        fill    (if full? (:amethyst c) (:gold c))
-        fill-w  (* content-width (/ pct 100.0))]
+  (let [pct        (max 0.0 (min 100.0 (double pct)))
+        full?      (>= pct 100.0)
+        glow-color (if full? (:amethyst c) (:gold c))
+        fill-grad  (if full? (:progress-done theme/gradients) (:progress-bar theme/gradients))
+        fill-w     (* content-width (/ pct 100.0))]
     {:fx/type :h-box
      :min-width content-width :max-width content-width
      :min-height 6 :max-height 6
@@ -328,7 +373,9 @@
      :children [{:fx/type :region
                  :min-width fill-w :max-width fill-w
                  :min-height 6 :max-height 6
-                 :style (theme/style {:-fx-background-color fill :-fx-background-radius 2})}
+                 :style (theme/style {:-fx-background-color fill-grad
+                                       :-fx-background-radius 2
+                                       :-fx-effect (theme/glow glow-color {:blur 22 :spread -4 :alpha 0.85})})}
                 {:fx/type :region :h-box/hgrow :always}]}))
 
 (defn- stats-line
@@ -407,9 +454,12 @@
    :children (vec (for [i (range total)]
                      {:fx/type :region
                       :min-width 6 :max-width 6 :min-height 6 :max-height 6
-                      :style (theme/style {:-fx-background-color
-                                            (if (= i idx) (:gold c) (:line-strong c))
-                                            :-fx-background-radius 3})}))})
+                      :style (theme/style
+                              (cond-> {:-fx-background-color
+                                       (if (= i idx) (:gold c) (:line-strong c))
+                                       :-fx-background-radius 3}
+                                (= i idx) (assoc :-fx-effect
+                                                  (theme/glow (:gold c) {:blur 12 :spread -1 :alpha 0.9}))))}))})
 
 (defn- quote-block
   "The quote card, or -- when the game has no catalog quotes at all -- the
@@ -437,6 +487,91 @@
        :style (theme/style {:-fx-font-family (theme/ui-font) :-fx-font-size 21
                              :-fx-text-fill (:text c)})})))
 
+(def ^:private panel-hairline
+  "The stage panel's inset top hairline (design delta: `inset 0 1px 0
+   rgba(242,240,238,.04)`). JavaFX has no inset-shadow equivalent, so this
+   is approximated as a real 1px top border in a near-invisible tint,
+   composed into `:-fx-border-color`'s per-side value alongside the
+   existing `:line` border on the other three sides -- the same
+   one-side-different-colour trick `sparkline`'s bottom baseline above
+   already uses."
+  (theme/rgba (:text c) 0.04))
+
+(def ^:private panel-shadow
+  "The stage panel's own drop shadow (design delta: `0 24px 60px -34px
+   #000`), so it sits seated in the page rather than flush with it."
+  (theme/glow "#000000" {:blur 60 :spread -34 :dy 24 :alpha 1.0}))
+
+(def ^:private sheen-w
+  "22% of the panel's width (design delta: 'a 22%-wide diagonal highlight'),
+   against the screen's own fixed content width -- see `content-width`'s
+   docstring for why a literal pixel constant is right for this
+   non-responsive window."
+  (* 0.22 content-width))
+
+(def ^:private sheen-gradient
+  "A soft light band, faked as *diagonal* purely by the gradient's own
+   angle: `anim/sheen!`'s docstring explains why the CSS's -18deg skew is
+   dropped rather than bolted on via a JavaFX `Shear` nobody asked for, so
+   the only diagonal cue left available WAS the gradient direction itself --
+   and it turns out not to be available either, so this band is straight.
+
+   The angle is measured from UP, clockwise, and it has to be exactly 90
+   (straight across) for the fade to run along the band's own 228px width
+   and reach zero at both edges. It started at 20 -- near-vertical -- which
+   faded top-to-bottom instead and left the alpha constant along every
+   horizontal row: a flat-topped slab with two hard vertical edges that
+   swept across the panel as a curtain.
+
+   Tilting it back toward horizontal does not fix that, it only shrinks it.
+   A tilted gradient's iso-lines cut across the rectangle, so two opposite
+   CORNERS always sit at non-zero alpha, and the region's straight edge
+   there is a visible seam. Measured against a surface base of 22 and a
+   peak of 41: at 72 the worst edge was 38, at 80 it was 32, at 85 it was
+   28, and only at 90 did every row read 22 at both edges. So the sheen is
+   a straight vertical band. The diagonal was already an approximation of
+   an approximation -- the mockup's -18deg skew was dropped before this --
+   and a clean sweep is worth more than a slanted one with seams."
+  (theme/linear-gradient 90 ["rgba(242,240,238,0)"
+                              ["rgba(242,240,238,0.09)" 50]
+                              "rgba(242,240,238,0)"]))
+
+(defn- sheen-highlight
+  "The stage panel's animated highlight -- sweeps left to right every 7s via
+   `anim/sheen!`, mouse-transparent so it never intercepts a click, pinned
+   to the panel's left edge so `sheen!`'s own translateX percentages (which
+   resolve against THIS node's own width, not the panel's) sweep it the
+   width the design delta intends. Placed as the FIRST child of the overlay
+   anchor-pane the caller builds -- i.e. UNDER the caption's scrim, the
+   chip's backing and the shot dots -- specifically so it never crosses the
+   one thing on this screen that must stay reliably readable: sweeping under
+   an opaque scrim leaves the quote exactly as legible as it already was,
+   and the sheen only shows where nothing is protecting readability anyway."
+  []
+  (assoc (anim/with-anim
+           {:fx/type :region
+            :min-width sheen-w :max-width sheen-w
+            :mouse-transparent true
+            :style (theme/style {:-fx-background-color sheen-gradient})}
+           (fn [node] (anim/sheen! node {:unit sheen-w})))
+         :anchor-pane/top 0.0 :anchor-pane/bottom 0.0 :anchor-pane/left 0.0))
+
+(defn- clip-to-live-bounds
+  "Wraps `desc` so its own rendered clip tracks its live width/height,
+   rounded to match the panel's own 6px `-fx-background-radius`. Needed
+   only because of `sheen-highlight` above: it legitimately renders outside
+   its own anchored box while sweeping, and StackPane/AnchorPane do not
+   clip children to the parent's bounds on their own -- without this the
+   sheen paints straight past the panel's edge during its sweep."
+  [desc]
+  {:fx/type fx/ext-on-instance-lifecycle
+   :on-created (fn [^Node node]
+                 (let [rect (doto (Rectangle.) (.setArcWidth 12.0) (.setArcHeight 12.0))]
+                   (.bind (.widthProperty rect) (.widthProperty ^Region node))
+                   (.bind (.heightProperty rect) (.heightProperty ^Region node))
+                   (.setClip node rect)))
+   :desc desc})
+
 (defn- stage-panel
   [{:keys [game snapshot shot-index quote-index screenshot-fn]}]
   (let [stage    (or (:stage snapshot) :idle)
@@ -460,35 +595,48 @@
         overlay
         {:fx/type :anchor-pane
          :children
-         (cond-> [(if url
-                    (assoc caption :anchor-pane/left 0.0 :anchor-pane/right 0.0
-                           :anchor-pane/bottom 0.0)
-                    (assoc caption :anchor-pane/left 24.0 :anchor-pane/right 24.0
-                           :anchor-pane/bottom 20.0))]
-           url (conj (assoc (shot-chip idx total)
-                             :anchor-pane/left 14.0 :anchor-pane/top 14.0))
-           url (conj (assoc (shot-dots total idx)
-                             :anchor-pane/right 14.0 :anchor-pane/top 14.0)))}]
-    {:fx/type :stack-pane
-     :v-box/vgrow :always
-     :style (theme/style (cond-> {:-fx-background-radius 6 :-fx-border-radius 6
-                                   :-fx-border-color (:line c) :-fx-border-width 1}
-                            (not url) (assoc :-fx-background-color (:surface c))))
-     :children
-     (if url
-       [{:fx/type :region
-         :style (theme/style {:-fx-background-image (str "url('" url "')")
-                               :-fx-background-size "cover"
-                               :-fx-background-position "center center"
-                               :-fx-background-repeat "no-repeat"})}
-        ;; a gentle vignette over the whole image; the caption's own scrim
-        ;; below is what makes the text readable, and stacking two heavy
-        ;; gradients would just black out the artwork the panel exists to show
-        {:fx/type :region
-         :style (theme/style {:-fx-background-color
-                               "linear-gradient(to bottom, transparent 50%, rgba(12,12,12,0.45) 100%)"})}
-        overlay]
-       [overlay])}))
+         (into [(sheen-highlight)]
+               (cond-> [(if url
+                          (assoc caption :anchor-pane/left 0.0 :anchor-pane/right 0.0
+                                 :anchor-pane/bottom 0.0)
+                          (assoc caption :anchor-pane/left 24.0 :anchor-pane/right 24.0
+                                 :anchor-pane/bottom 20.0))]
+                 url (conj (assoc (shot-chip idx total)
+                                   :anchor-pane/left 14.0 :anchor-pane/top 14.0))
+                 url (conj (assoc (shot-dots total idx)
+                                   :anchor-pane/right 14.0 :anchor-pane/top 14.0))))}
+        inner
+        {:fx/type :stack-pane
+         :style (theme/style (cond-> {:-fx-background-radius 6 :-fx-border-radius 6
+                                       :-fx-border-color (str panel-hairline " " (:line c) " "
+                                                               (:line c) " " (:line c))
+                                       :-fx-border-width 1}
+                                (not url) (assoc :-fx-background-color (:surface c))))
+         :children
+         (if url
+           [{:fx/type :region
+             :style (theme/style {:-fx-background-image (str "url('" url "')")
+                                   :-fx-background-size "cover"
+                                   :-fx-background-position "center center"
+                                   :-fx-background-repeat "no-repeat"})}
+            ;; a gentle vignette over the whole image; the caption's own scrim
+            ;; below is what makes the text readable, and stacking two heavy
+            ;; gradients would just black out the artwork the panel exists to show
+            {:fx/type :region
+             :style (theme/style {:-fx-background-color
+                                   "linear-gradient(to bottom, transparent 50%, rgba(12,12,12,0.45) 100%)"})}
+            overlay]
+           [overlay])}
+        outer
+        {:fx/type :stack-pane
+         :style (theme/style {:-fx-effect panel-shadow})
+         ;; the drop shadow lives on THIS node, one level up from the clip --
+         ;; a shadow paints outside its node's own layout bounds by design,
+         ;; and clipping that same node to its own bounds (for the sheen's
+         ;; sake) would cut the shadow off right where it's meant to bloom
+         :children [(clip-to-live-bounds inner)]}]
+    (assoc (anim/with-anim outer (fn [node] (anim/rise-in! node)))
+           :v-box/vgrow :always)))
 
 ;; ---------------------------------------------------------------------------
 ;; interrupted state -- gold on surface, NEVER a red banner. This replaces
@@ -509,7 +657,14 @@
    [{:fx/type :label :text (str/upper-case "Download interrupted")
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                            :-fx-text-fill (:gold c)})}
+    ;; BOTH alignments, and they are not the same thing: -fx-text-alignment
+    ;; only positions wrapped lines relative to EACH OTHER, so a message
+    ;; short enough to fit one line ("connection reset by peer") sat flush
+    ;; against the left edge of this label's 460px box while the gold
+    ;; heading and the mono detail line above and below it were centred.
+    ;; :alignment is what centres the text within the box.
     {:fx/type :label :text (or message "") :wrap-text true :max-width 460
+     :alignment :center
      :style (theme/style {:-fx-font-family (theme/ui-font) :-fx-font-size 18
                            :-fx-text-fill (:text c) :-fx-text-alignment "center"})}
     {:fx/type :label
@@ -526,10 +681,11 @@
      [{:fx/type :button :text "Resume download"
        :on-action (or on-retry (fn [_]))
        :min-height 40 :min-width 160
-       :style (theme/style {:-fx-background-color (:gold c) :-fx-text-fill (:bg c)
+       :style (theme/style {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)
                              :-fx-background-radius 3
                              :-fx-font-family (theme/ui-semibold-font)
-                             :-fx-font-size 14})}
+                             :-fx-font-size 14
+                             :-fx-effect (theme/glow (:gold c) {:blur 22 :spread -10 :dy 6 :alpha 0.9})})}
       {:fx/type :button :text "Back to library"
        :on-action (or on-back (fn [_]))
        :min-height 40 :min-width 160

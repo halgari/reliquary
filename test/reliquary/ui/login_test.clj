@@ -4,6 +4,7 @@
   (:require [cljfx.api :as fx]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [reliquary.ui.anim :as anim]
             [reliquary.ui.login :as login]))
 
 (defn find-node
@@ -49,6 +50,75 @@
           "an :error wraps the split with a strip beneath it")
       (is (str/includes? (pr-str errored) "steam is down")))
     (is (not (str/includes? (pr-str (login/view {})) "steam is down")))))
+
+(defn- node-seq
+  "Depth-first seq of a real JavaFX Node and every descendant, walking
+   through `Parent`'s children -- used to inspect actually-instantiated
+   nodes (as opposed to `find-node`'s walk over cljfx description maps)."
+  [^javafx.scene.Node node]
+  (cons node
+        (when (instance? javafx.scene.Parent node)
+          (mapcat node-seq (.getChildrenUnmodifiable ^javafx.scene.Parent node)))))
+
+(defn- any-running-anim?
+  "True if some node in `node` and its descendants carries the property
+   `with-anim` stores an animation under (`::anim/running`, i.e.
+   `:reliquary.ui.anim/running`) -- regardless of whether that animation has
+   since finished, since the property is only ever removed on delete."
+  [^javafx.scene.Node node]
+  (boolean (some #(.get (.getProperties ^javafx.scene.Node %) ::anim/running)
+                 (node-seq node))))
+
+(deftest the-qr-frame-glow-differs-by-state
+  (testing "gold while waiting, amethyst once approved -- the design delta's
+            own colours (theme/glow folds the CSS's negative spread into
+            alpha, so these are the FOLDED values, not the raw CSS alpha --
+            see theme/glow's docstring)"
+    (let [waiting  (pr-str (login/qr-panel {:qr-state :waiting}))
+          approved (pr-str (login/qr-panel {:qr-state :approved}))]
+      (is (str/includes? waiting "rgba(194, 163, 95, 0.42)")
+          "gold glow, blur 34 / spread -8 / alpha .55 folded")
+      (is (not (str/includes? waiting "rgba(125, 107, 145, 0.73)"))
+          "must not carry the approved amethyst glow while waiting")
+      (is (str/includes? approved "rgba(125, 107, 145, 0.73)")
+          "amethyst glow, blur 42 / spread -6 / alpha .85 folded")
+      (is (not (str/includes? approved "rgba(194, 163, 95, 0.42)"))
+          "must not carry the waiting gold glow once approved"))))
+
+(deftest the-scan-line-is-only-present-while-waiting
+  (testing "a 'still waiting' signal must not render over the approved overlay"
+    (is (str/includes? (pr-str (login/qr-panel {:qr-state :waiting}))
+                        ":mouse-transparent true")
+        "the scan line is the only mouse-transparent node this screen builds")
+    (is (not (str/includes? (pr-str (login/qr-panel {:qr-state :approved}))
+                             ":mouse-transparent true")))))
+
+(deftest a-disabled-sign-in-button-carries-no-glow-and-no-gradient
+  (let [disabled (pr-str (find-node (login/view {:account "" :password ""}) :button))
+        enabled  (pr-str (find-node (login/view {:account "someone" :password "x"}) :button))]
+    (is (not (str/includes? disabled "-fx-effect")))
+    (is (not (str/includes? disabled "linear-gradient")))
+    (is (str/includes? enabled "-fx-effect")
+        "the enabled button gets the gold glow")
+    (is (str/includes? enabled "linear-gradient")
+        "the enabled button gets the :button gradient")))
+
+(deftest animate-false-starts-nothing-on-a-real-component
+  (testing "*animate* false must stop every with-anim call this screen makes
+            -- the scan line, the pulsing dot, and the approved overlay's
+            fade-in -- from ever storing a running animation on a real,
+            fx/create-component-instantiated node tree"
+    (let [state {:challenge-url "https://s.team/q/1/2" :qr-state :waiting}
+          [off on]
+          @(fx/on-fx-thread
+             [(binding [anim/*animate* false]
+                (any-running-anim?
+                 (fx/instance (fx/create-component (login/view state)))))
+              (binding [anim/*animate* true]
+                (any-running-anim?
+                 (fx/instance (fx/create-component (login/view state)))))])]
+      (is (false? off) "*animate* false started an animation somewhere")
+      (is (true? on) "*animate* true should start at least one (sanity check)"))))
 
 (deftest the-view-actually-instantiates-real-javafx-nodes
   (testing "pr-str only checks description SHAPE and never builds a Node -- it is

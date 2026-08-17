@@ -20,7 +20,14 @@
  * with insets instead.
  */
 
+/* Modena paints the scene's ROOT NODE with -fx-background (#F4F4F4). That is
+   an opaque fill covering the whole window, and it sits ON TOP of whatever
+   Scene.setFill says -- so a screen whose own root paints no background
+   renders as dark controls floating on cream, the entire palette inverted.
+   app/view's root v-box sets #0C0C0C explicitly and so never noticed; the
+   screenshot harness renders bare screens and did. */
 .root {
+    -fx-background-color:  #0C0C0C;
     -fx-focus-color:       #C2A35F;
     -fx-faint-focus-color: transparent;
 }

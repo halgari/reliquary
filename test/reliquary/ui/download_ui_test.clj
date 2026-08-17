@@ -9,6 +9,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [reliquary.ui.anim :as anim]
             [reliquary.ui.download :as download]
             [reliquary.ui.theme :as theme])
   (:import (java.awt.image BufferedImage)
@@ -72,6 +73,23 @@
     (testing "paused collapses every bar to line-strong, none gold"
       (is (str/includes? paused (:line-strong theme/color)))
       (is (not (str/includes? paused (:gold theme/color)))))))
+
+(deftest the-tip-bars-glow-and-the-rest-do-not
+  (testing "the leading (newest) 3 bars carry the tip glow while running"
+    (let [samples (vec (repeat 48 1000.0))
+          bars    (:children (#'download/sparkline samples false))
+          glow    (theme/glow (:gold theme/color) {:blur 10 :spread -1 :alpha 0.8})]
+      (is (= 48 (count bars)))
+      (is (every? #(str/includes? (pr-str %) glow) (take-last 3 bars))
+          "the last 3 (newest) bars carry the exact tip-glow effect")
+      (is (not-any? #(str/includes? (pr-str %) glow) (drop-last 3 bars))
+          "no other bar does")))
+  (testing "paused suppresses the tip glow too -- every bar is already flat
+            line-strong grey, and a gold glow on a grey bar would look like a bug"
+    (let [samples (vec (repeat 48 1000.0))
+          bars    (:children (#'download/sparkline samples true))
+          glow    (theme/glow (:gold theme/color) {:blur 10 :spread -1 :alpha 0.8})]
+      (is (not-any? #(str/includes? (pr-str %) glow) bars)))))
 
 ;; ---------------------------------------------------------------------------
 ;; the header row: title left, measurements right, ONE row
@@ -144,6 +162,47 @@
   (is (= "--:--" (#'download/fmt-clock 0))))
 
 ;; ---------------------------------------------------------------------------
+;; progress bar: gold gradient/glow under 100%, amethyst gradient/glow at 100%
+
+(deftest the-progress-bar-switches-gradient-and-glow-colour-at-100-percent
+  (let [forty     (pr-str (#'download/progress-bar 40.0))
+        full      (pr-str (#'download/progress-bar 100.0))
+        gold-grad (:progress-bar theme/gradients)
+        done-grad (:progress-done theme/gradients)
+        gold-glow (theme/glow (:gold theme/color) {:blur 22 :spread -4 :alpha 0.85})
+        amy-glow  (theme/glow (:amethyst theme/color) {:blur 22 :spread -4 :alpha 0.85})]
+    (is (str/includes? forty gold-grad))
+    (is (str/includes? forty gold-glow))
+    (is (not (str/includes? forty done-grad)))
+    (is (not (str/includes? forty amy-glow)))
+    (is (str/includes? full done-grad))
+    (is (str/includes? full amy-glow))
+    (is (not (str/includes? full gold-grad)))
+    (is (not (str/includes? full gold-glow)))
+    (is (not= gold-glow amy-glow) "the two glow colours actually differ")))
+
+;; ---------------------------------------------------------------------------
+;; percent and ETA: tabular numerals, and only percent gets the gold haze
+
+(deftest percent-and-eta-carry-tabular-numerals-and-only-percent-glows
+  (testing "walking the plain description data rather than `pr-str`-ing it,
+            because `pr-str` backslash-escapes the embedded double quotes in
+            `tabular-nums`' own value (\"tnum\"), which then never matches
+            literally inside the printed, re-escaped string"
+    (let [snapshot (snap {:bytes-done 40 :bytes-total 100})
+          row      (download/view {:snapshot snapshot :game game :version version})
+          header   (first (:children row))
+          eta-col  (nth (:children header) 3)
+          pct-col  (nth (:children header) 4)
+          eta-value-style (:style (second (:children eta-col)))
+          pct-value-style (:style (second (:children pct-col)))
+          pct-glow (theme/glow (:gold theme/color) {:blur 22 :alpha 0.45})]
+      (is (str/includes? eta-value-style theme/tabular-nums) "ETA carries tabular numerals")
+      (is (str/includes? pct-value-style theme/tabular-nums) "percent carries tabular numerals")
+      (is (str/includes? pct-value-style pct-glow) "percent carries the gold haze behind the number")
+      (is (not (str/includes? eta-value-style pct-glow)) "ETA does not -- only percent gets the glow"))))
+
+;; ---------------------------------------------------------------------------
 ;; :bytes-total 0 must never produce NaN/Infinity anywhere in the rendered
 ;; description -- this catalog genuinely contains such versions
 
@@ -178,6 +237,15 @@
     (testing "no red anywhere -- an explicit Gilt rule, not a style preference"
       (is (not (str/includes? (str/lower-case s) "red")))
       (is (not (re-find #"(?i)#ff0000" s))))))
+
+(deftest the-interrupted-state-has-no-amethyst-success-glow-either
+  (testing "amethyst is this app's ONE 'completed/success' cue (the done
+            screen's ring) -- the interrupted state gets the same gold
+            button treatment every primary action gets elsewhere, but must
+            never pick up amethyst, which would read as 'this succeeded'"
+    (let [snapshot (snap {:stage :failed :error {:category :io :message "disk full"}})
+          s        (pr-str (download/view {:snapshot snapshot :game game :version version}))]
+      (is (not (str/includes? s (:amethyst theme/color)))))))
 
 (deftest the-interrupted-panel-has-resume-and-back-buttons-not-a-cancel-button
   (let [snapshot (snap {:stage :failed :error {:category :unavailable :message "host unreachable"}})
@@ -302,6 +370,34 @@
     (is (str/includes? s "-fx-background-image"))
     (is (str/includes? s "SHOT 01 / 03"))))
 
+(deftest the-active-shot-dot-glows-and-the-others-do-not
+  (let [dots (#'download/shot-dots 3 1)
+        glow (theme/glow (:gold theme/color) {:blur 12 :spread -1 :alpha 0.9})
+        strs (mapv pr-str (:children dots))]
+    (is (= 3 (count strs)))
+    (is (str/includes? (nth strs 1) glow) "the active (index 1) dot glows")
+    (is (not (str/includes? (nth strs 0) glow)))
+    (is (not (str/includes? (nth strs 2) glow)))))
+
+;; ---------------------------------------------------------------------------
+;; the animate-false guarantee: *animate* false must start neither the stage
+;; panel's rise-in! entrance nor its sheen
+
+(deftest animate-false-starts-nothing-on-the-stage-panel
+  (testing "rise-in! only forces starting opacity 0 INSIDE its own
+            `(when *animate* ...)` guard -- with *animate* false a freshly
+            created node's opacity stays JavaFX's own default (1.0) rather
+            than being forced low by an entrance animation that never ran"
+    (let [opacity (fn [animate?]
+                    @(fx/on-fx-thread
+                       (binding [anim/*animate* animate?]
+                         (let [component (fx/create-component
+                                           (#'download/stage-panel
+                                            {:game game :snapshot (snap {}) :screenshot-fn (constantly nil)}))]
+                           (.getOpacity (fx/instance component))))))]
+      (is (= 1.0 (opacity false)))
+      (is (= 0.0 (opacity true))))))
+
 ;; ---------------------------------------------------------------------------
 ;; real component instantiation -- pr-str only checks shape, not a nil
 ;; handler or a bad prop, which has already bitten this project twice
@@ -329,3 +425,19 @@
                     :on-cancel (fn [_]) :on-retry (fn [_]) :on-back (fn [_])}]]
       (let [component @(fx/on-fx-thread (fx/create-component (download/view state)))]
         (is (some? (fx/instance component)) (str "failed to instantiate for " state))))))
+
+(deftest the-interrupted-message-is-centred-not-merely-text-aligned
+  ;; -fx-text-alignment only positions wrapped lines against each other. A
+  ;; one-line message ("connection reset by peer") sat flush left in its
+  ;; 460px box while the heading above and detail below were centred.
+  ;; :alignment is the property that centres text within the box.
+  (let [snapshot (snap {:stage :failed :bytes-done 1234567
+                        :error {:category :io :message "connection reset by peer"}})
+        desc (download/view {:snapshot snapshot :game game :version version})
+        lbl  (->> (tree-seq coll? seq desc)
+                  (filter #(and (map? %)
+                                 (= "connection reset by peer" (:text %))))
+                  first)]
+    (is (some? lbl) "the interrupted message is on screen")
+    (is (= :center (:alignment lbl))
+        "centred within its box, not just text-aligned")))
