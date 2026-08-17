@@ -1,6 +1,12 @@
 {
  "appid": 22370,
  "name": "Fallout 3 - Game of the Year Edition",
+ "foreign-language-depots": [
+  22372,
+  22373,
+  22374,
+  22375
+ ],
  "versions": [
   {
    "id": "public",
@@ -8,27 +14,11 @@
    "branch": "public",
    "build": "14365463",
    "date": "2024-06-04",
-   "bytes": 46249774966,
+   "bytes": 9347718020,
    "depots": [
     {
      "depot-id": 22371,
      "manifest-gid": "2416786561786063548"
-    },
-    {
-     "depot-id": 22372,
-     "manifest-gid": "827002912150357260"
-    },
-    {
-     "depot-id": 22373,
-     "manifest-gid": "179161400861758364"
-    },
-    {
-     "depot-id": 22374,
-     "manifest-gid": "5562528913773688286"
-    },
-    {
-     "depot-id": 22375,
-     "manifest-gid": "5343648328298172273"
     }
    ]
   }

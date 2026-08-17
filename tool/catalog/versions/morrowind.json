@@ -1,6 +1,10 @@
 {
  "appid": 22320,
  "name": "The Elder Scrolls III: Morrowind",
+ "foreign-language-depots": [
+  22322,
+  22323
+ ],
  "versions": [
   {
    "id": "public",
@@ -8,19 +12,11 @@
    "branch": "public",
    "build": "1510067",
    "date": "2018-05-08",
-   "bytes": 3321886096,
+   "bytes": 1247273953,
    "depots": [
     {
      "depot-id": 22321,
      "manifest-gid": "1293785437610275498"
-    },
-    {
-     "depot-id": 22322,
-     "manifest-gid": "7581756715156164220"
-    },
-    {
-     "depot-id": 22323,
-     "manifest-gid": "6554123731300372570"
     },
     {
      "depot-id": 451410,

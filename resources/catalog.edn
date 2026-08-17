@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-17T15:24:23Z"
+ :generated "2026-08-17T17:46:23Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -31,29 +31,13 @@
                     :branch "public"
                     :build "13189953"
                     :date "2024-01-17"
-                    :bytes 29742606498
+                    :bytes 16095731388
                     :depots [{:depot-id 489831
                              :manifest-gid "8442952117333549665"}
                             {:depot-id 489832
                              :manifest-gid "8042843504692938467"}
                             {:depot-id 489833
-                             :manifest-gid "1914580699073641964"}
-                            {:depot-id 489834
-                             :manifest-gid "8562891139598763344"}
-                            {:depot-id 489835
-                             :manifest-gid "9152699258833967999"}
-                            {:depot-id 489836
-                             :manifest-gid "2360664012913025776"}
-                            {:depot-id 489837
-                             :manifest-gid "8402094395440824039"}
-                            {:depot-id 489838
-                             :manifest-gid "3873588632592923754"}
-                            {:depot-id 489839
-                             :manifest-gid "176511637554234126"}
-                            {:depot-id 544860
-                             :manifest-gid "8476536650815851202"}
-                            {:depot-id 544861
-                             :manifest-gid "3494476046078906882"}]}
+                             :manifest-gid "1914580699073641964"}]}
                    {:id "1_5_97"
                     :label "1.5.97"
                     :branch "public"
@@ -192,7 +176,7 @@
                     :branch "public"
                     :build "22848228"
                     :date "2026-05-27"
-                    :bytes 67536079650
+                    :bytes 30410020902
                     :depots [{:depot-id 377161
                              :manifest-gid "5983086794954940044"}
                             {:depot-id 377162
@@ -200,85 +184,7 @@
                             {:depot-id 377163
                              :manifest-gid "8363807899725426636"}
                             {:depot-id 377164
-                             :manifest-gid "8492427313392140315"}
-                            {:depot-id 377165
-                             :manifest-gid "2033965788399743191"}
-                            {:depot-id 377166
-                             :manifest-gid "5627643066330450040"}
-                            {:depot-id 377167
-                             :manifest-gid "7494413550139810042"}
-                            {:depot-id 377168
-                             :manifest-gid "3728836035123485280"}
-                            {:depot-id 393880
-                             :manifest-gid "4656512446653497676"}
-                            {:depot-id 393881
-                             :manifest-gid "9220466047319762009"}
-                            {:depot-id 393882
-                             :manifest-gid "8191305962459798887"}
-                            {:depot-id 393883
-                             :manifest-gid "8665224215527782698"}
-                            {:depot-id 393884
-                             :manifest-gid "7858461782713595876"}]}
-                   {:id "1_10_163"
-                    :label "1.10.163"
-                    :branch "public"
-                    :build ""
-                    :date nil
-                    :bytes 84783989454
-                    :depots [{:depot-id 377161
-                             :manifest-gid "7497069378349273908"}
-                            {:depot-id 377162
-                             :manifest-gid "5847529232406005096"}
-                            {:depot-id 377163
-                             :manifest-gid "5819088023757897745"}
-                            {:depot-id 377164
-                             :manifest-gid "2178106366609958945"}
-                            {:depot-id 435870
-                             :manifest-gid "1691678129192680960"}
-                            {:depot-id 435871
-                             :manifest-gid "5106118861901111234"}
-                            {:depot-id 435880
-                             :manifest-gid "1255562923187931216"}
-                            {:depot-id 435881
-                             :manifest-gid "1207717296920736193"}
-                            {:depot-id 435882
-                             :manifest-gid "8482181819175811242"}
-                            {:depot-id 480630
-                             :manifest-gid "5527412439359349504"}
-                            {:depot-id 480631
-                             :manifest-gid "6588493486198824788"}
-                            {:depot-id 393885
-                             :manifest-gid "5000262035721758737"}
-                            {:depot-id 393895
-                             :manifest-gid "7677765994120765493"}
-                            {:depot-id 377165
-                             :manifest-gid "7549549550652702123"}
-                            {:depot-id 377166
-                             :manifest-gid "6854162778963425477"}
-                            {:depot-id 377167
-                             :manifest-gid "783101348965844295"}
-                            {:depot-id 377168
-                             :manifest-gid "7717372852115364102"}
-                            {:depot-id 393881
-                             :manifest-gid "4735225695214536532"}
-                            {:depot-id 393882
-                             :manifest-gid "7540680803954664080"}
-                            {:depot-id 393884
-                             :manifest-gid "3455288010746962666"}
-                            {:depot-id 404091
-                             :manifest-gid "6756984187996423348"}
-                            {:depot-id 435872
-                             :manifest-gid "5590419866095647350"}
-                            {:depot-id 435873
-                             :manifest-gid "2207548206398235202"}
-                            {:depot-id 435874
-                             :manifest-gid "9032251103390457158"}
-                            {:depot-id 435875
-                             :manifest-gid "2953236065717816833"}
-                            {:depot-id 435877
-                             :manifest-gid "2675794883952625475"}
-                            {:depot-id 435878
-                             :manifest-gid "8276750634369029613"}]}
+                             :manifest-gid "8492427313392140315"}]}
                    {:id "1_10_984"
                     :label "1.10.984"
                     :branch "public"
@@ -331,83 +237,11 @@
                     :branch "public"
                     :build "15039560"
                     :date "2024-09-05"
-                    :bytes 43741285430
-                    :depots [{:depot-id 211721
-                             :manifest-gid "8491601813494771150"}
-                            {:depot-id 211722
-                             :manifest-gid "1022735717219821693"}
-                            {:depot-id 211723
-                             :manifest-gid "1086946781294420899"}
-                            {:depot-id 211724
-                             :manifest-gid "1276143862192158998"}
-                            {:depot-id 211725
-                             :manifest-gid "8299795016551985184"}
-                            {:depot-id 211726
-                             :manifest-gid "5289416362846105567"}
-                            {:depot-id 211727
-                             :manifest-gid "7751553359064521832"}
-                            {:depot-id 211728
-                             :manifest-gid "4059246410413922004"}
-                            {:depot-id 211729
-                             :manifest-gid "7463371072418866286"}
-                            {:depot-id 220761
-                             :manifest-gid "2344958374935388264"}
-                            {:depot-id 220762
-                             :manifest-gid "5113555411172661886"}
-                            {:depot-id 220763
-                             :manifest-gid "8215433295476872627"}
-                            {:depot-id 220764
-                             :manifest-gid "7691844347959071567"}
-                            {:depot-id 220765
-                             :manifest-gid "257722701370938794"}
-                            {:depot-id 220766
-                             :manifest-gid "931899454736580467"}
-                            {:depot-id 220767
-                             :manifest-gid "1912731935620426238"}
-                            {:depot-id 220768
-                             :manifest-gid "8180020645450882851"}
-                            {:depot-id 220769
-                             :manifest-gid "2819260933799905552"}
-                            {:depot-id 226881
-                             :manifest-gid "5951986179928071119"}
-                            {:depot-id 226882
-                             :manifest-gid "1063207227414446171"}
-                            {:depot-id 226883
-                             :manifest-gid "2843325968068819127"}
-                            {:depot-id 226884
-                             :manifest-gid "3812267532474553905"}
-                            {:depot-id 226885
-                             :manifest-gid "1585497366712628883"}
-                            {:depot-id 226886
-                             :manifest-gid "5952995101008705423"}
-                            {:depot-id 226887
-                             :manifest-gid "7536838561817009398"}
-                            {:depot-id 226888
-                             :manifest-gid "921222014325323019"}
-                            {:depot-id 226890
-                             :manifest-gid "612194655676385333"}
-                            {:depot-id 72851
+                    :bytes 6013532400
+                    :depots [{:depot-id 72851
                              :manifest-gid "430694959351693705"}
                             {:depot-id 72853
-                             :manifest-gid "5477471785942614203"}
-                            {:depot-id 72854
-                             :manifest-gid "7714663930157316519"}
-                            {:depot-id 72855
-                             :manifest-gid "2251296615448706646"}
-                            {:depot-id 72856
-                             :manifest-gid "1727971286572746112"}
-                            {:depot-id 72857
-                             :manifest-gid "7452763826351096823"}
-                            {:depot-id 72858
-                             :manifest-gid "7838100264460942831"}
-                            {:depot-id 72859
-                             :manifest-gid "5471547594501309345"}
-                            {:depot-id 72860
-                             :manifest-gid "5193644833404975611"}
-                            {:depot-id 72861
-                             :manifest-gid "400878757036949667"}
-                            {:depot-id 72862
-                             :manifest-gid "2225156885713950567"}]}]}
+                             :manifest-gid "5477471785942614203"}]}]}
         {:appid 22380
          :title "Fallout: New Vegas"
          :studio "Obsidian Entertainment"
@@ -438,135 +272,25 @@
                     :branch "public"
                     :build "1510068"
                     :date "2018-05-08"
-                    :bytes 29788171997
+                    :bytes 9896511981
                     :depots [{:depot-id 22381
                              :manifest-gid "8327177303444281069"}
                             {:depot-id 22382
                              :manifest-gid "1869121858616960493"}
-                            {:depot-id 22383
-                             :manifest-gid "4908451661450393672"}
-                            {:depot-id 22384
-                             :manifest-gid "3154332352227781227"}
-                            {:depot-id 22385
-                             :manifest-gid "1254217014717060816"}
-                            {:depot-id 22386
-                             :manifest-gid "8761564382862573338"}
                             {:depot-id 22393
                              :manifest-gid "8227935753987096201"}
-                            {:depot-id 22461
-                             :manifest-gid "5904002363925640566"}
-                            {:depot-id 22462
-                             :manifest-gid "4866927589704494894"}
-                            {:depot-id 22463
-                             :manifest-gid "2606574133782217517"}
-                            {:depot-id 22464
-                             :manifest-gid "3566069208831073571"}
-                            {:depot-id 22466
-                             :manifest-gid "1510770969128417196"}
-                            {:depot-id 22467
-                             :manifest-gid "3538923246242403538"}
-                            {:depot-id 22468
-                             :manifest-gid "4054403017816647337"}
-                            {:depot-id 22469
-                             :manifest-gid "2754265232492844016"}
-                            {:depot-id 22471
-                             :manifest-gid "7317844635982217214"}
-                            {:depot-id 22472
-                             :manifest-gid "1132709297122659322"}
-                            {:depot-id 22473
-                             :manifest-gid "6438309698058593440"}
-                            {:depot-id 22474
-                             :manifest-gid "4369356280283756406"}
-                            {:depot-id 22476
-                             :manifest-gid "4281683315724973816"}
-                            {:depot-id 22477
-                             :manifest-gid "7147209989063233162"}
-                            {:depot-id 22478
-                             :manifest-gid "6144308732856631726"}
-                            {:depot-id 22479
-                             :manifest-gid "5039947182700550471"}
                             {:depot-id 22493
                              :manifest-gid "2502952557192596705"}
-                            {:depot-id 22494
-                             :manifest-gid "172761448805198342"}
-                            {:depot-id 22495
-                             :manifest-gid "3899563573656223062"}
-                            {:depot-id 22496
-                             :manifest-gid "2854660838749520858"}
-                            {:depot-id 72702
-                             :manifest-gid "218001916733409543"}
-                            {:depot-id 72703
-                             :manifest-gid "8704668556634681206"}
-                            {:depot-id 72704
-                             :manifest-gid "5027314936807090238"}
-                            {:depot-id 72706
-                             :manifest-gid "4769162033996668390"}
-                            {:depot-id 72707
-                             :manifest-gid "2475543823682564198"}
-                            {:depot-id 72708
-                             :manifest-gid "2833359475025167693"}
-                            {:depot-id 72710
-                             :manifest-gid "4444319566282062264"}
-                            {:depot-id 72711
-                             :manifest-gid "5188458997640746773"}
-                            {:depot-id 72712
-                             :manifest-gid "851361898012512096"}
-                            {:depot-id 72714
-                             :manifest-gid "2877250838608166760"}
-                            {:depot-id 72715
-                             :manifest-gid "7383312129410005891"}
-                            {:depot-id 72716
-                             :manifest-gid "6186740497873431344"}
                             {:depot-id 72732
                              :manifest-gid "4131381354636064588"}
-                            {:depot-id 72733
-                             :manifest-gid "4152591146727673335"}
-                            {:depot-id 72734
-                             :manifest-gid "3274733605889166985"}
-                            {:depot-id 72735
-                             :manifest-gid "8677900210824532806"}
-                            {:depot-id 72736
-                             :manifest-gid "7999052110491368290"}
                             {:depot-id 72742
                              :manifest-gid "4517089570337326424"}
-                            {:depot-id 72743
-                             :manifest-gid "5251151026503673295"}
-                            {:depot-id 72744
-                             :manifest-gid "1305099132607763646"}
-                            {:depot-id 72745
-                             :manifest-gid "1687258286902847069"}
-                            {:depot-id 72746
-                             :manifest-gid "8215456132420404126"}
                             {:depot-id 72751
                              :manifest-gid "1624841217294494503"}
-                            {:depot-id 72752
-                             :manifest-gid "7666384873706904799"}
-                            {:depot-id 72753
-                             :manifest-gid "8226671937990042355"}
-                            {:depot-id 72754
-                             :manifest-gid "6027990557909752884"}
-                            {:depot-id 72755
-                             :manifest-gid "2158729683026608055"}
                             {:depot-id 72761
                              :manifest-gid "5717050455382180241"}
-                            {:depot-id 72762
-                             :manifest-gid "7641337957345960590"}
-                            {:depot-id 72763
-                             :manifest-gid "8371948547095099581"}
-                            {:depot-id 72764
-                             :manifest-gid "4409623748397178295"}
-                            {:depot-id 72765
-                             :manifest-gid "4696146338252983690"}
                             {:depot-id 72841
-                             :manifest-gid "7404324045800590955"}
-                            {:depot-id 72842
-                             :manifest-gid "1434764155323580833"}
-                            {:depot-id 72843
-                             :manifest-gid "7904639580398839628"}
-                            {:depot-id 72844
-                             :manifest-gid "6599444621768713933"}
-                            {:depot-id 72845
-                             :manifest-gid "7165809099252444575"}]}]}
+                             :manifest-gid "7404324045800590955"}]}]}
         {:appid 22330
          :title "The Elder Scrolls IV: Oblivion"
          :studio "Bethesda Game Studios"
@@ -597,17 +321,9 @@
                     :branch "public"
                     :build "1510065"
                     :date "2018-05-08"
-                    :bytes 24978289925
+                    :bytes 5931321158
                     :depots [{:depot-id 22331
-                             :manifest-gid "7977703601170745652"}
-                            {:depot-id 22334
-                             :manifest-gid "6986544622093806923"}
-                            {:depot-id 22335
-                             :manifest-gid "1772388336463976851"}
-                            {:depot-id 22336
-                             :manifest-gid "4349214922682464414"}
-                            {:depot-id 22337
-                             :manifest-gid "424494866178121373"}]}]}
+                             :manifest-gid "7977703601170745652"}]}]}
         {:appid 413150
          :title "Stardew Valley"
          :studio "ConcernedApe"
@@ -705,141 +421,41 @@
                     :branch "public"
                     :build "20383525"
                     :date "2025-10-14"
-                    :bytes 117178735039
+                    :bytes 66366228927
                     :depots [{:depot-id 1091501
-                             :manifest-gid "3389237510439361019"}
-                            {:depot-id 1091502
-                             :manifest-gid "819305496055337333"}
-                            {:depot-id 1091503
-                             :manifest-gid "2051822335481947109"}
-                            {:depot-id 1091504
-                             :manifest-gid "7478488130966967410"}
-                            {:depot-id 1091505
-                             :manifest-gid "7982214908117080286"}
-                            {:depot-id 1091506
-                             :manifest-gid "2059269590710419725"}
-                            {:depot-id 1091507
-                             :manifest-gid "5073153400365828217"}
-                            {:depot-id 1091508
-                             :manifest-gid "8836038990327543024"}
-                            {:depot-id 1091509
-                             :manifest-gid "2202736442745644704"}
-                            {:depot-id 1460470
-                             :manifest-gid "4839420595466808435"}
-                            {:depot-id 1460471
-                             :manifest-gid "2293639687853156805"}]}
+                             :manifest-gid "3389237510439361019"}]}
                    {:id "2_30_old"
                     :label "2.3"
                     :branch "2_30_old"
                     :build "19260982"
                     :date "2025-09-11"
-                    :bytes 118144284967
+                    :bytes 67331782951
                     :depots [{:depot-id 1091501
-                             :manifest-gid "6814019010317238099"}
-                            {:depot-id 1091502
-                             :manifest-gid "6184739646416384219"}
-                            {:depot-id 1091503
-                             :manifest-gid "2155431883450560521"}
-                            {:depot-id 1091504
-                             :manifest-gid "154478943248480549"}
-                            {:depot-id 1091505
-                             :manifest-gid "2785239419527800155"}
-                            {:depot-id 1091506
-                             :manifest-gid "4950498239915244227"}
-                            {:depot-id 1091507
-                             :manifest-gid "6688146715027058561"}
-                            {:depot-id 1091508
-                             :manifest-gid "8161295208627735550"}
-                            {:depot-id 1091509
-                             :manifest-gid "1164045688452124372"}
-                            {:depot-id 1460470
-                             :manifest-gid "293694417878924697"}
-                            {:depot-id 1460471
-                             :manifest-gid "5234987954077902546"}]}
+                             :manifest-gid "6814019010317238099"}]}
                    {:id "2_21_old"
                     :label "2.21"
                     :branch "2_21_old"
                     :build "17055519"
                     :date "2025-07-17"
-                    :bytes 116799298830
+                    :bytes 66043436302
                     :depots [{:depot-id 1091501
-                             :manifest-gid "8420445566849588826"}
-                            {:depot-id 1091502
-                             :manifest-gid "3260780708809854852"}
-                            {:depot-id 1091503
-                             :manifest-gid "2781196279510572595"}
-                            {:depot-id 1091504
-                             :manifest-gid "2997316000567469581"}
-                            {:depot-id 1091505
-                             :manifest-gid "4589533780567096316"}
-                            {:depot-id 1091506
-                             :manifest-gid "4746434433646308761"}
-                            {:depot-id 1091507
-                             :manifest-gid "5139081181596225291"}
-                            {:depot-id 1091508
-                             :manifest-gid "8063732630804129021"}
-                            {:depot-id 1091509
-                             :manifest-gid "4359393218898221092"}
-                            {:depot-id 1460470
-                             :manifest-gid "1470473429525273457"}
-                            {:depot-id 1460471
-                             :manifest-gid "619006663931326731"}]}
+                             :manifest-gid "8420445566849588826"}]}
                    {:id "2_13_old"
                     :label "2.13"
                     :branch "2_13_old"
                     :build "15646965"
                     :date "2024-12-10"
-                    :bytes 116605304136
+                    :bytes 65871998280
                     :depots [{:depot-id 1091501
-                             :manifest-gid "4350623720177810551"}
-                            {:depot-id 1091502
-                             :manifest-gid "4846693136267556074"}
-                            {:depot-id 1091503
-                             :manifest-gid "2930929891484713220"}
-                            {:depot-id 1091504
-                             :manifest-gid "4078220236152172576"}
-                            {:depot-id 1091505
-                             :manifest-gid "498874446476828295"}
-                            {:depot-id 1091506
-                             :manifest-gid "1923371999643087830"}
-                            {:depot-id 1091507
-                             :manifest-gid "2478744079664596808"}
-                            {:depot-id 1091508
-                             :manifest-gid "7381328406432883171"}
-                            {:depot-id 1091509
-                             :manifest-gid "1513374529205859369"}
-                            {:depot-id 1460470
-                             :manifest-gid "2012342711196649618"}
-                            {:depot-id 1460471
-                             :manifest-gid "1139551677548366368"}]}
+                             :manifest-gid "4350623720177810551"}]}
                    {:id "1_63_legacy_patch"
                     :label "1.63 (legacy)"
                     :branch "1_63_legacy_patch"
                     :build "11545061"
                     :date "2023-09-21"
-                    :bytes 120220651617
+                    :bytes 69245530209
                     :depots [{:depot-id 1091501
-                             :manifest-gid "6594873489665865240"}
-                            {:depot-id 1091502
-                             :manifest-gid "8869499918106631472"}
-                            {:depot-id 1091503
-                             :manifest-gid "7860725176037203861"}
-                            {:depot-id 1091504
-                             :manifest-gid "3942706128185741435"}
-                            {:depot-id 1091505
-                             :manifest-gid "4214828340855710649"}
-                            {:depot-id 1091506
-                             :manifest-gid "5463429117151273495"}
-                            {:depot-id 1091507
-                             :manifest-gid "3145667816131657121"}
-                            {:depot-id 1091508
-                             :manifest-gid "3995250012592214586"}
-                            {:depot-id 1091509
-                             :manifest-gid "9217761376710018763"}
-                            {:depot-id 1460470
-                             :manifest-gid "5765923022907354951"}
-                            {:depot-id 1460471
-                             :manifest-gid "2979356708568940230"}]}]}
+                             :manifest-gid "6594873489665865240"}]}]}
         {:appid 1086940
          :title "Baldur's Gate 3"
          :studio "Larian Studios"
@@ -871,127 +487,43 @@
                     :branch "public"
                     :build "24532579"
                     :date "2026-08-03"
-                    :bytes 155594720745
+                    :bytes 155343283550
                     :depots [{:depot-id 1086941
                              :manifest-gid "4288948197859959444"}
                             {:depot-id 1086942
                              :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "2118230943991643525"}
-                            {:depot-id 1086944
-                             :manifest-gid "3423097641402863301"}
-                            {:depot-id 1086945
-                             :manifest-gid "9002272171910189584"}
-                            {:depot-id 1086946
-                             :manifest-gid "2409481873063333868"}
-                            {:depot-id 1086947
-                             :manifest-gid "4701297036193868114"}
-                            {:depot-id 1086948
-                             :manifest-gid "8505682662122387972"}
-                            {:depot-id 1086949
-                             :manifest-gid "4043484420852339008"}
-                            {:depot-id 1419650
-                             :manifest-gid "6250389178731869788"}
-                            {:depot-id 1419651
-                             :manifest-gid "9051166838150188236"}
                             {:depot-id 1419652
                              :manifest-gid "7005275183208636774"}
                             {:depot-id 1419653
-                             :manifest-gid "2098612237190800348"}
-                            {:depot-id 1419658
-                             :manifest-gid "916483664598379515"}
-                            {:depot-id 1419668
-                             :manifest-gid "6176479858889274652"}
-                            {:depot-id 1419669
-                             :manifest-gid "9081827886419290237"}
-                            {:depot-id 2330350
-                             :manifest-gid "1205466515600447451"}
-                            {:depot-id 2330351
-                             :manifest-gid "7646694850759131929"}]}
+                             :manifest-gid "2098612237190800348"}]}
                    {:id "release_patch_7_hf3"
                     :label "Patch 7 hf3"
                     :branch "release_patch_7_hf3"
                     :build "16065077"
                     :date "2025-03-27"
-                    :bytes 154627572267
+                    :bytes 154377614894
                     :depots [{:depot-id 1086941
                              :manifest-gid "5026713417664092526"}
                             {:depot-id 1086942
                              :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "1107708890965171808"}
-                            {:depot-id 1086944
-                             :manifest-gid "4428239725755415705"}
-                            {:depot-id 1086945
-                             :manifest-gid "6028240894531217739"}
-                            {:depot-id 1086946
-                             :manifest-gid "8814279930504850804"}
-                            {:depot-id 1086947
-                             :manifest-gid "7055405863172719745"}
-                            {:depot-id 1086948
-                             :manifest-gid "1177849686188402038"}
-                            {:depot-id 1086949
-                             :manifest-gid "7900372690999400037"}
-                            {:depot-id 1419650
-                             :manifest-gid "2476340684195286569"}
-                            {:depot-id 1419651
-                             :manifest-gid "6806914915590760927"}
                             {:depot-id 1419652
                              :manifest-gid "4560720842929068408"}
                             {:depot-id 1419653
-                             :manifest-gid "813968981771126782"}
-                            {:depot-id 1419658
-                             :manifest-gid "4522073111045687015"}
-                            {:depot-id 1419668
-                             :manifest-gid "5757806648215906392"}
-                            {:depot-id 1419669
-                             :manifest-gid "2801378419093995952"}
-                            {:depot-id 2330350
-                             :manifest-gid "3531144885724029944"}
-                            {:depot-id 2330351
-                             :manifest-gid "8566425517764903600"}]}
+                             :manifest-gid "813968981771126782"}]}
                    {:id "release_patch6_hf9"
                     :label "Patch 6 hf9"
                     :branch "release_patch6_hf9"
                     :build "13981165"
                     :date "2024-04-08"
-                    :bytes 153034479055
+                    :bytes 152785305901
                     :depots [{:depot-id 1086941
                              :manifest-gid "4016443084035836922"}
                             {:depot-id 1086942
                              :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "8704250069811909913"}
-                            {:depot-id 1086944
-                             :manifest-gid "3292885662645325731"}
-                            {:depot-id 1086945
-                             :manifest-gid "8237530545437607331"}
-                            {:depot-id 1086946
-                             :manifest-gid "5080467222606749123"}
-                            {:depot-id 1086947
-                             :manifest-gid "8260264646733091175"}
-                            {:depot-id 1086948
-                             :manifest-gid "9059714744390918940"}
-                            {:depot-id 1086949
-                             :manifest-gid "8465180551353127518"}
-                            {:depot-id 1419650
-                             :manifest-gid "8372184514980148361"}
-                            {:depot-id 1419651
-                             :manifest-gid "6120897092515926605"}
                             {:depot-id 1419652
                              :manifest-gid "6054390892227846984"}
                             {:depot-id 1419653
-                             :manifest-gid "5004287504333497038"}
-                            {:depot-id 1419658
-                             :manifest-gid "4835577404029430904"}
-                            {:depot-id 1419668
-                             :manifest-gid "7928402143006248738"}
-                            {:depot-id 1419669
-                             :manifest-gid "5988027054563412068"}
-                            {:depot-id 2330350
-                             :manifest-gid "7410969271902313996"}
-                            {:depot-id 2330351
-                             :manifest-gid "2538495863540404322"}]}]}
+                             :manifest-gid "5004287504333497038"}]}]}
         {:appid 22370
          :title "Fallout 3"
          :studio "Bethesda Game Studios"
@@ -1023,17 +555,9 @@
                     :branch "public"
                     :build "14365463"
                     :date "2024-06-04"
-                    :bytes 46249774966
+                    :bytes 9347718020
                     :depots [{:depot-id 22371
-                             :manifest-gid "2416786561786063548"}
-                            {:depot-id 22372
-                             :manifest-gid "827002912150357260"}
-                            {:depot-id 22373
-                             :manifest-gid "179161400861758364"}
-                            {:depot-id 22374
-                             :manifest-gid "5562528913773688286"}
-                            {:depot-id 22375
-                             :manifest-gid "5343648328298172273"}]}]}
+                             :manifest-gid "2416786561786063548"}]}]}
         {:appid 22320
          :title "The Elder Scrolls III: Morrowind"
          :studio "Bethesda Game Studios"
@@ -1065,13 +589,9 @@
                     :branch "public"
                     :build "1510067"
                     :date "2018-05-08"
-                    :bytes 3321886096
+                    :bytes 1247273953
                     :depots [{:depot-id 22321
                              :manifest-gid "1293785437610275498"}
-                            {:depot-id 22322
-                             :manifest-gid "7581756715156164220"}
-                            {:depot-id 22323
-                             :manifest-gid "6554123731300372570"}
                             {:depot-id 451410
                              :manifest-gid "5635087427908069289"}]}]}
         {:appid 1716740
@@ -1105,18 +625,8 @@
                     :branch "public"
                     :build "23518663"
                     :date "2026-06-11"
-                    :bytes 169346759739
+                    :bytes 137931370869
                     :depots [{:depot-id 1716741
                              :manifest-gid "6026043903923231328"}
                             {:depot-id 1716742
-                             :manifest-gid "3130703038371677921"}
-                            {:depot-id 1716743
-                             :manifest-gid "7908035178130303133"}
-                            {:depot-id 1716744
-                             :manifest-gid "7835038652843152485"}
-                            {:depot-id 1716745
-                             :manifest-gid "8082676786766068854"}
-                            {:depot-id 1716746
-                             :manifest-gid "8256719953704350900"}
-                            {:depot-id 1716747
-                             :manifest-gid "1299082767590167920"}]}]}]}
+                             :manifest-gid "3130703038371677921"}]}]}]}

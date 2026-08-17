@@ -150,11 +150,18 @@
    entries sharing a sha-content but declaring different sizes cannot be the
    same content, so a size conflict means this is NOT a copy: the entry is
    planned as its own file rather than aborting the whole download over a
-   remote-controlled input like a sentinel/all-zero digest. A manifest that
-   lists the same destination path twice -- whether under the same sha, a
+   remote-controlled input like a sentinel/all-zero digest.
+
+   The same destination path claimed twice -- whether under the same sha, a
    different sha, or no sha at all -- is rejected outright: read naively it
    would produce a copy of a path onto itself, and the engine's Files/copy
-   with REPLACE_EXISTING would truncate that path before reading it.
+   with REPLACE_EXISTING would truncate that path before reading it. Note the
+   check spans the UNION of `depot-manifests`, not each manifest separately,
+   and in practice that is where it fires: Steam ships one depot per
+   localization and localizations deliberately overwrite each other's files,
+   so selecting a game's language depots alongside its core depot presents the
+   same path many times over. The raised message names both depots, because
+   the fix is almost always to the depot SELECTION rather than to a manifest.
 
    Every planned file's chunks must tile its declared size exactly (see
    `validate-tiling!`) -- a gap or overlap here produces plausible bytes at
@@ -177,7 +184,7 @@
         skipped (- (count not-file-es) (count (filter directory? not-file-es)))]
     (loop [remaining (seq file-es)
            seen      {}                       ; sha-content -> {:path :size} already planned
-           paths     #{}                      ; every destination path already claimed
+           paths     {}                       ; path -> {:depot-id :sha :size} that claimed it
            files     []
            copies    []
            dl-bytes  0
@@ -193,20 +200,47 @@
          :skipped        skipped}
         (let [e    (first remaining)
               path (safe-path (:name e))
-              _    (when (contains? paths path)
-                     (error/raise :incorrect
-                                  (str "manifest lists the same path twice: " path)
-                                  {:path path}))
               size     (->long (:size e) :size)
               sha      (real-sha (:sha-content e))
               has-sha? (some? sha)
+              claimed  (get paths path)
+              ;; Two depots naming one path is only a CONFLICT when they
+              ;; disagree about what goes there. Identical content -- same
+              ;; SHA-1, same size -- is just the same file shipped twice, and
+              ;; Fallout 4 does exactly that: depots 377161 and 377163 both
+              ;; carry `Data/Fallout4 - Meshes.ba2`, byte for byte, and share
+              ;; no other path at all. Writing it once is right and loses
+              ;; nothing; refusing the whole download over it is not.
+              ;; Across depots only. One depot listing a path twice is a
+              ;; malformed manifest whatever the content says, and gets no
+              ;; leniency; two depots doing it is Steam's normal behaviour.
+              same?    (and claimed has-sha?
+                            (not= (:depot-id claimed) (:depot-id e))
+                            (= sha (:sha claimed)) (= size (:size claimed)))
+              _    (when (and claimed (not same?))
+                     ;; Name BOTH depots. This fires most often because the
+                     ;; depot selection is wrong rather than because a single
+                     ;; manifest is malformed -- Steam ships one depot per
+                     ;; localization, and localizations overwrite each other's
+                     ;; files by design (Skyrim Special Edition puts
+                     ;; Skyrim_Default.ini in its core depot AND in all eight
+                     ;; language depots). Without the depot ids the message
+                     ;; sends you looking for a corrupt manifest instead of at
+                     ;; the two depots that should never have been selected
+                     ;; together.
+                     (error/raise :incorrect
+                                  (str "depots " (:depot-id claimed) " and " (:depot-id e)
+                                       " both write the same path with different content: "
+                                       path)
+                                  {:path path :depot-id (:depot-id e)
+                                   :other-depot-id (:depot-id claimed)}))
               src      (when has-sha? (get seen sha))
               as-file  (fn [seen']
                          (let [cs (norm-chunks (:chunks e))]
                            (validate-tiling! path size cs)
                            [(next remaining)
                             seen'
-                            (conj paths path)
+                            (assoc paths path {:depot-id (:depot-id e) :sha sha :size size})
                             (conj files {:path        path
                                          :size        size
                                          :depot-id    (:depot-id e)
@@ -217,12 +251,18 @@
                             (+ disk size)
                             (+ chunks (count cs))]))]
           (cond
+            ;; Already planned, byte-identical: nothing to add. Falling
+            ;; through would double-count its bytes and chunks.
+            same?
+            (recur (next remaining) seen paths files copies dl-bytes disk chunks)
+
             (and has-sha? src (not= (:size src) size))
             (let [[rem seen' paths' files' copies' dl' disk' chunks'] (as-file seen)]
               (recur rem seen' paths' files' copies' dl' disk' chunks'))
 
             (and has-sha? src)
-            (recur (next remaining) seen (conj paths path) files
+            (recur (next remaining) seen
+                   (assoc paths path {:depot-id (:depot-id e) :sha sha :size size}) files
                    (conj copies {:path path :source (:path src) :size (:size src)})
                    dl-bytes (+ disk size) chunks)
 

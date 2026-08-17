@@ -127,6 +127,18 @@ def norm_depots(depots):
         out.append({"depot-id": int(d["depot-id"]), "manifest-gid": gid})
     return out
 
+def drop_foreign(depots, foreign):
+    """Strip non-English localization depots from a hand-curated depot list.
+
+    versions-historical/ entries come from community downgrade guides, which
+    list depot ids with no PICS metadata, so the language filter in
+    fetch_versions.py cannot see them. Fallout 4's 1.10.163 arrived with 27
+    depots, fourteen of them French, German, Italian, Spanish, Russian,
+    Brazilian or Japanese. Beyond the wasted gigabytes those depots collide:
+    localizations overwrite each other's files by design, and plan/build
+    refuses a download whose depots disagree about what belongs at a path."""
+    return [d for d in depots if int(d["depot-id"]) not in foreign]
+
 def build_game(domain):
     g = load(f"{TOOL}/games/{domain}.json")
     if not g or not g.get("appid"):
@@ -141,8 +153,10 @@ def build_game(domain):
         if v and int(v["appid"]) != appid:
             raise ValueError(
                 f"appid mismatch: games/ says {appid}, {src}/ says {v['appid']}")
+    pics_doc = load(f"{TOOL}/versions/{domain}.json") or {}
+    foreign = set(pics_doc.get("foreign-language-depots") or [])
     versions = []
-    for v in (load(f"{TOOL}/versions/{domain}.json") or {}).get("versions", []):
+    for v in pics_doc.get("versions", []):
         versions.append({"id": v["id"], "label": clean_label(v["id"], v["label"]),
                          "branch": v["branch"],
                          "build": str(v.get("build") or ""), "date": v.get("date"),
@@ -181,7 +195,7 @@ def build_game(domain):
                          "branch": "public",
                          "build": str(v.get("build") or ""), "date": v.get("date"),
                          "bytes": int(v.get("bytes") or 0),
-                         "depots": norm_depots(v["depots"])})
+                         "depots": norm_depots(drop_foreign(v["depots"], foreign))})
     if not versions:
         return None, "no versions from any source"
     return {"appid": appid, "title": clean_title(g["title"]), "studio": g.get("studio"),

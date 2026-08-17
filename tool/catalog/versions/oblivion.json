@@ -1,6 +1,12 @@
 {
  "appid": 22330,
  "name": "The Elder Scrolls IV: Oblivion Game of the Year Edition (2009)",
+ "foreign-language-depots": [
+  22334,
+  22335,
+  22336,
+  22337
+ ],
  "versions": [
   {
    "id": "public",
@@ -8,27 +14,11 @@
    "branch": "public",
    "build": "1510065",
    "date": "2018-05-08",
-   "bytes": 24978289925,
+   "bytes": 5931321158,
    "depots": [
     {
      "depot-id": 22331,
      "manifest-gid": "7977703601170745652"
-    },
-    {
-     "depot-id": 22334,
-     "manifest-gid": "6986544622093806923"
-    },
-    {
-     "depot-id": 22335,
-     "manifest-gid": "1772388336463976851"
-    },
-    {
-     "depot-id": 22336,
-     "manifest-gid": "4349214922682464414"
-    },
-    {
-     "depot-id": 22337,
-     "manifest-gid": "424494866178121373"
     }
    ]
   }

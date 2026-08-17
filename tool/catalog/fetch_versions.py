@@ -17,6 +17,31 @@ def pics(appid):
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.load(r)["data"][str(appid)]
 
+#: Steam ships one depot per localization. We install English, so every OTHER
+#: language is dead weight -- and worse than dead weight, because localization
+#: depots collide. Measured across this catalog, the non-English depots were
+#: 90% of Skyrim's download (36.5 GB of 40.7), 83% of Fallout: New Vegas's,
+#: 80% of Fallout 3's, 61% of Fallout 4's and 43% of Cyberpunk's.
+#:
+#: The collision is not incidental. Skyrim Special Edition ships
+#: `Skyrim_Default.ini` in its CORE depot AND in every one of its eight
+#: language depots -- each localization overwrites the same file with its own
+#: language setting. Selecting them all makes the same destination path appear
+#: nine times, which plan/build rejects outright (it will not plan a copy of a
+#: path onto itself). So this is what produced BOTH the absurd sizes and the
+#: "lists the same path twice" failure.
+#:
+#: English is NOT always in the unlabelled core depot, so "drop every depot
+#: with a language" is wrong and would silently ship broken installs: Fallout 4
+#: keeps 3.8 GB of English voice in depot 377164, Skyrim 1.5 GB in 72853
+#: against a 4.2 GB core, and Fallout: New Vegas 4.8 GB across seven
+#: english-tagged DLC depots. Hence: no language, OR english.
+def wanted_language(cfg):
+    """Is this depot's localization one we install? Unlabelled depots are
+       shared content and always wanted; labelled ones only if English."""
+    lang = (cfg.get("language") or "").strip().lower()
+    return (not lang) or lang == "english"
+
 def windows_depots(depots, branch):
     """Depots this app installs on Windows that carry a manifest for `branch`."""
     out = []
@@ -25,8 +50,11 @@ def windows_depots(depots, branch):
             continue
         if v.get("dlcappid") or v.get("optional"):
             continue
-        oslist = (v.get("config") or {}).get("oslist")
+        cfg = v.get("config") or {}
+        oslist = cfg.get("oslist")
         if oslist and "windows" not in oslist:
+            continue
+        if not wanted_language(cfg):
             continue
         m = (v.get("manifests") or {}).get(branch)
         if not m or not m.get("gid"):
@@ -57,7 +85,19 @@ def versions_for(appid):
                    "build": str(b.get("buildid") or ""), "date": date,
                    "bytes": sum(d.pop("bytes") for d in sel),
                    "depots": sel})
-    return {"appid": appid, "name": app["common"]["name"], "versions": vs}
+    # Every depot we are DELIBERATELY leaving out for being a non-English
+    # localization, recorded so assemble.py can apply the same rule to the
+    # hand-curated versions-historical/ lists. Those name their depots by id
+    # only, with no PICS metadata attached, so without this they would keep
+    # shipping the language depots this function drops -- which is exactly
+    # what happened: Fallout 4's 1.10.163 arrived from a downgrade guide with
+    # 27 depots, fourteen of them French, German, Italian, Spanish, Russian,
+    # Brazilian or Japanese.
+    foreign = sorted(int(k) for k, v in depots.items()
+                     if k.isdigit() and isinstance(v, dict)
+                     and not wanted_language(v.get("config") or {}))
+    return {"appid": appid, "name": app["common"]["name"],
+            "foreign-language-depots": foreign, "versions": vs}
 
 if __name__ == "__main__":
     for arg in sys.argv[1:]:

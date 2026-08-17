@@ -147,6 +147,63 @@
       (is (= :incorrect (:reliquary/error (ex-data ex))))
       (is (= "a.bsa" (:path (ex-data ex)))))))
 
+(deftest two-depots-shipping-one-identical-file-plan-it-once
+  ;; Fallout 4 depots 377161 and 377163 both carry
+  ;; `Data/Fallout4 - Meshes.ba2`, byte for byte -- same SHA-1, same
+  ;; 1,491,573,805 bytes -- and share no other path at all. Steam writes it
+  ;; once. Refusing the whole 28 GB download over it, as this originally did,
+  ;; is not a defensible reading of "the same path twice": there is no
+  ;; ambiguity about what belongs there.
+  (let [a {:depot-id 377161 :key-hex "k"
+           :files [(entry "Data/Fallout4 - Meshes.ba2" 100 "meshes-sha" [["c0" 0 100]])
+                   (entry "Data/only-in-a.ba2" 10 "a-sha" [["c1" 0 10]])]}
+        b {:depot-id 377163 :key-hex "k"
+           :files [(entry "Data/Fallout4 - Meshes.ba2" 100 "meshes-sha" [["c0" 0 100]])
+                   (entry "Data/only-in-b.ba2" 20 "b-sha" [["c2" 0 20]])]}
+        p (plan/build [a b])]
+    (is (= #{"Data/Fallout4 - Meshes.ba2" "Data/only-in-a.ba2" "Data/only-in-b.ba2"}
+           (set (map :path (:files p)))))
+    (is (= 1 (count (filter #(= "Data/Fallout4 - Meshes.ba2" (:path %)) (:files p))))
+        "planned once, not twice")
+    (is (= [] (:copies p)) "and not as a copy of itself")
+    (is (= 130 (:disk-bytes p)) "its bytes are counted once, not doubled")
+    (is (= 130 (:download-bytes p)))
+    (is (= 3 (:total-chunks p)))))
+
+(deftest one-depot-listing-a-path-twice-is-still-rejected
+  ;; The leniency above is for two DEPOTS. A single manifest naming one path
+  ;; twice is malformed no matter how well its two entries agree, and gets no
+  ;; benefit of the doubt.
+  (is (thrown? clojure.lang.ExceptionInfo
+               (plan/build [{:depot-id 377161 :key-hex "k"
+                             :files [(entry "a.bsa" 10 "same" [["c0" 0 10]])
+                                     (entry "a.bsa" 10 "same" [["c0" 0 10]])]}]))))
+
+(deftest two-depots-writing-one-path-name-both-depots
+  ;; This is how the check actually fires in production. Steam ships one depot
+  ;; per localization and localizations overwrite each other's files by
+  ;; design: Skyrim Special Edition puts Skyrim_Default.ini in its core depot
+  ;; AND in all eight of its language depots. Selecting them together presents
+  ;; the same destination path nine times. The message has to name the depots,
+  ;; or it sends the reader looking for a corrupt manifest when the real fault
+  ;; is the depot selection.
+  (let [core {:depot-id 489832 :key-hex "k"
+              :files [(entry "Skyrim_Default.ini" 10 "core-sha" [["c0" 0 10]])]}
+        fr   {:depot-id 489834 :key-hex "k"
+              :files [(entry "Skyrim_Default.ini" 12 "fr-sha" [["c1" 0 12]])]}
+        ex   (try (plan/build [core fr])
+                  nil
+                  (catch clojure.lang.ExceptionInfo e e))
+        d    (ex-data ex)]
+    (is (some? ex) "a cross-depot path collision is rejected")
+    (is (= :incorrect (:reliquary/error d)))
+    (is (= "Skyrim_Default.ini" (:path d)))
+    (is (= #{489832 489834} #{(:depot-id d) (:other-depot-id d)})
+        "both depots are in the data, not just the second one")
+    (is (re-find #"489832" (ex-message ex)))
+    (is (re-find #"489834" (ex-message ex))
+        "and both are in the message a user actually sees")))
+
 ;; --- carried findings from the foundation review -------------------------
 
 (deftest chunks-that-do-not-tile-are-rejected
