@@ -231,7 +231,12 @@
                    :text (if approved? "Approved — signing in"
                              "Waiting for approval on your device")
                    :style (theme/style {:-fx-font-size 13 :-fx-text-fill (:text-muted c)})}]}
+      ;; :alignment as well as -fx-text-alignment -- see the note in
+      ;; download.clj's interrupted panel. This copy happens to wrap to two
+      ;; full lines today, which hides the difference; shorten it to one
+      ;; line and it would go flush left inside its 290px box.
       {:fx/type :label :wrap-text true :max-width 290
+       :alignment :center
        :text (str "Approve the request in the mobile app. "
                   "Sign-in completes on its own — there is no button here.")
        :style (theme/style {:-fx-font-size 12 :-fx-text-fill (:text-muted c)

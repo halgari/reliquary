@@ -425,3 +425,19 @@
                     :on-cancel (fn [_]) :on-retry (fn [_]) :on-back (fn [_])}]]
       (let [component @(fx/on-fx-thread (fx/create-component (download/view state)))]
         (is (some? (fx/instance component)) (str "failed to instantiate for " state))))))
+
+(deftest the-interrupted-message-is-centred-not-merely-text-aligned
+  ;; -fx-text-alignment only positions wrapped lines against each other. A
+  ;; one-line message ("connection reset by peer") sat flush left in its
+  ;; 460px box while the heading above and detail below were centred.
+  ;; :alignment is the property that centres text within the box.
+  (let [snapshot (snap {:stage :failed :bytes-done 1234567
+                        :error {:category :io :message "connection reset by peer"}})
+        desc (download/view {:snapshot snapshot :game game :version version})
+        lbl  (->> (tree-seq coll? seq desc)
+                  (filter #(and (map? %)
+                                 (= "connection reset by peer" (:text %))))
+                  first)]
+    (is (some? lbl) "the interrupted message is on screen")
+    (is (= :center (:alignment lbl))
+        "centred within its box, not just text-aligned")))

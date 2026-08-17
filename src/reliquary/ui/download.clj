@@ -639,7 +639,14 @@
    [{:fx/type :label :text (str/upper-case "Download interrupted")
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                            :-fx-text-fill (:gold c)})}
+    ;; BOTH alignments, and they are not the same thing: -fx-text-alignment
+    ;; only positions wrapped lines relative to EACH OTHER, so a message
+    ;; short enough to fit one line ("connection reset by peer") sat flush
+    ;; against the left edge of this label's 460px box while the gold
+    ;; heading and the mono detail line above and below it were centred.
+    ;; :alignment is what centres the text within the box.
     {:fx/type :label :text (or message "") :wrap-text true :max-width 460
+     :alignment :center
      :style (theme/style {:-fx-font-family (theme/ui-font) :-fx-font-size 18
                            :-fx-text-fill (:text c) :-fx-text-alignment "center"})}
     {:fx/type :label
