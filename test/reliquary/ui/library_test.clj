@@ -4,7 +4,12 @@
   (:require [cljfx.api :as fx]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [reliquary.ui.library :as library]))
+            [reliquary.ui.anim :as anim]
+            [reliquary.ui.library :as library]
+            [reliquary.ui.theme :as theme])
+  (:import (javafx.scene Node Parent Scene)
+           (javafx.scene.image WritableImage)
+           (javafx.scene.layout Region)))
 
 (defn find-nodes
   "Walks a cljfx description tree depth-first and returns every map whose
@@ -21,6 +26,18 @@
     :else nil))
 
 (defn find-node [desc type] (first (find-nodes desc type)))
+
+(defn game-cards
+  "Every card's top-level :v-box description, in game order. A card is
+   distinguished from the OTHER :v-box nodes nested inside it (the
+   title/meta-row block) by carrying both a click handler and the card's
+   own rounded-rectangle clip -- the inner block has neither. `find-nodes`
+   recurses through every map value regardless of key name, so this finds
+   cards whether or not they are wrapped in `anim/with-anim`'s
+   `fx/ext-on-instance-lifecycle`."
+  [desc]
+  (filter #(and (:on-mouse-clicked %) (= :rectangle (get-in % [:clip :fx/type])))
+          (find-nodes desc :v-box)))
 
 (def games
   [{:appid 100 :title "Stardew Valley" :studio "ConcernedApe"
@@ -184,3 +201,87 @@
     (let [games [{:appid 1 :title "G" :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}]}]
           s (pr-str (library/view {:games games :selected-appid 1 :selected-version-id "public"}))]
       (is (not (str/includes? s "You don't own this game"))))))
+
+;; ---------------------------------------------------------------------
+;; Visual pass (docs/design-delta-2026-08-17.md) -- ring/lift on the
+;; selected card, the card art sheen, version row/dot glows, and the
+;; gradient Download button.
+;; ---------------------------------------------------------------------
+
+(deftest the-selected-card-gets-a-ring-lift-and-glow-the-unselected-one-does-not
+  (let [desc      (library/view {:games games :selected-appid 200})
+        by-appid  (zipmap (map :appid games) (game-cards desc))
+        selected  (get by-appid 200)
+        unselected (get by-appid 100)]
+    (is (some? selected))
+    (is (some? unselected))
+    (testing "selected: gold ring (border), lift, and a glow beneath"
+      (is (str/includes? (:style selected) (str "-fx-border-color: " (:gold theme/color) ";")))
+      (is (str/includes? (:style selected) "-fx-translate-y: -2;"))
+      (is (str/includes? (:style selected) "-fx-effect: dropshadow")))
+    (testing "unselected: plain line border, no lift, no glow"
+      (is (str/includes? (:style unselected) (str "-fx-border-color: " (:line theme/color) ";")))
+      (is (not (str/includes? (:style unselected) "-fx-translate-y")))
+      (is (not (str/includes? (:style unselected) "-fx-effect"))))))
+
+(deftest the-card-art-sheen-is-mouse-transparent-and-inside-the-arts-clip
+  (let [desc   (library/view {:games games})
+        sheens (filter #(str/includes? (or (:style %) "") "rgba(242, 240, 238, 0.07)")
+                        (find-nodes desc :region))]
+    (is (= (count games) (count sheens))
+        "one sheen per card")
+    (doseq [sheen sheens]
+      (is (true? (:mouse-transparent sheen))
+          "the sheen must never steal the card's click"))))
+
+(deftest selected-version-row-and-dot-glow
+  (let [desc (library/view {:games games :selected-appid 200 :selected-version-id "public"})
+        s    (pr-str desc)]
+    (is (str/includes? s "-fx-effect: dropshadow")
+        "a selected version row and its dot both carry a glow")))
+
+(deftest a-disabled-download-button-has-no-gradient-and-no-glow
+  (testing "unowned -- the ownership case"
+    (let [btn (primary-button (library/view {:games games :selected-appid 100
+                                              :selected-version-id "public" :owned #{}}))]
+      (is (true? (:disable btn)))
+      (is (not (str/includes? (:style btn) "linear-gradient")))
+      (is (not (str/includes? (:style btn) "-fx-effect")))))
+  (testing "no version selected -- owned, but nothing chosen yet"
+    (let [btn (primary-button (library/view {:games games :selected-appid 100 :owned #{100}}))]
+      (is (true? (:disable btn)))
+      (is (not (str/includes? (:style btn) "linear-gradient")))
+      (is (not (str/includes? (:style btn) "-fx-effect"))))))
+
+(deftest an-enabled-download-button-gets-the-gradient-and-glow
+  (let [btn (primary-button (library/view {:games games :selected-appid 200
+                                            :selected-version-id "public" :owned #{200}}))]
+    (is (not (:disable btn)))
+    (is (str/includes? (:style btn) "linear-gradient"))
+    (is (str/includes? (:style btn) "-fx-effect: dropshadow"))))
+
+(deftest binding-animate-false-starts-nothing
+  (testing "a card's real Node keeps its default opacity when *animate* is
+            false -- rise-in! would otherwise force it to 0.0 as the very
+            first thing it does, before playing anything"
+    (let [root      @(fx/on-fx-thread
+                        (binding [anim/*animate* false]
+                          (let [component (fx/create-component (library/view {:games games}))
+                                root      (fx/instance component)]
+                            ;; ScrollPane only realises its content into the
+                            ;; real scene graph once a Skin exists, which
+                            ;; needs a CSS/layout pass -- .snapshot forces
+                            ;; one synchronously, same as shot/render! does,
+                            ;; without needing a shown Stage.
+                            (.snapshot (Scene. root) (WritableImage. 1 1))
+                            root)))
+          card      (letfn [(find-card [^Node node]
+                               (if (and (instance? Region node)
+                                        (== 168.0 (.getMinWidth ^Region node)))
+                                 node
+                                 (when (instance? Parent node)
+                                   (some find-card (.getChildrenUnmodifiable ^Parent node)))))]
+                      (find-card root))]
+      (is (some? card) "a card-sized node must exist in the real scene graph")
+      (is (= 1.0 (.getOpacity ^Node card))
+          "rise-in! never ran, so nothing set opacity away from its default"))))
