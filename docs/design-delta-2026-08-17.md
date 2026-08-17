@@ -70,11 +70,19 @@ wordmark in the title bar. Rendered at **height 26px, width auto** (source is
 `filter: drop-shadow(0 3px 9px rgba(125,107,145,.5))` — an amethyst glow — and
 the breathing gold halo behind it.
 
-**The file is not in the repo.** `DesignSync/get_file` caps at 256 KiB and
-returned it truncated (no IEND chunk), so it cannot be decoded. The title bar
-must therefore **fall back to the existing drawn mark + wordmark when
-`resources/reliquary-logo.png` is absent or unreadable**, and use the image when
-it is present. Ask the user to drop the real file in.
+**The file is now at `resources/reliquary-logo.png`** (289,470 bytes, 1099x259
+RGBA, verified decodable by ImageIO). `DesignSync/get_file` caps at 256 KiB and
+returned it truncated, so the user supplied it directly.
+
+The artwork is an amethyst chest with a gold clasp and a download arrow, beside
+a cream `RELIQUARY` wordmark -- so it carries the Gilt palette itself and
+replaces BOTH the drawn ring-and-dot mark and the tracked text wordmark.
+Verified legible at 110x26.
+
+Keep a **fallback to the drawn mark + wordmark when the resource is missing or
+unreadable**. It costs a few lines, and it means a packaging mistake that drops
+the image degrades to the old title bar rather than to an empty rectangle or a
+crash.
 
 ## Other deltas
 
