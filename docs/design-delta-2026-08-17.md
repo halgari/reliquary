@@ -70,8 +70,18 @@ wordmark in the title bar. Rendered at **height 26px, width auto** (source is
 `filter: drop-shadow(0 3px 9px rgba(125,107,145,.5))` — an amethyst glow — and
 the breathing gold halo behind it.
 
-**The file is now at `resources/reliquary-logo.png`** (289,470 bytes, 1099x259
-RGBA, verified decodable by ImageIO). `DesignSync/get_file` caps at 256 KiB and
+**The file is at `resources/reliquary-logo.png`**, 330x78 RGBA, 27,770 bytes.
+
+The source was 1099x259 / 289 KB -- roughly ten times the pixels ever drawn,
+since it renders at 110x26. It is stored at 3x that (330x78), which covers
+HiDPI scaling beyond anything in normal use, for a 90% saving. Verified
+indistinguishable from the original at display size.
+
+**WebP was considered and does not work.** JavaFX loads images through its own
+`com.sun.javafx.iio` decoders -- PNG, JPEG, GIF, BMP -- not through ImageIO, so
+an ImageIO plugin would not help either. A WebP is rejected outright with
+`No loader for image data` (tested). Downscaling the PNG achieves more than the
+format change would have anyway: 289 KB -> 27.7 KB. `DesignSync/get_file` caps at 256 KiB and
 returned it truncated, so the user supplied it directly.
 
 The artwork is an amethyst chest with a gold clasp and a download arrow, beside
