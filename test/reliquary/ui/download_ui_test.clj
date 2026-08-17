@@ -441,3 +441,23 @@
     (is (some? lbl) "the interrupted message is on screen")
     (is (= :center (:alignment lbl))
         "centred within its box, not just text-aligned")))
+
+(deftest the-eta-uses-the-session-average-not-the-instantaneous-rate
+  ;; Dividing remaining bytes by a 250 ms rate makes a clock that swings
+  ;; wildly twice a second. The speedometer and sparkline keep the live rate;
+  ;; only the clock is smoothed.
+  (let [;; half done; the instant rate is a 10x spike, the session average is calm
+        snapshot (snap {:stage :downloading :bytes-done 500 :bytes-total 1000
+                        :bytes-per-sec 1000.0 :wire-bytes-per-sec 1000.0
+                        :session-bytes-per-sec 100.0})
+        s (pr-str (download/view {:snapshot snapshot :game game :version version}))]
+    ;; 500 remaining / 100 B/s = 5s -> 00:05. The instant rate would say 00:01.
+    (is (str/includes? s "00:05")
+        "the clock follows the session average")
+    (is (not (str/includes? s "00:01"))
+        "and not the momentary spike"))
+  (testing "no session history yet reads --:-- rather than a wild number"
+    (let [snapshot (snap {:stage :downloading :bytes-done 10 :bytes-total 1000
+                          :bytes-per-sec 5000.0 :session-bytes-per-sec 0.0})
+          s (pr-str (download/view {:snapshot snapshot :game game :version version}))]
+      (is (str/includes? s "--:--")))))

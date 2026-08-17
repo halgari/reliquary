@@ -93,7 +93,7 @@
     (doseq [g (catalog/games cat)]
       (println)
       (println (format "%-8s %s" (str (:appid g)) (:title g)))
-      (doseq [v (:versions g)]
+      (doseq [v (catalog/versions g)]
         ;; No build id. It is Valve's own ordinal for a build -- not the
         ;; version the user is choosing, and not what identifies the content.
         ;; The release date says more and every version has one.

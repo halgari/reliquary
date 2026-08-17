@@ -91,9 +91,16 @@
   (str (long (Math/round (double pct))) "%"))
 
 (defn- eta-seconds
-  "Remaining seconds at the current :bytes-per-sec, or nil whenever any input
-   is missing, non-finite, zero or negative -- an unknown total or a stalled
-   rate has no meaningful ETA."
+  "Remaining seconds at `bps`, or nil whenever any input is missing,
+   non-finite, zero or negative -- an unknown total or a stalled rate has no
+   meaningful ETA.
+
+   Callers pass :session-bytes-per-sec, the average over the whole run, NOT
+   the 250 ms :bytes-per-sec. Dividing the remaining bytes by an
+   instantaneous rate produces a clock that swings between 04:11 and 47:02
+   twice a second: accurate at each instant and useless to plan around. The
+   speedometer and the sparkline still show the live rate, which is where a
+   live rate belongs."
   [done total bps]
   (when (and (finite-num? done) (finite-num? total) (finite-num? bps)
              (pos? (double total)) (pos? (double bps)))
@@ -309,7 +316,7 @@
   [snapshot paused?]
   (let [secs  (when-not paused?
                 (eta-seconds (:bytes-done snapshot) (:bytes-total snapshot)
-                             (:bytes-per-sec snapshot)))
+                             (:session-bytes-per-sec snapshot)))
         clock (fmt-clock secs)]
     (stat-column "Time remaining" clock
                  (if (= clock "--:--") (:text-muted c) (:text c)))))
@@ -380,9 +387,11 @@
 
 (defn- stats-line
   [snapshot paused?]
-  (let [{:keys [stage bytes-done bytes-total bytes-per-sec wire-bytes-per-sec]} snapshot
+  (let [{:keys [stage bytes-done bytes-total wire-bytes-per-sec
+                session-bytes-per-sec]} snapshot
         stage (or stage :idle)
-        eta   (fmt-clock (when-not paused? (eta-seconds bytes-done bytes-total bytes-per-sec)))]
+        eta   (fmt-clock (when-not paused?
+                           (eta-seconds bytes-done bytes-total session-bytes-per-sec)))]
     {:fx/type :label
      :text (str (fmt-bytes bytes-done) " / " (fmt-size bytes-total) "  ·  "
                 (fmt-rate wire-bytes-per-sec) "  ·  " eta " remaining  ·  "

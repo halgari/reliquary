@@ -22,6 +22,7 @@
    never be treated differently from a game that simply has no art -- both
    render the same placeholder."
   (:require [clojure.string :as str]
+            [reliquary.catalog :as catalog]
             [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme]))
 
@@ -204,7 +205,7 @@
    belongs on the download button, not on the click. The card stays dimmed and
    says `Not owned` so the state is legible, but the panel opens."
   [{:keys [game selected? owned? capsule-fn on-select]}]
-  (let [primary (first (:versions game))
+  (let [primary (first (catalog/versions game))
         ;; Two lines, wrapped. On one line every Elder Scrolls title truncates
         ;; to "The Elder Scrolls V: S..." -- Skyrim and Skyrim Special Edition
         ;; become the same card, which defeats the point of a grid you pick a
@@ -491,7 +492,7 @@
 
 (defn- side-panel
   [{:keys [game selected-version-id folder owned? on-select-version on-change-folder on-download]}]
-  (let [versions         (:versions game)
+  (let [versions         (catalog/versions game)
         selected-version (find-version game selected-version-id)]
     ;; :border-pane, not a :v-box with a :v-box/vgrow :always middle child.
     ;; That was the first draft, and it is exactly the trap this project has

@@ -204,3 +204,23 @@
       ;; there would silently shadow the bundled catalog for every test that
       ;; runs after this one in the same JVM. Clean up regardless of outcome.
       (finally (io/delete-file cache-file true)))))
+
+(deftest versions-are-newest-release-first
+  ;; Document order is not display order: the current build comes from PICS
+  ;; and older ones from hand-curated files, so they arrive concatenated.
+  ;; Skyrim Special Edition listed Latest (2024), 1.5.97 (2019), then climbed
+  ;; back through 2021 and 2022 -- no order at all, as far as a reader can tell.
+  (let [g {:appid 1 :versions [{:id "public" :date "2024-01-17"}
+                               {:id "old"    :date "2019-11-20"}
+                               {:id "mid"    :date "2021-11-11"}
+                               {:id "newer"  :date "2023-12-05"}]}]
+    (is (= ["public" "newer" "mid" "old"] (mapv :id (catalog/versions g)))))
+  (testing "ties keep document order -- Stardew ships public and compatibility
+            the same day, and the current build belongs above the 32-bit one"
+    (let [g {:appid 2 :versions [{:id "public" :date "2024-12-22"}
+                                 {:id "compatibility" :date "2024-12-22"}
+                                 {:id "older" :date "2024-11-04"}]}]
+      (is (= ["public" "compatibility" "older"] (mapv :id (catalog/versions g))))))
+  (testing "a missing date sorts last instead of throwing"
+    (let [g {:appid 3 :versions [{:id "undated"} {:id "dated" :date "2020-01-01"}]}]
+      (is (= ["dated" "undated"] (mapv :id (catalog/versions g)))))))

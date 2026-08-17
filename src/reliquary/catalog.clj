@@ -175,3 +175,22 @@
 (defn games [catalog] (:games catalog))
 (defn game [catalog appid] (first (filter #(= (long appid) (:appid %)) (:games catalog))))
 (defn version [game version-id] (first (filter #(= version-id (:id %)) (:versions game))))
+
+(defn versions
+  "`game`'s versions, newest release first.
+
+   Document order is not display order. The current build comes from PICS and
+   the older ones from hand-curated files, so they arrive concatenated rather
+   than merged: Skyrim Special Edition listed Latest (2024-01-17), then
+   1.5.97 (2019), then climbed back up through 2021 and 2022 -- a list that
+   is neither newest-first nor oldest-first, and reads as though the versions
+   are in no order at all.
+
+   Dates are ISO-8601, so they sort lexicographically and need no parsing.
+   The sort is STABLE, which is what keeps ties in their document order:
+   Stardew Valley publishes `public` and `compatibility` on the same day, and
+   the current build should stay above the 32-bit one. A missing date sorts
+   last rather than throwing -- every catalog version has one today, and a
+   version picker is not the place to discover that a new one does not."
+  [game]
+  (vec (sort-by #(or (:date %) "") #(compare %2 %1) (:versions game))))

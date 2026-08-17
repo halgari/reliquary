@@ -125,6 +125,7 @@
    :wire-bytes         0
    :bytes-per-sec      0.0
    :wire-bytes-per-sec 0.0
+   :session-bytes-per-sec 0.0
    :samples            []
    :error              nil})
 
@@ -162,6 +163,21 @@
      :wire-bytes-per-sec B/s of :wire-bytes, over the last 250 ms -- the real
                          network throughput, and the honest number to compare
                          against a connection's speed
+     :session-bytes-per-sec
+                         B/s of :bytes-done averaged over THIS RUN so far, not
+                         over a 250 ms window: bytes written since the run
+                         started, divided by seconds since it started. This is
+                         the rate to compute a time-remaining from. The 250 ms
+                         rates are the honest instantaneous reading and belong
+                         on a speedometer and a sparkline, but dividing a
+                         remaining-bytes figure by one makes a clock that jumps
+                         between 04:11 and 47:02 twice a second, which tells
+                         the user nothing they can plan around. A cumulative
+                         average settles within seconds and then moves slowly.
+                         0.0 until the run has a second of history, and on a
+                         RESUME it measures only what this run fetched -- the
+                         bytes found already on disk took no time today and
+                         would otherwise show an ETA of nearly zero.
      :samples            up to 48 of the most recent :wire-bytes-per-sec
                          values, oldest first -- twelve seconds of history for
                          a sparkline. B/s, the SAME unit as the rates above.
@@ -441,6 +457,11 @@
                                     (long (or (:total-chunks todo) 0))))
         landed      (AtomicLong. 0)
         failure     (atom nil)
+        ;; nanoTime at the moment :downloading begins, for the session
+        ;; average above. Not the moment execute! is called: preallocation of
+        ;; a 128 GB install is not download time, and counting it would drag
+        ;; the average down for the whole run.
+        started     (AtomicLong. 0)
         stage!      (fn [s] (swap! state assoc :stage s))
         refresh!    (fn [] (swap! state assoc
                                   :bytes-done (.get bytes-done)
@@ -468,6 +489,7 @@
                 c chunks]
           (.add q {:path path :depot-id depot-id :chunk c}))
         (try
+          (.set started (System/nanoTime))
           (stage! :downloading)
           ;; Both rates are B/s over the same 250 ms window, and :samples is
           ;; the wire rate in B/s too. One map must not carry two units: a UI
@@ -481,7 +503,15 @@
                (let [now       (.get bytes-done)
                      now-wire  (.get wire-bytes)
                      rate      (/ (double (- now (.get prev))) 0.25)
-                     wire-rate (/ (double (- now-wire (.get prev-wire))) 0.25)]
+                     wire-rate (/ (double (- now-wire (.get prev-wire))) 0.25)
+                     elapsed   (/ (double (- (System/nanoTime) (.get started))) 1.0e9)
+                     ;; Under a second of history divides a small byte count
+                     ;; by a smaller number and produces a rate in the
+                     ;; gigabytes; 0.0 reads as "--:--" until it means
+                     ;; something.
+                     sess-rate (if (>= elapsed 1.0)
+                                 (/ (double (- now done0-bytes)) elapsed)
+                                 0.0)]
                  (.set prev now)
                  (.set prev-wire now-wire)
                  (swap! state (fn [s]
@@ -490,7 +520,8 @@
                                            :chunks-done (.get chunks-done)
                                            :wire-bytes now-wire
                                            :bytes-per-sec rate
-                                           :wire-bytes-per-sec wire-rate)
+                                           :wire-bytes-per-sec wire-rate
+                                           :session-bytes-per-sec sess-rate)
                                     (update :samples
                                             (fn [xs]
                                               (let [xs (conj (or xs []) wire-rate)]
