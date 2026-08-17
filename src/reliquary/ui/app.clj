@@ -94,6 +94,7 @@
    :title "Reliquary"
    :width 1100 :height 720
    :scene {:fx/type :scene
+           :stylesheets [(theme/stylesheet)]
            :fill (:bg c)
            :root {:fx/type :v-box
                   :style (theme/style {:-fx-background-color (:bg c)})

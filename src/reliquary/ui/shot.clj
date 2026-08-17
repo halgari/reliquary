@@ -113,6 +113,16 @@
        (let [component (fx/create-component desc)
              root      (fx/instance component)
              scene     (Scene. root (double width) (double height))
+             ;; Attach the Gilt stylesheet, because the real app does.
+             ;; render! is handed a bare root node -- callers pass
+             ;; (get-in (app/view ...) [:scene :root]) -- so the :stylesheets
+             ;; the app sets on its Scene never reach this one. Without this
+             ;; line every screenshot silently renders scrollbars, focus rings
+             ;; and disabled buttons in JavaFX's default Modena skin: pale grey
+             ;; furniture that does not exist in the running application. A
+             ;; screenshot that does not match the app is worse than no
+             ;; screenshot, because it is the thing being reviewed.
+             _         (.add (.getStylesheets scene) (theme/stylesheet))
              image     (WritableImage. (int width) (int height))]
          (.snapshot scene image)
          (ImageIO/write (fx-image->buffered-image image) "png" out)))

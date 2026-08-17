@@ -1,0 +1,103 @@
+/*
+ * Reliquary — Copyright (C) 2026 Timothy Baldridge
+ * Licensed under the GNU General Public License v3 or later. See LICENSE.
+ *
+ * Gilt, applied to the controls that inline styles cannot reach.
+ *
+ * A cljfx :style string sets properties on ONE node. A ScrollBar is built from
+ * sub-nodes the view never names -- .thumb, .track, the two arrow buttons --
+ * so JavaFX's default Modena skin shows through: pale grey bars on a near-black
+ * window. The only way in is a stylesheet.
+ *
+ * The design's own rule, from the mockup:
+ *     ::-webkit-scrollbar       { width: 10px; }
+ *     ::-webkit-scrollbar-thumb { background: #383838; border-radius: 6px;
+ *                                 border: 3px solid #0C0C0C; }
+ *     ::-webkit-scrollbar-track { background: transparent; }
+ *
+ * The 3px border is what makes the thumb read as a floating capsule rather than
+ * a bar filling the gutter; JavaFX has no border-on-thumb, so it is reproduced
+ * with insets instead.
+ */
+
+.root {
+    -fx-focus-color:       #C2A35F;
+    -fx-faint-focus-color: transparent;
+}
+
+/* ---- scroll panes ---------------------------------------------------- */
+
+.scroll-pane,
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Modena draws a 1px inset border on a focused ScrollPane; against Gilt it
+   reads as an unexplained pale rectangle around the grid. */
+.scroll-pane {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical  { -fx-pref-width: 10; }
+.scroll-bar:horizontal { -fx-pref-height: 10; }
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: #383838;
+    -fx-background-radius: 6;
+    /* stands in for the mockup's 3px solid #0C0C0C border on the thumb */
+    -fx-background-insets: 3;
+}
+
+.scroll-bar > .thumb:hover   { -fx-background-color: #4F4F4F; }
+.scroll-bar > .thumb:pressed { -fx-background-color: #9A9A9A; }
+
+/* Modena's stepper arrows have no place in this design and the mockup has
+   none: collapse them to nothing rather than restyling them. */
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-height: 0;
+    -fx-pref-width: 0;
+}
+
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-shape: null;
+    -fx-padding: 0;
+}
+
+/* The little square where the two bars meet. */
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
+}
+
+/* ---- text fields ------------------------------------------------------ */
+
+.text-field,
+.password-field {
+    -fx-prompt-text-fill: #9A9A9A;
+    -fx-highlight-fill:   #C2A35F;
+    -fx-highlight-text-fill: #0C0C0C;
+}
+
+/* ---- buttons ---------------------------------------------------------- */
+
+/* A disabled button keeps the surface/muted styling the view already sets;
+   Modena's default is to halve the opacity of everything, which makes the
+   label unreadable against #161616. */
+.button:disabled {
+    -fx-opacity: 1.0;
+}

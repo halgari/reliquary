@@ -108,3 +108,14 @@
   (str/join " "
     (for [[k v] decls]
       (str (fx-prop->str k) ": " v ";"))))
+
+(defn stylesheet
+  "The Gilt stylesheet's URL, for a Scene's :stylesheets.
+
+   Inline `:style` strings reach one node. A ScrollBar is assembled from
+   sub-nodes the view never names -- .thumb, .track, the stepper buttons -- so
+   without this the default Modena skin shows through: pale grey scrollbars on
+   a near-black window. Anything that must style a control's internals belongs
+   in resources/reliquary.css, not here."
+  []
+  (str (io/resource "reliquary.css")))

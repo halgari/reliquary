@@ -99,6 +99,42 @@
 (def ^:private card-width 168)
 (def ^:private card-height (long (* card-width 1.5))) ; aspect 2/3
 
+(def ^:private card-radius 6)
+(def ^:private card-border 1)
+
+;; The art spans the card minus its border on each side.
+;;
+;; NO padding on the card. JavaFX's Region.getInsets() is padding PLUS border
+;; width, and children are laid out inside those insets -- so a 1px border
+;; already reserves its own 1px. Adding `:padding 1` on top made the content
+;; box card-width - 4 while the art was sized card-width - 2, and the art
+;; overflowed by exactly one pixel per side, straight over the border. That is
+;; the whole bug: the border was never being covered because children ignore
+;; it, but because the card was told to inset them twice.
+(def ^:private art-width (- card-width (* 2 card-border)))
+
+;; The art's own radius: the card's outer radius less the border it sits
+;; inside. The card's clip rounds to the border's OUTER edge, which is not
+;; enough -- along a corner the arc sweeps inward by up to r - r/sqrt(2)
+;; (~1.8px at r=6) further than the straight edge does, so a square-cornered
+;; child inset by only the border width still pokes through the arc.
+(def ^:private art-radius (- card-radius card-border))
+
+(defn- top-rounded-clip
+  "An SVG path: `w` x `h` with the TOP two corners rounded to `r`, bottom square.
+
+   A :rectangle clip rounds all four corners, which would notch the bottom of
+   the art where it meets the title block and show the card's surface through
+   two little bites. The art has to be round on top -- following the card's
+   inner border curve -- and flat on the bottom."
+  [w h r]
+  {:fx/type :svg-path
+   :content (format "M %d,0 H %d A %d,%d 0 0 1 %d,%d V %d H 0 V %d A %d,%d 0 0 1 %d,0 Z"
+                    r (- w r) r r w r h r r r r)})
+
+;; art + (8 top padding + 34 title + 4 spacing + ~15 meta row + 10 bottom)
+(def ^:private card-total-height (+ card-height 71 (* 2 card-border)))
+
 (defn- capsule-placeholder
   "The mockup's diagonal hatch, drawn with a repeating linear gradient --
    JavaFX CSS has no hatch pattern primitive -- with a mono 'capsule art'
@@ -127,25 +163,37 @@
   [game capsule-fn]
   (let [image (try ((or capsule-fn (constantly nil)) game) (catch Exception _ nil))]
     {:fx/type :stack-pane
-     :min-width card-width :max-width card-width
+     :clip (top-rounded-clip art-width card-height art-radius)
+     :min-width art-width :max-width art-width
      :min-height card-height :max-height card-height
      :style (theme/style {:-fx-border-color (str "transparent transparent " (:line c) " transparent")
                            :-fx-border-width "0 0 1 0"})
      :children [(if image
                   {:fx/type :image-view :image image
-                   :fit-width card-width :fit-height card-height
+                   :fit-width art-width :fit-height card-height
                    :preserve-ratio false}
                   (capsule-placeholder))]}))
 
 (defn- card
-  "One grid tile. Unowned games render muted (dimmed via opacity, since
-   Gilt's palette has no separate 'disabled' token) and carry no click
-   handler at all -- there is nothing sensible for a click on them to do --
-   plus a plain one-line reason in place of the appid/size row."
+  "One grid tile.
+
+   Unowned games are still SELECTABLE. Browsing what versions exist is useful
+   whether or not you own the game -- it is how you find out that 1.5.97 is
+   the SKSE-stable build before you decide to buy -- so the ownership gate
+   belongs on the download button, not on the click. The card stays dimmed and
+   says `Not owned` so the state is legible, but the panel opens."
   [{:keys [game selected? owned? capsule-fn on-select]}]
   (let [primary (first (:versions game))
+        ;; Two lines, wrapped. On one line every Elder Scrolls title truncates
+        ;; to "The Elder Scrolls V: S..." -- Skyrim and Skyrim Special Edition
+        ;; become the same card, which defeats the point of a grid you pick a
+        ;; game from. Two lines fit both in full at this width. The height is
+        ;; pinned so a one-line title does not make its card shorter than its
+        ;; neighbours and ragged the row.
         title   {:fx/type :label :text (:title game)
-                 :max-width (- card-width 20)
+                 :wrap-text true
+                 :max-width (- art-width 20)
+                 :min-height 34 :max-height 34
                  :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
                                        :-fx-font-size 13
                                        :-fx-text-fill (:text c)})}
@@ -160,23 +208,43 @@
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
                                                       :-fx-text-fill (:text-muted c)})}]}
-                   {:fx/type :label :text "Not owned"
-                    :style (theme/style {:-fx-font-family (theme/mono-font)
-                                          :-fx-font-size 11
-                                          :-fx-text-fill (:text-muted c)})})]
+                   {:fx/type :h-box
+                    :children [{:fx/type :label :text (str "app " (:appid game))
+                                :style (theme/style {:-fx-font-family (theme/mono-font)
+                                                      :-fx-font-size 11
+                                                      :-fx-text-fill (:text-muted c)})}
+                               {:fx/type :region :h-box/hgrow :always}
+                               {:fx/type :label :text "Not owned"
+                                :style (theme/style {:-fx-font-family (theme/mono-font)
+                                                      :-fx-font-size 11
+                                                      :-fx-text-fill (:text-muted c)})}]})]
     (cond-> {:fx/type :v-box
+             ;; A rounded background does NOT clip children in JavaFX --
+             ;; -fx-background-radius only rounds the fill that is painted
+             ;; behind them. The capsule art is an ImageView drawn on top, so
+             ;; without an explicit clip it keeps its square corners and
+             ;; visibly overhangs the card's rounded border. The clip is a
+             ;; rounded rectangle over the whole card; arc = 2 x radius,
+             ;; because JavaFX's arcWidth is the full width of the corner
+             ;; ellipse rather than its radius.
+             :clip {:fx/type :rectangle
+                    :width card-width :height card-total-height
+                    :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
              :min-width card-width :max-width card-width
+             :min-height card-total-height :max-height card-total-height
              :style (theme/style (cond-> {:-fx-background-color (:surface c)
-                                           :-fx-background-radius 6
-                                           :-fx-border-radius 6
+                                           :-fx-background-radius card-radius
+                                           :-fx-border-radius card-radius
                                            :-fx-border-width 1
                                            :-fx-border-color (if selected? (:gold c) (:line c))}
-                                    (not owned?) (assoc :-fx-opacity 0.45)))
+                                    ;; dimmed, but not so far that it reads as
+                                    ;; inert -- these cards are clickable now
+                                    (not owned?) (assoc :-fx-opacity 0.7)))
              :children [(capsule-art game capsule-fn)
                         {:fx/type :v-box :spacing 4
                          :padding {:top 8 :bottom 10 :left 10 :right 10}
                          :children [title meta-row]}]}
-      owned? (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))))
+      :always (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))))
 
 (defn- grid [{:keys [games selected-appid owned capsule-fn on-select-game]}]
   {:fx/type :flow-pane
@@ -299,16 +367,22 @@
    really contains -- says just `Download`, never `Download size unknown`,
    which the old code produced by pasting `size-label`'s not-a-size answer
    into a sentence that needed a size."
-  [selected-version]
-  (cond
-    (nil? selected-version)                 "Select a version"
-    (pos? (or (:bytes selected-version) 0)) (str "Download " (size-label (:bytes selected-version)))
-    :else                                   "Download"))
+  ([selected-version] (download-button-label selected-version true))
+  ([selected-version owned?]
+   (cond
+     ;; Ownership outranks version selection: telling someone to pick a
+     ;; version they could not download either way sends them down a path
+     ;; that ends in a Steam refusal.
+     (not owned?)                            "You don't own this game"
+     (nil? selected-version)                 "Select a version"
+     (pos? (or (:bytes selected-version) 0)) (str "Download " (size-label (:bytes selected-version)))
+     :else                                   "Download")))
 
 (defn- panel-footer
-  [{:keys [folder selected-version on-change-folder on-download]}]
-  (let [ready?   (some? selected-version)
-        btn-text (download-button-label selected-version)]
+  [{:keys [folder selected-version owned? on-change-folder on-download]}]
+  (let [owned?   (not (false? owned?))
+        ready?   (and owned? (some? selected-version))
+        btn-text (download-button-label selected-version owned?)]
     {:fx/type :v-box :spacing 10
      :children
      [{:fx/type :label :text (tracked "Install to")
@@ -342,7 +416,7 @@
                                :-fx-background-radius 3 :-fx-font-size 14}))}]}))
 
 (defn- side-panel
-  [{:keys [game selected-version-id folder on-select-version on-change-folder on-download]}]
+  [{:keys [game selected-version-id folder owned? on-select-version on-change-folder on-download]}]
   (let [versions         (:versions game)
         selected-version (find-version game selected-version-id)]
     ;; :border-pane, not a :v-box with a :v-box/vgrow :always middle child.
@@ -385,6 +459,7 @@
      :bottom {:fx/type :v-box
               :border-pane/margin {:top 16}
               :children [(panel-footer {:folder folder :selected-version selected-version
+                                             :owned? owned?
                                          :on-change-folder on-change-folder :on-download on-download})]}}))
 
 ;; ---------------------------------------------------------------------
@@ -423,6 +498,7 @@
        (conj (side-panel {:game selected-game
                            :selected-version-id selected-version-id
                            :folder folder
+                           :owned? (owned?* owned (:appid selected-game))
                            :on-select-version on-select-version
                            :on-change-folder on-change-folder
                            :on-download on-download})))}))

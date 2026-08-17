@@ -139,3 +139,48 @@
                  {:games games :query "sky"}]]
     (let [component @(fx/on-fx-thread (fx/create-component (library/view state)))]
       (is (some? (fx/instance component)) (str "failed to instantiate for " state)))))
+
+;; --- unowned games are browsable, not blocked ------------------------------
+;; Requested directly: "allow users to click on and view versions for games
+;; they don't own, just disable the download button if it's not owned."
+
+(deftest an-unowned-game-is-still-selectable
+  (testing "the card carries a click handler regardless of ownership -- finding
+            out which versions exist is useful before you decide to buy"
+    (let [games [{:appid 1 :title "Owned" :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}]}
+                 {:appid 2 :title "Not owned" :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}]}]
+          s (pr-str (library/view {:games games :owned #{1}}))]
+      (is (str/includes? s "Not owned"))
+      ;; both cards must carry a handler; count them
+      (is (= 2 (count (re-seq #":on-mouse-clicked" (pr-str (library/view {:games games :owned #{1}})))))
+          "an unowned card without a click handler cannot open its version list"))))
+
+(deftest the-side-panel-opens-for-an-unowned-game
+  (let [games [{:appid 2 :title "Not owned"
+                :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}
+                           {:id "old" :label "1.2.3" :bytes 20 :depots [{}]}]}]
+        s (pr-str (library/view {:games games :owned #{} :selected-appid 2}))]
+    (is (str/includes? s "1.2.3") "its versions must be visible")))
+
+(deftest the-download-button-is-disabled-for-an-unowned-game
+  (testing "ownership outranks version selection: offering 'Select a version'
+            for a game you cannot download sends the user down a dead path"
+    (let [games [{:appid 2 :title "Not owned"
+                  :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}]}]
+          s (pr-str (library/view {:games games :owned #{} :selected-appid 2
+                               :selected-version-id "public"}))]
+      (is (str/includes? s "You don't own this game"))
+      (is (not (str/includes? s "Download 0.0 GB")))))
+
+  (testing "and it still works normally when owned"
+    (let [games [{:appid 1 :title "Owned"
+                  :versions [{:id "public" :label "Latest" :bytes 13628807699 :depots [{}]}]}]
+          s (pr-str (library/view {:games games :owned #{1} :selected-appid 1
+                               :selected-version-id "public"}))]
+      (is (str/includes? s "Download 12.7 GB")))))
+
+(deftest a-missing-owned-set-still-treats-everything-as-owned
+  (testing "no Steam session must not make the whole library look unowned"
+    (let [games [{:appid 1 :title "G" :versions [{:id "public" :label "Latest" :bytes 10 :depots [{}]}]}]
+          s (pr-str (library/view {:games games :selected-appid 1 :selected-version-id "public"}))]
+      (is (not (str/includes? s "You don't own this game"))))))

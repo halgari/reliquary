@@ -1,890 +1,6 @@
 {:schema-version 1
- :generated "2026-08-16T23:29:19Z"
- :games [{:appid 1086940
-         :title "Baldur's Gate 3"
-         :studio "Larian Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/1086940/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_c73bc54415178c07fef85f54ee26621728c77504.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_73d93bea842b93914d966622104dcb8c0f42972b.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_cf936d31061b58e98e0c646aee00e6030c410cda.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_b6a6ee6e046426d08ceea7a4506a1b5f44181543.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_6b8faba0f6831a406ce015648958da9612d14dbb.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_8fc5eba770b4a1639b31666908bdd2bbc1aa2ae4.1920x1080.jpg"]}
-         :quotes [{:text "Why do beautiful people taste better? It hardly seems fair on the ugly — they have such wonderful personalities."
-                  :attrib "Astarion"}
-                 {:text "Tongs. A wide variety of tongs."
-                  :attrib "the Narrator, examining a workbench"}
-                 {:text "Halsin wasn't originally a romance option — Larian added him after fans latched onto the character during early access."
-                  :attrib "development trivia"}
-                 {:text "The finished game holds over 236 hours of recorded dialogue across a script that runs past two million words."
-                  :attrib "development trivia"}
-                 {:text "Larian spent six years building the game, three of them in public early access."
-                  :attrib "development trivia"}
-                 {:text "Every lawful-good cleric run ends with someone shoved off a cliff for the extra experience."
-                  :attrib "every player, eventually"}
-                 {:text "Every player accidentally murders a shopkeeper once, then reloads the save in shame."
-                  :attrib "every player, eventually"}
-                 {:text "Long rest gets called after every single fight, whether anyone actually needs it or not."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "24532579"
-                    :date "2026-08-03"
-                    :bytes 155594720745
-                    :depots [{:depot-id 1086941
-                             :manifest-gid "4288948197859959444"}
-                            {:depot-id 1086942
-                             :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "2118230943991643525"}
-                            {:depot-id 1086944
-                             :manifest-gid "3423097641402863301"}
-                            {:depot-id 1086945
-                             :manifest-gid "9002272171910189584"}
-                            {:depot-id 1086946
-                             :manifest-gid "2409481873063333868"}
-                            {:depot-id 1086947
-                             :manifest-gid "4701297036193868114"}
-                            {:depot-id 1086948
-                             :manifest-gid "8505682662122387972"}
-                            {:depot-id 1086949
-                             :manifest-gid "4043484420852339008"}
-                            {:depot-id 1419650
-                             :manifest-gid "6250389178731869788"}
-                            {:depot-id 1419651
-                             :manifest-gid "9051166838150188236"}
-                            {:depot-id 1419652
-                             :manifest-gid "7005275183208636774"}
-                            {:depot-id 1419653
-                             :manifest-gid "2098612237190800348"}
-                            {:depot-id 1419658
-                             :manifest-gid "916483664598379515"}
-                            {:depot-id 1419668
-                             :manifest-gid "6176479858889274652"}
-                            {:depot-id 1419669
-                             :manifest-gid "9081827886419290237"}
-                            {:depot-id 2330350
-                             :manifest-gid "1205466515600447451"}
-                            {:depot-id 2330351
-                             :manifest-gid "7646694850759131929"}]}
-                   {:id "release_patch_7_hf3"
-                    :label "release_patch_7_hf3"
-                    :branch "release_patch_7_hf3"
-                    :build "16065077"
-                    :date "2025-03-27"
-                    :bytes 154627572267
-                    :depots [{:depot-id 1086941
-                             :manifest-gid "5026713417664092526"}
-                            {:depot-id 1086942
-                             :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "1107708890965171808"}
-                            {:depot-id 1086944
-                             :manifest-gid "4428239725755415705"}
-                            {:depot-id 1086945
-                             :manifest-gid "6028240894531217739"}
-                            {:depot-id 1086946
-                             :manifest-gid "8814279930504850804"}
-                            {:depot-id 1086947
-                             :manifest-gid "7055405863172719745"}
-                            {:depot-id 1086948
-                             :manifest-gid "1177849686188402038"}
-                            {:depot-id 1086949
-                             :manifest-gid "7900372690999400037"}
-                            {:depot-id 1419650
-                             :manifest-gid "2476340684195286569"}
-                            {:depot-id 1419651
-                             :manifest-gid "6806914915590760927"}
-                            {:depot-id 1419652
-                             :manifest-gid "4560720842929068408"}
-                            {:depot-id 1419653
-                             :manifest-gid "813968981771126782"}
-                            {:depot-id 1419658
-                             :manifest-gid "4522073111045687015"}
-                            {:depot-id 1419668
-                             :manifest-gid "5757806648215906392"}
-                            {:depot-id 1419669
-                             :manifest-gid "2801378419093995952"}
-                            {:depot-id 2330350
-                             :manifest-gid "3531144885724029944"}
-                            {:depot-id 2330351
-                             :manifest-gid "8566425517764903600"}]}
-                   {:id "release_patch6_hf9"
-                    :label "release_patch6_hf9"
-                    :branch "release_patch6_hf9"
-                    :build "13981165"
-                    :date "2024-04-08"
-                    :bytes 153034479055
-                    :depots [{:depot-id 1086941
-                             :manifest-gid "4016443084035836922"}
-                            {:depot-id 1086942
-                             :manifest-gid "17875152607970122"}
-                            {:depot-id 1086943
-                             :manifest-gid "8704250069811909913"}
-                            {:depot-id 1086944
-                             :manifest-gid "3292885662645325731"}
-                            {:depot-id 1086945
-                             :manifest-gid "8237530545437607331"}
-                            {:depot-id 1086946
-                             :manifest-gid "5080467222606749123"}
-                            {:depot-id 1086947
-                             :manifest-gid "8260264646733091175"}
-                            {:depot-id 1086948
-                             :manifest-gid "9059714744390918940"}
-                            {:depot-id 1086949
-                             :manifest-gid "8465180551353127518"}
-                            {:depot-id 1419650
-                             :manifest-gid "8372184514980148361"}
-                            {:depot-id 1419651
-                             :manifest-gid "6120897092515926605"}
-                            {:depot-id 1419652
-                             :manifest-gid "6054390892227846984"}
-                            {:depot-id 1419653
-                             :manifest-gid "5004287504333497038"}
-                            {:depot-id 1419658
-                             :manifest-gid "4835577404029430904"}
-                            {:depot-id 1419668
-                             :manifest-gid "7928402143006248738"}
-                            {:depot-id 1419669
-                             :manifest-gid "5988027054563412068"}
-                            {:depot-id 2330350
-                             :manifest-gid "7410969271902313996"}
-                            {:depot-id 2330351
-                             :manifest-gid "2538495863540404322"}]}]}
-        {:appid 1091500
-         :title "Cyberpunk 2077"
-         :studio "CD PROJEKT RED"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_2f649b68d579bf87011487d29bc4ccbfdd97d34f.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_0e64170751e1ae20ff8fdb7001a8892fd48260e7.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_af2804aa4bf35d4251043744412ce3b359a125ef.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_7924f64b6e5d586a80418c9896a1c92881a7905b.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_4eb068b1cf52c91b57157b84bed18a186ed7714b.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_b529b0abc43f55fc23fe8058eddb6e37c9629a6a.1920x1080.jpg"]}
-         :quotes [{:text "Wake the fuck up, Samurai. We have a city to burn."
-                  :attrib "Johnny Silverhand"}
-                 {:text "We all lap up the last of our fuel eventually. But that hardly means the journey wasn't a joy."
-                  :attrib "Delamain"}
-                 {:text "Sony pulled Cyberpunk 2077 from the PlayStation Store for six months after launch over bugs and performance."
-                  :attrib "development trivia"}
-                 {:text "Every V line was recorded twice — Gavin Drea and Cherami Leigh, kept apart so neither would imitate the other."
-                  :attrib "development trivia"}
-                 {:text "Night City and Adam Smasher both trace back to Mike Pondsmith's 1988 tabletop RPG, Cyberpunk 2020."
-                  :attrib "development trivia"}
-                 {:text "Every character creator session ends with a face a full-coverage cyberware helmet will hide for the rest of the game."
-                  :attrib "every player, eventually"}
-                 {:text "Every dumpster, glovebox, and trash pile in Night City gets opened at least once, on principle."
-                  :attrib "every player, eventually"}
-                 {:text "Everyone swears they will romance exactly one person in Night City. Most end up juggling three apartments."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "20383525"
-                    :date "2025-10-14"
-                    :bytes 117178735039
-                    :depots [{:depot-id 1091501
-                             :manifest-gid "3389237510439361019"}
-                            {:depot-id 1091502
-                             :manifest-gid "819305496055337333"}
-                            {:depot-id 1091503
-                             :manifest-gid "2051822335481947109"}
-                            {:depot-id 1091504
-                             :manifest-gid "7478488130966967410"}
-                            {:depot-id 1091505
-                             :manifest-gid "7982214908117080286"}
-                            {:depot-id 1091506
-                             :manifest-gid "2059269590710419725"}
-                            {:depot-id 1091507
-                             :manifest-gid "5073153400365828217"}
-                            {:depot-id 1091508
-                             :manifest-gid "8836038990327543024"}
-                            {:depot-id 1091509
-                             :manifest-gid "2202736442745644704"}
-                            {:depot-id 1460470
-                             :manifest-gid "4839420595466808435"}
-                            {:depot-id 1460471
-                             :manifest-gid "2293639687853156805"}]}
-                   {:id "2_30_old"
-                    :label "Patch 2.3"
-                    :branch "2_30_old"
-                    :build "19260982"
-                    :date "2025-09-11"
-                    :bytes 118144284967
-                    :depots [{:depot-id 1091501
-                             :manifest-gid "6814019010317238099"}
-                            {:depot-id 1091502
-                             :manifest-gid "6184739646416384219"}
-                            {:depot-id 1091503
-                             :manifest-gid "2155431883450560521"}
-                            {:depot-id 1091504
-                             :manifest-gid "154478943248480549"}
-                            {:depot-id 1091505
-                             :manifest-gid "2785239419527800155"}
-                            {:depot-id 1091506
-                             :manifest-gid "4950498239915244227"}
-                            {:depot-id 1091507
-                             :manifest-gid "6688146715027058561"}
-                            {:depot-id 1091508
-                             :manifest-gid "8161295208627735550"}
-                            {:depot-id 1091509
-                             :manifest-gid "1164045688452124372"}
-                            {:depot-id 1460470
-                             :manifest-gid "293694417878924697"}
-                            {:depot-id 1460471
-                             :manifest-gid "5234987954077902546"}]}
-                   {:id "2_21_old"
-                    :label "Patch 2.21 [Windows]"
-                    :branch "2_21_old"
-                    :build "17055519"
-                    :date "2025-07-17"
-                    :bytes 116799298830
-                    :depots [{:depot-id 1091501
-                             :manifest-gid "8420445566849588826"}
-                            {:depot-id 1091502
-                             :manifest-gid "3260780708809854852"}
-                            {:depot-id 1091503
-                             :manifest-gid "2781196279510572595"}
-                            {:depot-id 1091504
-                             :manifest-gid "2997316000567469581"}
-                            {:depot-id 1091505
-                             :manifest-gid "4589533780567096316"}
-                            {:depot-id 1091506
-                             :manifest-gid "4746434433646308761"}
-                            {:depot-id 1091507
-                             :manifest-gid "5139081181596225291"}
-                            {:depot-id 1091508
-                             :manifest-gid "8063732630804129021"}
-                            {:depot-id 1091509
-                             :manifest-gid "4359393218898221092"}
-                            {:depot-id 1460470
-                             :manifest-gid "1470473429525273457"}
-                            {:depot-id 1460471
-                             :manifest-gid "619006663931326731"}]}
-                   {:id "2_13_old"
-                    :label "Patch 2.13 [Windows]"
-                    :branch "2_13_old"
-                    :build "15646965"
-                    :date "2024-12-10"
-                    :bytes 116605304136
-                    :depots [{:depot-id 1091501
-                             :manifest-gid "4350623720177810551"}
-                            {:depot-id 1091502
-                             :manifest-gid "4846693136267556074"}
-                            {:depot-id 1091503
-                             :manifest-gid "2930929891484713220"}
-                            {:depot-id 1091504
-                             :manifest-gid "4078220236152172576"}
-                            {:depot-id 1091505
-                             :manifest-gid "498874446476828295"}
-                            {:depot-id 1091506
-                             :manifest-gid "1923371999643087830"}
-                            {:depot-id 1091507
-                             :manifest-gid "2478744079664596808"}
-                            {:depot-id 1091508
-                             :manifest-gid "7381328406432883171"}
-                            {:depot-id 1091509
-                             :manifest-gid "1513374529205859369"}
-                            {:depot-id 1460470
-                             :manifest-gid "2012342711196649618"}
-                            {:depot-id 1460471
-                             :manifest-gid "1139551677548366368"}]}
-                   {:id "1_63_legacy_patch"
-                    :label "1.63 Legacy Version [Windows]"
-                    :branch "1_63_legacy_patch"
-                    :build "11545061"
-                    :date "2023-09-21"
-                    :bytes 120220651617
-                    :depots [{:depot-id 1091501
-                             :manifest-gid "6594873489665865240"}
-                            {:depot-id 1091502
-                             :manifest-gid "8869499918106631472"}
-                            {:depot-id 1091503
-                             :manifest-gid "7860725176037203861"}
-                            {:depot-id 1091504
-                             :manifest-gid "3942706128185741435"}
-                            {:depot-id 1091505
-                             :manifest-gid "4214828340855710649"}
-                            {:depot-id 1091506
-                             :manifest-gid "5463429117151273495"}
-                            {:depot-id 1091507
-                             :manifest-gid "3145667816131657121"}
-                            {:depot-id 1091508
-                             :manifest-gid "3995250012592214586"}
-                            {:depot-id 1091509
-                             :manifest-gid "9217761376710018763"}
-                            {:depot-id 1460470
-                             :manifest-gid "5765923022907354951"}
-                            {:depot-id 1460471
-                             :manifest-gid "2979356708568940230"}]}]}
-        {:appid 22370
-         :title "Fallout 3: Game of the Year Edition"
-         :studio "Bethesda Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22370/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_87fb57e11912a692f29614f88411d0db2cba405a.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_d770133d0a0c1b9b73fa31f20f29fe6617b73cfb.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_2405f21839a5cec01918a5f6fe7cae0b80422107.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_37398576af0f80af58744b56a24b8526833f2efb.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_b37fe0d332ed8877e06a2b18efc95b1dab2a54af.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_be899cfc4b2716f77d0a07737d519895ae0919f2.1920x1080.jpg"]}
-         :quotes [{:text "War. War never changes."
-                  :attrib "opening narration, voiced by Ron Perlman"}
-                 {:text "Freedom is the sovereign right of every American."
-                  :attrib "Liberty Prime"}
-                 {:text "Todd Howard found out Bethesda now owned the Fallout license from a Post-it note, not a memo."
-                  :attrib "development trivia"}
-                 {:text "Fallout 3 was refused classification in Australia over its morphine item, so Bethesda renamed it 'Med-X' worldwide."
-                  :attrib "development trivia"}
-                 {:text "The original ending just stopped after the main quest — Broken Steel later gave players a way to keep playing."
-                  :attrib "development trivia"}
-                 {:text "Every player fires at least one Fat Man just to watch the mushroom cloud, tactical necessity be damned."
-                  :attrib "every player, eventually"}
-                 {:text "Everyone starts as a saintly Vault dweller. The first raider with decent armor changes that fast."
-                  :attrib "every player, eventually"}
-                 {:text "You will hoard bottle caps, pre-War money, and teddy bears you will never once use."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "14365463"
-                    :date "2024-06-04"
-                    :bytes 46249774966
-                    :depots [{:depot-id 22371
-                             :manifest-gid "2416786561786063548"}
-                            {:depot-id 22372
-                             :manifest-gid "827002912150357260"}
-                            {:depot-id 22373
-                             :manifest-gid "179161400861758364"}
-                            {:depot-id 22374
-                             :manifest-gid "5562528913773688286"}
-                            {:depot-id 22375
-                             :manifest-gid "5343648328298172273"}]}]}
-        {:appid 377160
-         :title "Fallout 4"
-         :studio "Bethesda Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/377160/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f7861bd71e6c0c218d8ff69fb1c626aec0d187cf.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_910437ac708aed7c028f6e43a6224c633d086b0a.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f649b8e57749f380cca225db5074edbb1e06d7f5.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_c310f858e6a7b02ffa21db984afb0dd1b24c1423.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_5e2d136759e0ff4e0d74940fffc9c64e8cdcd833.1920x1080.jpg"]}
-         :quotes [{:text "There's another settlement that needs our help."
-                  :attrib "Preston Garvey"}
-                 {:text "Two hundred years ago, I never would have thought this level of dust possible!"
-                  :attrib "Codsworth"}
-                 {:text "I'm a synth. Synthetic man. All the parts, minus a few red blood cells."
-                  :attrib "Nick Valentine"}
-                 {:text "Come on, Blue. This isn't amateur hour."
-                  :attrib "Piper Wright"}
-                 {:text "Dogmeat is modeled on lead level designer Joel Burgess's own dog, River, who also voiced his barks."
-                  :attrib "development trivia"}
-                 {:text "The $120 Pip-Boy Collector's Edition shipped with a real wearable Pip-Boy that cradled your phone."
-                  :attrib "development trivia"}
-                 {:text "Every player has a settlement stockpiled with two hundred desk fans they will never use."
-                  :attrib "every player, eventually"}
-                 {:text "You promise yourself just one more settlement, then the main quest. Still promising it at level 80."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "22848228"
-                    :date "2026-05-27"
-                    :bytes 67536079650
-                    :depots [{:depot-id 377161
-                             :manifest-gid "5983086794954940044"}
-                            {:depot-id 377162
-                             :manifest-gid "387388833281246371"}
-                            {:depot-id 377163
-                             :manifest-gid "8363807899725426636"}
-                            {:depot-id 377164
-                             :manifest-gid "8492427313392140315"}
-                            {:depot-id 377165
-                             :manifest-gid "2033965788399743191"}
-                            {:depot-id 377166
-                             :manifest-gid "5627643066330450040"}
-                            {:depot-id 377167
-                             :manifest-gid "7494413550139810042"}
-                            {:depot-id 377168
-                             :manifest-gid "3728836035123485280"}
-                            {:depot-id 393880
-                             :manifest-gid "4656512446653497676"}
-                            {:depot-id 393881
-                             :manifest-gid "9220466047319762009"}
-                            {:depot-id 393882
-                             :manifest-gid "8191305962459798887"}
-                            {:depot-id 393883
-                             :manifest-gid "8665224215527782698"}
-                            {:depot-id 393884
-                             :manifest-gid "7858461782713595876"}]}
-                   {:id "1_10_163"
-                    :label "1.10.163 - pre-next-gen (F4SE-stable)"
-                    :branch "public"
-                    :build ""
-                    :date nil
-                    :bytes 84783989454
-                    :depots [{:depot-id 377161
-                             :manifest-gid "7497069378349273908"}
-                            {:depot-id 377162
-                             :manifest-gid "5847529232406005096"}
-                            {:depot-id 377163
-                             :manifest-gid "5819088023757897745"}
-                            {:depot-id 377164
-                             :manifest-gid "2178106366609958945"}
-                            {:depot-id 435870
-                             :manifest-gid "1691678129192680960"}
-                            {:depot-id 435871
-                             :manifest-gid "5106118861901111234"}
-                            {:depot-id 435880
-                             :manifest-gid "1255562923187931216"}
-                            {:depot-id 435881
-                             :manifest-gid "1207717296920736193"}
-                            {:depot-id 435882
-                             :manifest-gid "8482181819175811242"}
-                            {:depot-id 480630
-                             :manifest-gid "5527412439359349504"}
-                            {:depot-id 480631
-                             :manifest-gid "6588493486198824788"}
-                            {:depot-id 393885
-                             :manifest-gid "5000262035721758737"}
-                            {:depot-id 393895
-                             :manifest-gid "7677765994120765493"}
-                            {:depot-id 377165
-                             :manifest-gid "7549549550652702123"}
-                            {:depot-id 377166
-                             :manifest-gid "6854162778963425477"}
-                            {:depot-id 377167
-                             :manifest-gid "783101348965844295"}
-                            {:depot-id 377168
-                             :manifest-gid "7717372852115364102"}
-                            {:depot-id 393881
-                             :manifest-gid "4735225695214536532"}
-                            {:depot-id 393882
-                             :manifest-gid "7540680803954664080"}
-                            {:depot-id 393884
-                             :manifest-gid "3455288010746962666"}
-                            {:depot-id 404091
-                             :manifest-gid "6756984187996423348"}
-                            {:depot-id 435872
-                             :manifest-gid "5590419866095647350"}
-                            {:depot-id 435873
-                             :manifest-gid "2207548206398235202"}
-                            {:depot-id 435874
-                             :manifest-gid "9032251103390457158"}
-                            {:depot-id 435875
-                             :manifest-gid "2953236065717816833"}
-                            {:depot-id 435877
-                             :manifest-gid "2675794883952625475"}
-                            {:depot-id 435878
-                             :manifest-gid "8276750634369029613"}]}
-                   {:id "1_10_984"
-                    :label "1.10.984 - next-gen update 2 (F4SE 0.7.2, pre-Anniversary)"
-                    :branch "public"
-                    :build ""
-                    :date "2024-05-13"
-                    :bytes 31289015478
-                    :depots [{:depot-id 377161
-                             :manifest-gid "7332110922360867314"}
-                            {:depot-id 377162
-                             :manifest-gid "5698952341602575696"}
-                            {:depot-id 377163
-                             :manifest-gid "8681102885670959037"}
-                            {:depot-id 435871
-                             :manifest-gid "7785009542965564688"}
-                            {:depot-id 435880
-                             :manifest-gid "366079256218893805"}
-                            {:depot-id 377164
-                             :manifest-gid "8492427313392140315"}
-                            {:depot-id 435870
-                             :manifest-gid "1213339795579796878"}
-                            {:depot-id 393885
-                             :manifest-gid "5000262035721758737"}]}]}
-        {:appid 553850
-         :title "HELLDIVERS™ 2"
-         :studio "Arrowhead Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/553850/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/aed08979e15f54798f287dd8820fb5838476b5fa/ss_aed08979e15f54798f287dd8820fb5838476b5fa.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/71ef7c65fcf63ff974ce42150190c0420c66c72b/ss_71ef7c65fcf63ff974ce42150190c0420c66c72b.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/6c8b61a7c63479b6f526d285af6687a362d5d7ae/ss_6c8b61a7c63479b6f526d285af6687a362d5d7ae.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_0c79f56fc7be1bd0102f2ca1c92c8f0900daf4fb.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_33e684e9cb2517af1599f0ca2b57d65ee82c2e51.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/553850/ss_8949ed7dd24a02d5ea13b08fc5c04fab400dc4bd.1920x1080.jpg"]}
-         :quotes [{:text "How about a nice cup of Liber-tea?"
-                  :attrib "a Helldiver, mid-firefight"}
-                 {:text "There is but one assured path to peace... and that path is war."
-                  :attrib "Democracy Officer"}
-                 {:text "I only regret that I have but one ship's worth of lives to give to our cause."
-                  :attrib "Democracy Officer"}
-                 {:text "Democracy has landed."
-                  :attrib "a Helldiver, upon landing"}
-                 {:text "Helldivers 2 runs on Autodesk's Stingray engine, discontinued by Autodesk back in 2018."
-                  :attrib "development trivia"}
-                 {:text "After the game sold 12 million copies, Arrowhead noted there were now more Helldivers than Swedes."
-                  :attrib "development trivia"}
-                 {:text "Every squad loses at least one Helldiver to a poorly aimed orbital strike. Usually more than one."
-                  :attrib "every squad, eventually"}
-                 {:text "Nobody reads the stratagem input before throwing it. Everyone learns the 380mm barrage the hard way."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "24601870"
-                    :date "2026-08-12"
-                    :bytes 23886939929
-                    :depots [{:depot-id 553851
-                             :manifest-gid "3115173675505021070"}
-                            {:depot-id 553853
-                             :manifest-gid "7669628172356516538"}
-                            {:depot-id 553854
-                             :manifest-gid "6929803021334100650"}]}]}
-        {:appid 22320
-         :title "The Elder Scrolls III: Morrowind® Game of the Year Edition"
-         :studio "Bethesda Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22320/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009069.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009070.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009071.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009072.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009073.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009074.1920x1080.jpg"]}
-         :quotes [{:text "What a grand and intoxicating innocence! How could you be so naïve?"
-                  :attrib "Dagoth Ur, at his own fortress"}
-                 {:text "They have taken you from the Imperial City's prison, first by carriage, and now by boat."
-                  :attrib "Azura, in the opening dream"}
-                 {:text "I had it last week before their weekly 'Let's shake down Fargoth' ritual."
-                  :attrib "Fargoth, on his missing ring"}
-                 {:text "Wake up. We're here."
-                  :attrib "Jiub, the player's cellmate"}
-                 {:text "The Xbox port would secretly reboot itself mid-load to free up RAM, Todd Howard later revealed."
-                  :attrib "development trivia"}
-                 {:text "Oblivion later canonized Jiub as a saint for personally driving Morrowind's cliff racers into extinction."
-                  :attrib "development trivia"}
-                 {:text "Every player eventually stacks Fortify Intelligence potions into game-breaking alchemy loops."
-                  :attrib "every player, eventually"}
-                 {:text "New players fight the first screeching cliff racer. Everyone else just starts running."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "1510067"
-                    :date "2018-05-08"
-                    :bytes 3321886096
-                    :depots [{:depot-id 22321
-                             :manifest-gid "1293785437610275498"}
-                            {:depot-id 22322
-                             :manifest-gid "7581756715156164220"}
-                            {:depot-id 22323
-                             :manifest-gid "6554123731300372570"}
-                            {:depot-id 451410
-                             :manifest-gid "5635087427908069289"}]}]}
-        {:appid 22380
-         :title "Fallout: New Vegas"
-         :studio "Obsidian Entertainment"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22380/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_62f8d0b006935ff6de7fe276f713e7d15e579bc9.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_ec8a28942fcb5cb15718f949ab81124932a5084d.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_f703adcb9aa1d718a39288adf7d2e1b4dc0e568a.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e05e3697347c076d3382188bcf883339cf6144d5.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e430a2c8a841d4bc32bd8207223a91e3dbe0cdea.1920x1080.jpg"]}
-         :quotes [{:text "Truth is, the game was rigged from the start."
-                  :attrib "Benny"}
-                 {:text "Sorry to deny you a moment of primate triumph, but you'll have to go elsewhere to sound your barbaric yawp."
-                  :attrib "Mr. House"}
-                 {:text "You did a super job wrapping things up! And I'm not just saying that because I have to!"
-                  :attrib "Yes Man"}
-                 {:text "Obsidian built New Vegas in about 18 months, reusing Fallout 3's engine to make the deadline."
-                  :attrib "development trivia"}
-                 {:text "New Vegas needed an 85 on Metacritic for Obsidian's contractual bonus. It scored 84."
-                  :attrib "development trivia"}
-                 {:text "Every player turns on Hardcore Mode, dies of dehydration outside Goodsprings, and quietly turns it back off."
-                  :attrib "every player, eventually"}
-                 {:text "You'll spend hours deciding who deserves the Strip — NCR, Legion, House, or yourself — and still aren't sure."
-                  :attrib "every player, eventually"}
-                 {:text "You pick Wild Wasteland for the jokes, then forget you did until a UFO crashes into the road ahead."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "1510068"
-                    :date "2018-05-08"
-                    :bytes 29788171997
-                    :depots [{:depot-id 22381
-                             :manifest-gid "8327177303444281069"}
-                            {:depot-id 22382
-                             :manifest-gid "1869121858616960493"}
-                            {:depot-id 22383
-                             :manifest-gid "4908451661450393672"}
-                            {:depot-id 22384
-                             :manifest-gid "3154332352227781227"}
-                            {:depot-id 22385
-                             :manifest-gid "1254217014717060816"}
-                            {:depot-id 22386
-                             :manifest-gid "8761564382862573338"}
-                            {:depot-id 22393
-                             :manifest-gid "8227935753987096201"}
-                            {:depot-id 22461
-                             :manifest-gid "5904002363925640566"}
-                            {:depot-id 22462
-                             :manifest-gid "4866927589704494894"}
-                            {:depot-id 22463
-                             :manifest-gid "2606574133782217517"}
-                            {:depot-id 22464
-                             :manifest-gid "3566069208831073571"}
-                            {:depot-id 22466
-                             :manifest-gid "1510770969128417196"}
-                            {:depot-id 22467
-                             :manifest-gid "3538923246242403538"}
-                            {:depot-id 22468
-                             :manifest-gid "4054403017816647337"}
-                            {:depot-id 22469
-                             :manifest-gid "2754265232492844016"}
-                            {:depot-id 22471
-                             :manifest-gid "7317844635982217214"}
-                            {:depot-id 22472
-                             :manifest-gid "1132709297122659322"}
-                            {:depot-id 22473
-                             :manifest-gid "6438309698058593440"}
-                            {:depot-id 22474
-                             :manifest-gid "4369356280283756406"}
-                            {:depot-id 22476
-                             :manifest-gid "4281683315724973816"}
-                            {:depot-id 22477
-                             :manifest-gid "7147209989063233162"}
-                            {:depot-id 22478
-                             :manifest-gid "6144308732856631726"}
-                            {:depot-id 22479
-                             :manifest-gid "5039947182700550471"}
-                            {:depot-id 22493
-                             :manifest-gid "2502952557192596705"}
-                            {:depot-id 22494
-                             :manifest-gid "172761448805198342"}
-                            {:depot-id 22495
-                             :manifest-gid "3899563573656223062"}
-                            {:depot-id 22496
-                             :manifest-gid "2854660838749520858"}
-                            {:depot-id 72702
-                             :manifest-gid "218001916733409543"}
-                            {:depot-id 72703
-                             :manifest-gid "8704668556634681206"}
-                            {:depot-id 72704
-                             :manifest-gid "5027314936807090238"}
-                            {:depot-id 72706
-                             :manifest-gid "4769162033996668390"}
-                            {:depot-id 72707
-                             :manifest-gid "2475543823682564198"}
-                            {:depot-id 72708
-                             :manifest-gid "2833359475025167693"}
-                            {:depot-id 72710
-                             :manifest-gid "4444319566282062264"}
-                            {:depot-id 72711
-                             :manifest-gid "5188458997640746773"}
-                            {:depot-id 72712
-                             :manifest-gid "851361898012512096"}
-                            {:depot-id 72714
-                             :manifest-gid "2877250838608166760"}
-                            {:depot-id 72715
-                             :manifest-gid "7383312129410005891"}
-                            {:depot-id 72716
-                             :manifest-gid "6186740497873431344"}
-                            {:depot-id 72732
-                             :manifest-gid "4131381354636064588"}
-                            {:depot-id 72733
-                             :manifest-gid "4152591146727673335"}
-                            {:depot-id 72734
-                             :manifest-gid "3274733605889166985"}
-                            {:depot-id 72735
-                             :manifest-gid "8677900210824532806"}
-                            {:depot-id 72736
-                             :manifest-gid "7999052110491368290"}
-                            {:depot-id 72742
-                             :manifest-gid "4517089570337326424"}
-                            {:depot-id 72743
-                             :manifest-gid "5251151026503673295"}
-                            {:depot-id 72744
-                             :manifest-gid "1305099132607763646"}
-                            {:depot-id 72745
-                             :manifest-gid "1687258286902847069"}
-                            {:depot-id 72746
-                             :manifest-gid "8215456132420404126"}
-                            {:depot-id 72751
-                             :manifest-gid "1624841217294494503"}
-                            {:depot-id 72752
-                             :manifest-gid "7666384873706904799"}
-                            {:depot-id 72753
-                             :manifest-gid "8226671937990042355"}
-                            {:depot-id 72754
-                             :manifest-gid "6027990557909752884"}
-                            {:depot-id 72755
-                             :manifest-gid "2158729683026608055"}
-                            {:depot-id 72761
-                             :manifest-gid "5717050455382180241"}
-                            {:depot-id 72762
-                             :manifest-gid "7641337957345960590"}
-                            {:depot-id 72763
-                             :manifest-gid "8371948547095099581"}
-                            {:depot-id 72764
-                             :manifest-gid "4409623748397178295"}
-                            {:depot-id 72765
-                             :manifest-gid "4696146338252983690"}
-                            {:depot-id 72841
-                             :manifest-gid "7404324045800590955"}
-                            {:depot-id 72842
-                             :manifest-gid "1434764155323580833"}
-                            {:depot-id 72843
-                             :manifest-gid "7904639580398839628"}
-                            {:depot-id 72844
-                             :manifest-gid "6599444621768713933"}
-                            {:depot-id 72845
-                             :manifest-gid "7165809099252444575"}]}]}
-        {:appid 22330
-         :title "The Elder Scrolls IV: Oblivion® Game of the Year Edition (2009)"
-         :studio "Bethesda Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22330/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009037.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009038.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009039.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009040.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009041.1920x1080.jpg"]}
-         :quotes [{:text "Golly, you're the best! I'm going to follow you and watch you and worship the ground you walk on! Let's go!"
-                  :attrib "Adoring Fan"}
-                 {:text "Find him, and close shut the jaws of Oblivion."
-                  :attrib "Uriel Septim VII"}
-                 {:text "Stop right there, criminal scum!"
-                  :attrib "Imperial City Watch guard"}
-                 {:text "17 voice actors voiced 1,497 NPCs — a ratio you can hear in every tavern conversation."
-                  :attrib "development trivia"}
-                 {:text "Todd Howard voiced one NPC himself: the Daedric Prince Clavicus Vile."
-                  :attrib "development trivia"}
-                 {:text "Every player spends the whole game trying not to look at NPC faces too closely."
-                  :attrib "every player, eventually"}
-                 {:text "You get arrested for trespassing in your own house because a guard saw you climb through the window."
-                  :attrib "every player, eventually"}
-                 {:text "By the twentieth Oblivion Gate, you're closing them out of obligation, not heroism."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "1510065"
-                    :date "2018-05-08"
-                    :bytes 24978289925
-                    :depots [{:depot-id 22331
-                             :manifest-gid "7977703601170745652"}
-                            {:depot-id 22334
-                             :manifest-gid "6986544622093806923"}
-                            {:depot-id 22335
-                             :manifest-gid "1772388336463976851"}
-                            {:depot-id 22336
-                             :manifest-gid "4349214922682464414"}
-                            {:depot-id 22337
-                             :manifest-gid "424494866178121373"}]}]}
-        {:appid 72850
-         :title "The Elder Scrolls V: Skyrim"
-         :studio "Bethesda Game Studios"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/72850/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_4e95fbcf72ce2a9f86075738fa9930ef2bed1ac7.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b16a3740e032afe1c4b0477174eae7af8444b85d.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b3c5c70421af0c6a48dab2fbac88814a8827c057.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b29aa0a2503547a15e9e210551b9c3eed42cba78.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_8aad65240099ed6f44953d051d1fca5d4f16e174.1920x1080.jpg"]}
-         :quotes [{:text "Hey, you. You're finally awake."
-                  :attrib "Ralof, the first line spoken in the game"}
-                 {:text "I used to be an adventurer like you. Then I took an arrow in the knee..."
-                  :attrib "Whiterun guard"}
-                 {:text "Dragons were never gone. They were just invisible and very, very quiet."
-                  :attrib "M'aiq the Liar"}
-                 {:text "Radiant AI's list of NPC behaviors began as a napkin sketch from Todd Howard; nearly all of it shipped."
-                  :attrib "development trivia"}
-                 {:text "Dragon Shouts were inspired by the sound-based \"Weirding Way\" combat in David Lynch's 1984 Dune film."
-                  :attrib "development trivia"}
-                 {:text "Killing one town chicken turns the whole town hostile — the chicken shares its owners' faction."
-                  :attrib "development trivia"}
-                 {:text "Every player spends the first hour picking flowers and ignoring the dragon that just leveled a town."
-                  :attrib "every player, eventually"}
-                 {:text "You fast-travel everywhere, then feel guilty and walk once, just to see the scenery."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "15039560"
-                    :date "2024-09-05"
-                    :bytes 43741285430
-                    :depots [{:depot-id 211721
-                             :manifest-gid "8491601813494771150"}
-                            {:depot-id 211722
-                             :manifest-gid "1022735717219821693"}
-                            {:depot-id 211723
-                             :manifest-gid "1086946781294420899"}
-                            {:depot-id 211724
-                             :manifest-gid "1276143862192158998"}
-                            {:depot-id 211725
-                             :manifest-gid "8299795016551985184"}
-                            {:depot-id 211726
-                             :manifest-gid "5289416362846105567"}
-                            {:depot-id 211727
-                             :manifest-gid "7751553359064521832"}
-                            {:depot-id 211728
-                             :manifest-gid "4059246410413922004"}
-                            {:depot-id 211729
-                             :manifest-gid "7463371072418866286"}
-                            {:depot-id 220761
-                             :manifest-gid "2344958374935388264"}
-                            {:depot-id 220762
-                             :manifest-gid "5113555411172661886"}
-                            {:depot-id 220763
-                             :manifest-gid "8215433295476872627"}
-                            {:depot-id 220764
-                             :manifest-gid "7691844347959071567"}
-                            {:depot-id 220765
-                             :manifest-gid "257722701370938794"}
-                            {:depot-id 220766
-                             :manifest-gid "931899454736580467"}
-                            {:depot-id 220767
-                             :manifest-gid "1912731935620426238"}
-                            {:depot-id 220768
-                             :manifest-gid "8180020645450882851"}
-                            {:depot-id 220769
-                             :manifest-gid "2819260933799905552"}
-                            {:depot-id 226881
-                             :manifest-gid "5951986179928071119"}
-                            {:depot-id 226882
-                             :manifest-gid "1063207227414446171"}
-                            {:depot-id 226883
-                             :manifest-gid "2843325968068819127"}
-                            {:depot-id 226884
-                             :manifest-gid "3812267532474553905"}
-                            {:depot-id 226885
-                             :manifest-gid "1585497366712628883"}
-                            {:depot-id 226886
-                             :manifest-gid "5952995101008705423"}
-                            {:depot-id 226887
-                             :manifest-gid "7536838561817009398"}
-                            {:depot-id 226888
-                             :manifest-gid "921222014325323019"}
-                            {:depot-id 226890
-                             :manifest-gid "612194655676385333"}
-                            {:depot-id 72851
-                             :manifest-gid "430694959351693705"}
-                            {:depot-id 72853
-                             :manifest-gid "5477471785942614203"}
-                            {:depot-id 72854
-                             :manifest-gid "7714663930157316519"}
-                            {:depot-id 72855
-                             :manifest-gid "2251296615448706646"}
-                            {:depot-id 72856
-                             :manifest-gid "1727971286572746112"}
-                            {:depot-id 72857
-                             :manifest-gid "7452763826351096823"}
-                            {:depot-id 72858
-                             :manifest-gid "7838100264460942831"}
-                            {:depot-id 72859
-                             :manifest-gid "5471547594501309345"}
-                            {:depot-id 72860
-                             :manifest-gid "5193644833404975611"}
-                            {:depot-id 72861
-                             :manifest-gid "400878757036949667"}
-                            {:depot-id 72862
-                             :manifest-gid "2225156885713950567"}]}]}
-        {:appid 489830
+ :generated "2026-08-17T15:24:23Z"
+ :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
          :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/489830/library_600x900.jpg"
@@ -911,7 +27,7 @@
                  {:text "You will carry forty unenchanted iron daggers to sell later. You never sell them."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest — public"
+                    :label "Latest"
                     :branch "public"
                     :build "13189953"
                     :date "2024-01-17"
@@ -1046,6 +162,452 @@
                              :manifest-gid "4341968404481569190"}
                             {:depot-id 489833
                              :manifest-gid "2442187225363891157"}]}]}
+        {:appid 377160
+         :title "Fallout 4"
+         :studio "Bethesda Game Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/377160/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f7861bd71e6c0c218d8ff69fb1c626aec0d187cf.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_910437ac708aed7c028f6e43a6224c633d086b0a.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_f649b8e57749f380cca225db5074edbb1e06d7f5.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_c310f858e6a7b02ffa21db984afb0dd1b24c1423.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/377160/ss_5e2d136759e0ff4e0d74940fffc9c64e8cdcd833.1920x1080.jpg"]}
+         :quotes [{:text "There's another settlement that needs our help."
+                  :attrib "Preston Garvey"}
+                 {:text "Two hundred years ago, I never would have thought this level of dust possible!"
+                  :attrib "Codsworth"}
+                 {:text "I'm a synth. Synthetic man. All the parts, minus a few red blood cells."
+                  :attrib "Nick Valentine"}
+                 {:text "Come on, Blue. This isn't amateur hour."
+                  :attrib "Piper Wright"}
+                 {:text "Dogmeat is modeled on lead level designer Joel Burgess's own dog, River, who also voiced his barks."
+                  :attrib "development trivia"}
+                 {:text "The $120 Pip-Boy Collector's Edition shipped with a real wearable Pip-Boy that cradled your phone."
+                  :attrib "development trivia"}
+                 {:text "Every player has a settlement stockpiled with two hundred desk fans they will never use."
+                  :attrib "every player, eventually"}
+                 {:text "You promise yourself just one more settlement, then the main quest. Still promising it at level 80."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "22848228"
+                    :date "2026-05-27"
+                    :bytes 67536079650
+                    :depots [{:depot-id 377161
+                             :manifest-gid "5983086794954940044"}
+                            {:depot-id 377162
+                             :manifest-gid "387388833281246371"}
+                            {:depot-id 377163
+                             :manifest-gid "8363807899725426636"}
+                            {:depot-id 377164
+                             :manifest-gid "8492427313392140315"}
+                            {:depot-id 377165
+                             :manifest-gid "2033965788399743191"}
+                            {:depot-id 377166
+                             :manifest-gid "5627643066330450040"}
+                            {:depot-id 377167
+                             :manifest-gid "7494413550139810042"}
+                            {:depot-id 377168
+                             :manifest-gid "3728836035123485280"}
+                            {:depot-id 393880
+                             :manifest-gid "4656512446653497676"}
+                            {:depot-id 393881
+                             :manifest-gid "9220466047319762009"}
+                            {:depot-id 393882
+                             :manifest-gid "8191305962459798887"}
+                            {:depot-id 393883
+                             :manifest-gid "8665224215527782698"}
+                            {:depot-id 393884
+                             :manifest-gid "7858461782713595876"}]}
+                   {:id "1_10_163"
+                    :label "1.10.163"
+                    :branch "public"
+                    :build ""
+                    :date nil
+                    :bytes 84783989454
+                    :depots [{:depot-id 377161
+                             :manifest-gid "7497069378349273908"}
+                            {:depot-id 377162
+                             :manifest-gid "5847529232406005096"}
+                            {:depot-id 377163
+                             :manifest-gid "5819088023757897745"}
+                            {:depot-id 377164
+                             :manifest-gid "2178106366609958945"}
+                            {:depot-id 435870
+                             :manifest-gid "1691678129192680960"}
+                            {:depot-id 435871
+                             :manifest-gid "5106118861901111234"}
+                            {:depot-id 435880
+                             :manifest-gid "1255562923187931216"}
+                            {:depot-id 435881
+                             :manifest-gid "1207717296920736193"}
+                            {:depot-id 435882
+                             :manifest-gid "8482181819175811242"}
+                            {:depot-id 480630
+                             :manifest-gid "5527412439359349504"}
+                            {:depot-id 480631
+                             :manifest-gid "6588493486198824788"}
+                            {:depot-id 393885
+                             :manifest-gid "5000262035721758737"}
+                            {:depot-id 393895
+                             :manifest-gid "7677765994120765493"}
+                            {:depot-id 377165
+                             :manifest-gid "7549549550652702123"}
+                            {:depot-id 377166
+                             :manifest-gid "6854162778963425477"}
+                            {:depot-id 377167
+                             :manifest-gid "783101348965844295"}
+                            {:depot-id 377168
+                             :manifest-gid "7717372852115364102"}
+                            {:depot-id 393881
+                             :manifest-gid "4735225695214536532"}
+                            {:depot-id 393882
+                             :manifest-gid "7540680803954664080"}
+                            {:depot-id 393884
+                             :manifest-gid "3455288010746962666"}
+                            {:depot-id 404091
+                             :manifest-gid "6756984187996423348"}
+                            {:depot-id 435872
+                             :manifest-gid "5590419866095647350"}
+                            {:depot-id 435873
+                             :manifest-gid "2207548206398235202"}
+                            {:depot-id 435874
+                             :manifest-gid "9032251103390457158"}
+                            {:depot-id 435875
+                             :manifest-gid "2953236065717816833"}
+                            {:depot-id 435877
+                             :manifest-gid "2675794883952625475"}
+                            {:depot-id 435878
+                             :manifest-gid "8276750634369029613"}]}
+                   {:id "1_10_984"
+                    :label "1.10.984"
+                    :branch "public"
+                    :build ""
+                    :date "2024-05-13"
+                    :bytes 31289015478
+                    :depots [{:depot-id 377161
+                             :manifest-gid "7332110922360867314"}
+                            {:depot-id 377162
+                             :manifest-gid "5698952341602575696"}
+                            {:depot-id 377163
+                             :manifest-gid "8681102885670959037"}
+                            {:depot-id 435871
+                             :manifest-gid "7785009542965564688"}
+                            {:depot-id 435880
+                             :manifest-gid "366079256218893805"}
+                            {:depot-id 377164
+                             :manifest-gid "8492427313392140315"}
+                            {:depot-id 435870
+                             :manifest-gid "1213339795579796878"}
+                            {:depot-id 393885
+                             :manifest-gid "5000262035721758737"}]}]}
+        {:appid 72850
+         :title "The Elder Scrolls V: Skyrim"
+         :studio "Bethesda Game Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/72850/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_4e95fbcf72ce2a9f86075738fa9930ef2bed1ac7.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b16a3740e032afe1c4b0477174eae7af8444b85d.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b3c5c70421af0c6a48dab2fbac88814a8827c057.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_b29aa0a2503547a15e9e210551b9c3eed42cba78.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/72850/ss_8aad65240099ed6f44953d051d1fca5d4f16e174.1920x1080.jpg"]}
+         :quotes [{:text "Hey, you. You're finally awake."
+                  :attrib "Ralof, the first line spoken in the game"}
+                 {:text "I used to be an adventurer like you. Then I took an arrow in the knee..."
+                  :attrib "Whiterun guard"}
+                 {:text "Dragons were never gone. They were just invisible and very, very quiet."
+                  :attrib "M'aiq the Liar"}
+                 {:text "Radiant AI's list of NPC behaviors began as a napkin sketch from Todd Howard; nearly all of it shipped."
+                  :attrib "development trivia"}
+                 {:text "Dragon Shouts were inspired by the sound-based \"Weirding Way\" combat in David Lynch's 1984 Dune film."
+                  :attrib "development trivia"}
+                 {:text "Killing one town chicken turns the whole town hostile — the chicken shares its owners' faction."
+                  :attrib "development trivia"}
+                 {:text "Every player spends the first hour picking flowers and ignoring the dragon that just leveled a town."
+                  :attrib "every player, eventually"}
+                 {:text "You fast-travel everywhere, then feel guilty and walk once, just to see the scenery."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "15039560"
+                    :date "2024-09-05"
+                    :bytes 43741285430
+                    :depots [{:depot-id 211721
+                             :manifest-gid "8491601813494771150"}
+                            {:depot-id 211722
+                             :manifest-gid "1022735717219821693"}
+                            {:depot-id 211723
+                             :manifest-gid "1086946781294420899"}
+                            {:depot-id 211724
+                             :manifest-gid "1276143862192158998"}
+                            {:depot-id 211725
+                             :manifest-gid "8299795016551985184"}
+                            {:depot-id 211726
+                             :manifest-gid "5289416362846105567"}
+                            {:depot-id 211727
+                             :manifest-gid "7751553359064521832"}
+                            {:depot-id 211728
+                             :manifest-gid "4059246410413922004"}
+                            {:depot-id 211729
+                             :manifest-gid "7463371072418866286"}
+                            {:depot-id 220761
+                             :manifest-gid "2344958374935388264"}
+                            {:depot-id 220762
+                             :manifest-gid "5113555411172661886"}
+                            {:depot-id 220763
+                             :manifest-gid "8215433295476872627"}
+                            {:depot-id 220764
+                             :manifest-gid "7691844347959071567"}
+                            {:depot-id 220765
+                             :manifest-gid "257722701370938794"}
+                            {:depot-id 220766
+                             :manifest-gid "931899454736580467"}
+                            {:depot-id 220767
+                             :manifest-gid "1912731935620426238"}
+                            {:depot-id 220768
+                             :manifest-gid "8180020645450882851"}
+                            {:depot-id 220769
+                             :manifest-gid "2819260933799905552"}
+                            {:depot-id 226881
+                             :manifest-gid "5951986179928071119"}
+                            {:depot-id 226882
+                             :manifest-gid "1063207227414446171"}
+                            {:depot-id 226883
+                             :manifest-gid "2843325968068819127"}
+                            {:depot-id 226884
+                             :manifest-gid "3812267532474553905"}
+                            {:depot-id 226885
+                             :manifest-gid "1585497366712628883"}
+                            {:depot-id 226886
+                             :manifest-gid "5952995101008705423"}
+                            {:depot-id 226887
+                             :manifest-gid "7536838561817009398"}
+                            {:depot-id 226888
+                             :manifest-gid "921222014325323019"}
+                            {:depot-id 226890
+                             :manifest-gid "612194655676385333"}
+                            {:depot-id 72851
+                             :manifest-gid "430694959351693705"}
+                            {:depot-id 72853
+                             :manifest-gid "5477471785942614203"}
+                            {:depot-id 72854
+                             :manifest-gid "7714663930157316519"}
+                            {:depot-id 72855
+                             :manifest-gid "2251296615448706646"}
+                            {:depot-id 72856
+                             :manifest-gid "1727971286572746112"}
+                            {:depot-id 72857
+                             :manifest-gid "7452763826351096823"}
+                            {:depot-id 72858
+                             :manifest-gid "7838100264460942831"}
+                            {:depot-id 72859
+                             :manifest-gid "5471547594501309345"}
+                            {:depot-id 72860
+                             :manifest-gid "5193644833404975611"}
+                            {:depot-id 72861
+                             :manifest-gid "400878757036949667"}
+                            {:depot-id 72862
+                             :manifest-gid "2225156885713950567"}]}]}
+        {:appid 22380
+         :title "Fallout: New Vegas"
+         :studio "Obsidian Entertainment"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22380/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_62f8d0b006935ff6de7fe276f713e7d15e579bc9.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_ec8a28942fcb5cb15718f949ab81124932a5084d.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_f703adcb9aa1d718a39288adf7d2e1b4dc0e568a.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e05e3697347c076d3382188bcf883339cf6144d5.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22380/ss_e430a2c8a841d4bc32bd8207223a91e3dbe0cdea.1920x1080.jpg"]}
+         :quotes [{:text "Truth is, the game was rigged from the start."
+                  :attrib "Benny"}
+                 {:text "Sorry to deny you a moment of primate triumph, but you'll have to go elsewhere to sound your barbaric yawp."
+                  :attrib "Mr. House"}
+                 {:text "You did a super job wrapping things up! And I'm not just saying that because I have to!"
+                  :attrib "Yes Man"}
+                 {:text "Obsidian built New Vegas in about 18 months, reusing Fallout 3's engine to make the deadline."
+                  :attrib "development trivia"}
+                 {:text "New Vegas needed an 85 on Metacritic for Obsidian's contractual bonus. It scored 84."
+                  :attrib "development trivia"}
+                 {:text "Every player turns on Hardcore Mode, dies of dehydration outside Goodsprings, and quietly turns it back off."
+                  :attrib "every player, eventually"}
+                 {:text "You'll spend hours deciding who deserves the Strip — NCR, Legion, House, or yourself — and still aren't sure."
+                  :attrib "every player, eventually"}
+                 {:text "You pick Wild Wasteland for the jokes, then forget you did until a UFO crashes into the road ahead."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "1510068"
+                    :date "2018-05-08"
+                    :bytes 29788171997
+                    :depots [{:depot-id 22381
+                             :manifest-gid "8327177303444281069"}
+                            {:depot-id 22382
+                             :manifest-gid "1869121858616960493"}
+                            {:depot-id 22383
+                             :manifest-gid "4908451661450393672"}
+                            {:depot-id 22384
+                             :manifest-gid "3154332352227781227"}
+                            {:depot-id 22385
+                             :manifest-gid "1254217014717060816"}
+                            {:depot-id 22386
+                             :manifest-gid "8761564382862573338"}
+                            {:depot-id 22393
+                             :manifest-gid "8227935753987096201"}
+                            {:depot-id 22461
+                             :manifest-gid "5904002363925640566"}
+                            {:depot-id 22462
+                             :manifest-gid "4866927589704494894"}
+                            {:depot-id 22463
+                             :manifest-gid "2606574133782217517"}
+                            {:depot-id 22464
+                             :manifest-gid "3566069208831073571"}
+                            {:depot-id 22466
+                             :manifest-gid "1510770969128417196"}
+                            {:depot-id 22467
+                             :manifest-gid "3538923246242403538"}
+                            {:depot-id 22468
+                             :manifest-gid "4054403017816647337"}
+                            {:depot-id 22469
+                             :manifest-gid "2754265232492844016"}
+                            {:depot-id 22471
+                             :manifest-gid "7317844635982217214"}
+                            {:depot-id 22472
+                             :manifest-gid "1132709297122659322"}
+                            {:depot-id 22473
+                             :manifest-gid "6438309698058593440"}
+                            {:depot-id 22474
+                             :manifest-gid "4369356280283756406"}
+                            {:depot-id 22476
+                             :manifest-gid "4281683315724973816"}
+                            {:depot-id 22477
+                             :manifest-gid "7147209989063233162"}
+                            {:depot-id 22478
+                             :manifest-gid "6144308732856631726"}
+                            {:depot-id 22479
+                             :manifest-gid "5039947182700550471"}
+                            {:depot-id 22493
+                             :manifest-gid "2502952557192596705"}
+                            {:depot-id 22494
+                             :manifest-gid "172761448805198342"}
+                            {:depot-id 22495
+                             :manifest-gid "3899563573656223062"}
+                            {:depot-id 22496
+                             :manifest-gid "2854660838749520858"}
+                            {:depot-id 72702
+                             :manifest-gid "218001916733409543"}
+                            {:depot-id 72703
+                             :manifest-gid "8704668556634681206"}
+                            {:depot-id 72704
+                             :manifest-gid "5027314936807090238"}
+                            {:depot-id 72706
+                             :manifest-gid "4769162033996668390"}
+                            {:depot-id 72707
+                             :manifest-gid "2475543823682564198"}
+                            {:depot-id 72708
+                             :manifest-gid "2833359475025167693"}
+                            {:depot-id 72710
+                             :manifest-gid "4444319566282062264"}
+                            {:depot-id 72711
+                             :manifest-gid "5188458997640746773"}
+                            {:depot-id 72712
+                             :manifest-gid "851361898012512096"}
+                            {:depot-id 72714
+                             :manifest-gid "2877250838608166760"}
+                            {:depot-id 72715
+                             :manifest-gid "7383312129410005891"}
+                            {:depot-id 72716
+                             :manifest-gid "6186740497873431344"}
+                            {:depot-id 72732
+                             :manifest-gid "4131381354636064588"}
+                            {:depot-id 72733
+                             :manifest-gid "4152591146727673335"}
+                            {:depot-id 72734
+                             :manifest-gid "3274733605889166985"}
+                            {:depot-id 72735
+                             :manifest-gid "8677900210824532806"}
+                            {:depot-id 72736
+                             :manifest-gid "7999052110491368290"}
+                            {:depot-id 72742
+                             :manifest-gid "4517089570337326424"}
+                            {:depot-id 72743
+                             :manifest-gid "5251151026503673295"}
+                            {:depot-id 72744
+                             :manifest-gid "1305099132607763646"}
+                            {:depot-id 72745
+                             :manifest-gid "1687258286902847069"}
+                            {:depot-id 72746
+                             :manifest-gid "8215456132420404126"}
+                            {:depot-id 72751
+                             :manifest-gid "1624841217294494503"}
+                            {:depot-id 72752
+                             :manifest-gid "7666384873706904799"}
+                            {:depot-id 72753
+                             :manifest-gid "8226671937990042355"}
+                            {:depot-id 72754
+                             :manifest-gid "6027990557909752884"}
+                            {:depot-id 72755
+                             :manifest-gid "2158729683026608055"}
+                            {:depot-id 72761
+                             :manifest-gid "5717050455382180241"}
+                            {:depot-id 72762
+                             :manifest-gid "7641337957345960590"}
+                            {:depot-id 72763
+                             :manifest-gid "8371948547095099581"}
+                            {:depot-id 72764
+                             :manifest-gid "4409623748397178295"}
+                            {:depot-id 72765
+                             :manifest-gid "4696146338252983690"}
+                            {:depot-id 72841
+                             :manifest-gid "7404324045800590955"}
+                            {:depot-id 72842
+                             :manifest-gid "1434764155323580833"}
+                            {:depot-id 72843
+                             :manifest-gid "7904639580398839628"}
+                            {:depot-id 72844
+                             :manifest-gid "6599444621768713933"}
+                            {:depot-id 72845
+                             :manifest-gid "7165809099252444575"}]}]}
+        {:appid 22330
+         :title "The Elder Scrolls IV: Oblivion"
+         :studio "Bethesda Game Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22330/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009037.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009038.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009039.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009040.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22330/0000009041.1920x1080.jpg"]}
+         :quotes [{:text "Golly, you're the best! I'm going to follow you and watch you and worship the ground you walk on! Let's go!"
+                  :attrib "Adoring Fan"}
+                 {:text "Find him, and close shut the jaws of Oblivion."
+                  :attrib "Uriel Septim VII"}
+                 {:text "Stop right there, criminal scum!"
+                  :attrib "Imperial City Watch guard"}
+                 {:text "17 voice actors voiced 1,497 NPCs — a ratio you can hear in every tavern conversation."
+                  :attrib "development trivia"}
+                 {:text "Todd Howard voiced one NPC himself: the Daedric Prince Clavicus Vile."
+                  :attrib "development trivia"}
+                 {:text "Every player spends the whole game trying not to look at NPC faces too closely."
+                  :attrib "every player, eventually"}
+                 {:text "You get arrested for trespassing in your own house because a guard saw you climb through the window."
+                  :attrib "every player, eventually"}
+                 {:text "By the twentieth Oblivion Gate, you're closing them out of obligation, not heroism."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "1510065"
+                    :date "2018-05-08"
+                    :bytes 24978289925
+                    :depots [{:depot-id 22331
+                             :manifest-gid "7977703601170745652"}
+                            {:depot-id 22334
+                             :manifest-gid "6986544622093806923"}
+                            {:depot-id 22335
+                             :manifest-gid "1772388336463976851"}
+                            {:depot-id 22336
+                             :manifest-gid "4349214922682464414"}
+                            {:depot-id 22337
+                             :manifest-gid "424494866178121373"}]}]}
         {:appid 413150
          :title "Stardew Valley"
          :studio "ConcernedApe"
@@ -1073,7 +635,7 @@
                  {:text "You tell yourself this will be the year you get to bed before 2am in-game. It will not."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest — public"
+                    :label "Latest"
                     :branch "public"
                     :build "16826371"
                     :date "2024-12-22"
@@ -1081,7 +643,7 @@
                     :depots [{:depot-id 413151
                              :manifest-gid "4278718763097142923"}]}
                    {:id "compatibility"
-                    :label "For 32-bit systems. The legacy XNA version of Stardew Valley."
+                    :label "32-bit"
                     :branch "compatibility"
                     :build "16826373"
                     :date "2024-12-22"
@@ -1089,7 +651,7 @@
                     :depots [{:depot-id 413151
                              :manifest-gid "4848991934266309406"}]}
                    {:id "previous_version"
-                    :label "The previous version of Stardew Valley (currently 1.6.14)"
+                    :label "1.6.14"
                     :branch "previous_version"
                     :build "16375315"
                     :date "2024-12-20"
@@ -1097,7 +659,7 @@
                     :depots [{:depot-id 413151
                              :manifest-gid "1364246008775303529"}]}
                    {:id "legacy_1.6.8"
-                    :label "The legacy 1.6.8 version of Stardew Valley"
+                    :label "1.6.8 (legacy)"
                     :branch "legacy_1.6.8"
                     :build "14198583"
                     :date "2024-11-04"
@@ -1105,13 +667,413 @@
                     :depots [{:depot-id 413151
                              :manifest-gid "1777024427851858279"}]}
                    {:id "legacy_1.5.6"
-                    :label "The legacy 1.5.6 version of Stardew Valley."
+                    :label "1.5.6 (legacy)"
                     :branch "legacy_1.5.6"
                     :build "8043676"
                     :date "2024-03-18"
                     :bytes 650810621
                     :depots [{:depot-id 413151
                              :manifest-gid "5609262347030774375"}]}]}
+        {:appid 1091500
+         :title "Cyberpunk 2077"
+         :studio "CD PROJEKT RED"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_2f649b68d579bf87011487d29bc4ccbfdd97d34f.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_0e64170751e1ae20ff8fdb7001a8892fd48260e7.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_af2804aa4bf35d4251043744412ce3b359a125ef.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_7924f64b6e5d586a80418c9896a1c92881a7905b.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_4eb068b1cf52c91b57157b84bed18a186ed7714b.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/ss_b529b0abc43f55fc23fe8058eddb6e37c9629a6a.1920x1080.jpg"]}
+         :quotes [{:text "Wake the fuck up, Samurai. We have a city to burn."
+                  :attrib "Johnny Silverhand"}
+                 {:text "We all lap up the last of our fuel eventually. But that hardly means the journey wasn't a joy."
+                  :attrib "Delamain"}
+                 {:text "Sony pulled Cyberpunk 2077 from the PlayStation Store for six months after launch over bugs and performance."
+                  :attrib "development trivia"}
+                 {:text "Every V line was recorded twice — Gavin Drea and Cherami Leigh, kept apart so neither would imitate the other."
+                  :attrib "development trivia"}
+                 {:text "Night City and Adam Smasher both trace back to Mike Pondsmith's 1988 tabletop RPG, Cyberpunk 2020."
+                  :attrib "development trivia"}
+                 {:text "Every character creator session ends with a face a full-coverage cyberware helmet will hide for the rest of the game."
+                  :attrib "every player, eventually"}
+                 {:text "Every dumpster, glovebox, and trash pile in Night City gets opened at least once, on principle."
+                  :attrib "every player, eventually"}
+                 {:text "Everyone swears they will romance exactly one person in Night City. Most end up juggling three apartments."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "20383525"
+                    :date "2025-10-14"
+                    :bytes 117178735039
+                    :depots [{:depot-id 1091501
+                             :manifest-gid "3389237510439361019"}
+                            {:depot-id 1091502
+                             :manifest-gid "819305496055337333"}
+                            {:depot-id 1091503
+                             :manifest-gid "2051822335481947109"}
+                            {:depot-id 1091504
+                             :manifest-gid "7478488130966967410"}
+                            {:depot-id 1091505
+                             :manifest-gid "7982214908117080286"}
+                            {:depot-id 1091506
+                             :manifest-gid "2059269590710419725"}
+                            {:depot-id 1091507
+                             :manifest-gid "5073153400365828217"}
+                            {:depot-id 1091508
+                             :manifest-gid "8836038990327543024"}
+                            {:depot-id 1091509
+                             :manifest-gid "2202736442745644704"}
+                            {:depot-id 1460470
+                             :manifest-gid "4839420595466808435"}
+                            {:depot-id 1460471
+                             :manifest-gid "2293639687853156805"}]}
+                   {:id "2_30_old"
+                    :label "2.3"
+                    :branch "2_30_old"
+                    :build "19260982"
+                    :date "2025-09-11"
+                    :bytes 118144284967
+                    :depots [{:depot-id 1091501
+                             :manifest-gid "6814019010317238099"}
+                            {:depot-id 1091502
+                             :manifest-gid "6184739646416384219"}
+                            {:depot-id 1091503
+                             :manifest-gid "2155431883450560521"}
+                            {:depot-id 1091504
+                             :manifest-gid "154478943248480549"}
+                            {:depot-id 1091505
+                             :manifest-gid "2785239419527800155"}
+                            {:depot-id 1091506
+                             :manifest-gid "4950498239915244227"}
+                            {:depot-id 1091507
+                             :manifest-gid "6688146715027058561"}
+                            {:depot-id 1091508
+                             :manifest-gid "8161295208627735550"}
+                            {:depot-id 1091509
+                             :manifest-gid "1164045688452124372"}
+                            {:depot-id 1460470
+                             :manifest-gid "293694417878924697"}
+                            {:depot-id 1460471
+                             :manifest-gid "5234987954077902546"}]}
+                   {:id "2_21_old"
+                    :label "2.21"
+                    :branch "2_21_old"
+                    :build "17055519"
+                    :date "2025-07-17"
+                    :bytes 116799298830
+                    :depots [{:depot-id 1091501
+                             :manifest-gid "8420445566849588826"}
+                            {:depot-id 1091502
+                             :manifest-gid "3260780708809854852"}
+                            {:depot-id 1091503
+                             :manifest-gid "2781196279510572595"}
+                            {:depot-id 1091504
+                             :manifest-gid "2997316000567469581"}
+                            {:depot-id 1091505
+                             :manifest-gid "4589533780567096316"}
+                            {:depot-id 1091506
+                             :manifest-gid "4746434433646308761"}
+                            {:depot-id 1091507
+                             :manifest-gid "5139081181596225291"}
+                            {:depot-id 1091508
+                             :manifest-gid "8063732630804129021"}
+                            {:depot-id 1091509
+                             :manifest-gid "4359393218898221092"}
+                            {:depot-id 1460470
+                             :manifest-gid "1470473429525273457"}
+                            {:depot-id 1460471
+                             :manifest-gid "619006663931326731"}]}
+                   {:id "2_13_old"
+                    :label "2.13"
+                    :branch "2_13_old"
+                    :build "15646965"
+                    :date "2024-12-10"
+                    :bytes 116605304136
+                    :depots [{:depot-id 1091501
+                             :manifest-gid "4350623720177810551"}
+                            {:depot-id 1091502
+                             :manifest-gid "4846693136267556074"}
+                            {:depot-id 1091503
+                             :manifest-gid "2930929891484713220"}
+                            {:depot-id 1091504
+                             :manifest-gid "4078220236152172576"}
+                            {:depot-id 1091505
+                             :manifest-gid "498874446476828295"}
+                            {:depot-id 1091506
+                             :manifest-gid "1923371999643087830"}
+                            {:depot-id 1091507
+                             :manifest-gid "2478744079664596808"}
+                            {:depot-id 1091508
+                             :manifest-gid "7381328406432883171"}
+                            {:depot-id 1091509
+                             :manifest-gid "1513374529205859369"}
+                            {:depot-id 1460470
+                             :manifest-gid "2012342711196649618"}
+                            {:depot-id 1460471
+                             :manifest-gid "1139551677548366368"}]}
+                   {:id "1_63_legacy_patch"
+                    :label "1.63 (legacy)"
+                    :branch "1_63_legacy_patch"
+                    :build "11545061"
+                    :date "2023-09-21"
+                    :bytes 120220651617
+                    :depots [{:depot-id 1091501
+                             :manifest-gid "6594873489665865240"}
+                            {:depot-id 1091502
+                             :manifest-gid "8869499918106631472"}
+                            {:depot-id 1091503
+                             :manifest-gid "7860725176037203861"}
+                            {:depot-id 1091504
+                             :manifest-gid "3942706128185741435"}
+                            {:depot-id 1091505
+                             :manifest-gid "4214828340855710649"}
+                            {:depot-id 1091506
+                             :manifest-gid "5463429117151273495"}
+                            {:depot-id 1091507
+                             :manifest-gid "3145667816131657121"}
+                            {:depot-id 1091508
+                             :manifest-gid "3995250012592214586"}
+                            {:depot-id 1091509
+                             :manifest-gid "9217761376710018763"}
+                            {:depot-id 1460470
+                             :manifest-gid "5765923022907354951"}
+                            {:depot-id 1460471
+                             :manifest-gid "2979356708568940230"}]}]}
+        {:appid 1086940
+         :title "Baldur's Gate 3"
+         :studio "Larian Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/1086940/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_c73bc54415178c07fef85f54ee26621728c77504.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_73d93bea842b93914d966622104dcb8c0f42972b.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_cf936d31061b58e98e0c646aee00e6030c410cda.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_b6a6ee6e046426d08ceea7a4506a1b5f44181543.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_6b8faba0f6831a406ce015648958da9612d14dbb.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1086940/ss_8fc5eba770b4a1639b31666908bdd2bbc1aa2ae4.1920x1080.jpg"]}
+         :quotes [{:text "Why do beautiful people taste better? It hardly seems fair on the ugly — they have such wonderful personalities."
+                  :attrib "Astarion"}
+                 {:text "Tongs. A wide variety of tongs."
+                  :attrib "the Narrator, examining a workbench"}
+                 {:text "Halsin wasn't originally a romance option — Larian added him after fans latched onto the character during early access."
+                  :attrib "development trivia"}
+                 {:text "The finished game holds over 236 hours of recorded dialogue across a script that runs past two million words."
+                  :attrib "development trivia"}
+                 {:text "Larian spent six years building the game, three of them in public early access."
+                  :attrib "development trivia"}
+                 {:text "Every lawful-good cleric run ends with someone shoved off a cliff for the extra experience."
+                  :attrib "every player, eventually"}
+                 {:text "Every player accidentally murders a shopkeeper once, then reloads the save in shame."
+                  :attrib "every player, eventually"}
+                 {:text "Long rest gets called after every single fight, whether anyone actually needs it or not."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "24532579"
+                    :date "2026-08-03"
+                    :bytes 155594720745
+                    :depots [{:depot-id 1086941
+                             :manifest-gid "4288948197859959444"}
+                            {:depot-id 1086942
+                             :manifest-gid "17875152607970122"}
+                            {:depot-id 1086943
+                             :manifest-gid "2118230943991643525"}
+                            {:depot-id 1086944
+                             :manifest-gid "3423097641402863301"}
+                            {:depot-id 1086945
+                             :manifest-gid "9002272171910189584"}
+                            {:depot-id 1086946
+                             :manifest-gid "2409481873063333868"}
+                            {:depot-id 1086947
+                             :manifest-gid "4701297036193868114"}
+                            {:depot-id 1086948
+                             :manifest-gid "8505682662122387972"}
+                            {:depot-id 1086949
+                             :manifest-gid "4043484420852339008"}
+                            {:depot-id 1419650
+                             :manifest-gid "6250389178731869788"}
+                            {:depot-id 1419651
+                             :manifest-gid "9051166838150188236"}
+                            {:depot-id 1419652
+                             :manifest-gid "7005275183208636774"}
+                            {:depot-id 1419653
+                             :manifest-gid "2098612237190800348"}
+                            {:depot-id 1419658
+                             :manifest-gid "916483664598379515"}
+                            {:depot-id 1419668
+                             :manifest-gid "6176479858889274652"}
+                            {:depot-id 1419669
+                             :manifest-gid "9081827886419290237"}
+                            {:depot-id 2330350
+                             :manifest-gid "1205466515600447451"}
+                            {:depot-id 2330351
+                             :manifest-gid "7646694850759131929"}]}
+                   {:id "release_patch_7_hf3"
+                    :label "Patch 7 hf3"
+                    :branch "release_patch_7_hf3"
+                    :build "16065077"
+                    :date "2025-03-27"
+                    :bytes 154627572267
+                    :depots [{:depot-id 1086941
+                             :manifest-gid "5026713417664092526"}
+                            {:depot-id 1086942
+                             :manifest-gid "17875152607970122"}
+                            {:depot-id 1086943
+                             :manifest-gid "1107708890965171808"}
+                            {:depot-id 1086944
+                             :manifest-gid "4428239725755415705"}
+                            {:depot-id 1086945
+                             :manifest-gid "6028240894531217739"}
+                            {:depot-id 1086946
+                             :manifest-gid "8814279930504850804"}
+                            {:depot-id 1086947
+                             :manifest-gid "7055405863172719745"}
+                            {:depot-id 1086948
+                             :manifest-gid "1177849686188402038"}
+                            {:depot-id 1086949
+                             :manifest-gid "7900372690999400037"}
+                            {:depot-id 1419650
+                             :manifest-gid "2476340684195286569"}
+                            {:depot-id 1419651
+                             :manifest-gid "6806914915590760927"}
+                            {:depot-id 1419652
+                             :manifest-gid "4560720842929068408"}
+                            {:depot-id 1419653
+                             :manifest-gid "813968981771126782"}
+                            {:depot-id 1419658
+                             :manifest-gid "4522073111045687015"}
+                            {:depot-id 1419668
+                             :manifest-gid "5757806648215906392"}
+                            {:depot-id 1419669
+                             :manifest-gid "2801378419093995952"}
+                            {:depot-id 2330350
+                             :manifest-gid "3531144885724029944"}
+                            {:depot-id 2330351
+                             :manifest-gid "8566425517764903600"}]}
+                   {:id "release_patch6_hf9"
+                    :label "Patch 6 hf9"
+                    :branch "release_patch6_hf9"
+                    :build "13981165"
+                    :date "2024-04-08"
+                    :bytes 153034479055
+                    :depots [{:depot-id 1086941
+                             :manifest-gid "4016443084035836922"}
+                            {:depot-id 1086942
+                             :manifest-gid "17875152607970122"}
+                            {:depot-id 1086943
+                             :manifest-gid "8704250069811909913"}
+                            {:depot-id 1086944
+                             :manifest-gid "3292885662645325731"}
+                            {:depot-id 1086945
+                             :manifest-gid "8237530545437607331"}
+                            {:depot-id 1086946
+                             :manifest-gid "5080467222606749123"}
+                            {:depot-id 1086947
+                             :manifest-gid "8260264646733091175"}
+                            {:depot-id 1086948
+                             :manifest-gid "9059714744390918940"}
+                            {:depot-id 1086949
+                             :manifest-gid "8465180551353127518"}
+                            {:depot-id 1419650
+                             :manifest-gid "8372184514980148361"}
+                            {:depot-id 1419651
+                             :manifest-gid "6120897092515926605"}
+                            {:depot-id 1419652
+                             :manifest-gid "6054390892227846984"}
+                            {:depot-id 1419653
+                             :manifest-gid "5004287504333497038"}
+                            {:depot-id 1419658
+                             :manifest-gid "4835577404029430904"}
+                            {:depot-id 1419668
+                             :manifest-gid "7928402143006248738"}
+                            {:depot-id 1419669
+                             :manifest-gid "5988027054563412068"}
+                            {:depot-id 2330350
+                             :manifest-gid "7410969271902313996"}
+                            {:depot-id 2330351
+                             :manifest-gid "2538495863540404322"}]}]}
+        {:appid 22370
+         :title "Fallout 3"
+         :studio "Bethesda Game Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22370/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_87fb57e11912a692f29614f88411d0db2cba405a.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_d770133d0a0c1b9b73fa31f20f29fe6617b73cfb.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_2405f21839a5cec01918a5f6fe7cae0b80422107.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_37398576af0f80af58744b56a24b8526833f2efb.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_b37fe0d332ed8877e06a2b18efc95b1dab2a54af.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22370/ss_be899cfc4b2716f77d0a07737d519895ae0919f2.1920x1080.jpg"]}
+         :quotes [{:text "War. War never changes."
+                  :attrib "opening narration, voiced by Ron Perlman"}
+                 {:text "Freedom is the sovereign right of every American."
+                  :attrib "Liberty Prime"}
+                 {:text "Todd Howard found out Bethesda now owned the Fallout license from a Post-it note, not a memo."
+                  :attrib "development trivia"}
+                 {:text "Fallout 3 was refused classification in Australia over its morphine item, so Bethesda renamed it 'Med-X' worldwide."
+                  :attrib "development trivia"}
+                 {:text "The original ending just stopped after the main quest — Broken Steel later gave players a way to keep playing."
+                  :attrib "development trivia"}
+                 {:text "Every player fires at least one Fat Man just to watch the mushroom cloud, tactical necessity be damned."
+                  :attrib "every player, eventually"}
+                 {:text "Everyone starts as a saintly Vault dweller. The first raider with decent armor changes that fast."
+                  :attrib "every player, eventually"}
+                 {:text "You will hoard bottle caps, pre-War money, and teddy bears you will never once use."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "14365463"
+                    :date "2024-06-04"
+                    :bytes 46249774966
+                    :depots [{:depot-id 22371
+                             :manifest-gid "2416786561786063548"}
+                            {:depot-id 22372
+                             :manifest-gid "827002912150357260"}
+                            {:depot-id 22373
+                             :manifest-gid "179161400861758364"}
+                            {:depot-id 22374
+                             :manifest-gid "5562528913773688286"}
+                            {:depot-id 22375
+                             :manifest-gid "5343648328298172273"}]}]}
+        {:appid 22320
+         :title "The Elder Scrolls III: Morrowind"
+         :studio "Bethesda Game Studios"
+         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/22320/library_600x900.jpg"
+              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009069.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009070.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009071.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009072.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009073.1920x1080.jpg"
+                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/22320/0000009074.1920x1080.jpg"]}
+         :quotes [{:text "What a grand and intoxicating innocence! How could you be so naïve?"
+                  :attrib "Dagoth Ur, at his own fortress"}
+                 {:text "They have taken you from the Imperial City's prison, first by carriage, and now by boat."
+                  :attrib "Azura, in the opening dream"}
+                 {:text "I had it last week before their weekly 'Let's shake down Fargoth' ritual."
+                  :attrib "Fargoth, on his missing ring"}
+                 {:text "Wake up. We're here."
+                  :attrib "Jiub, the player's cellmate"}
+                 {:text "The Xbox port would secretly reboot itself mid-load to free up RAM, Todd Howard later revealed."
+                  :attrib "development trivia"}
+                 {:text "Oblivion later canonized Jiub as a saint for personally driving Morrowind's cliff racers into extinction."
+                  :attrib "development trivia"}
+                 {:text "Every player eventually stacks Fortify Intelligence potions into game-breaking alchemy loops."
+                  :attrib "every player, eventually"}
+                 {:text "New players fight the first screeching cliff racer. Everyone else just starts running."
+                  :attrib "every player, eventually"}]
+         :versions [{:id "public"
+                    :label "Latest"
+                    :branch "public"
+                    :build "1510067"
+                    :date "2018-05-08"
+                    :bytes 3321886096
+                    :depots [{:depot-id 22321
+                             :manifest-gid "1293785437610275498"}
+                            {:depot-id 22322
+                             :manifest-gid "7581756715156164220"}
+                            {:depot-id 22323
+                             :manifest-gid "6554123731300372570"}
+                            {:depot-id 451410
+                             :manifest-gid "5635087427908069289"}]}]}
         {:appid 1716740
          :title "Starfield"
          :studio "Bethesda Game Studios"
@@ -1139,7 +1101,7 @@
                  {:text "Players begged for a flight sim, then fast-travel past every system they unlock."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest — public"
+                    :label "Latest"
                     :branch "public"
                     :build "23518663"
                     :date "2026-06-11"
@@ -1157,62 +1119,4 @@
                             {:depot-id 1716746
                              :manifest-gid "8256719953704350900"}
                             {:depot-id 1716747
-                             :manifest-gid "1299082767590167920"}]}]}
-        {:appid 1237950
-         :title "STAR WARS™ Battlefront™ II"
-         :studio "DICE"
-         :art {:capsule "https://cdn.cloudflare.steamstatic.com/steam/apps/1237950/library_600x900.jpg"
-              :screenshots ["https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_4d4265ec83814642cc303d5fe312da8cf6d6a80f.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_625abcf051f814c2f009ac9322d4c470271fa0e2.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_6a84c15d3d4ecacdb36545be857d208d6c7d3e92.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_5b05cfc5e4e6a3f4bde51f2b20370e5f367bddf4.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_a0bb86ca908239a33c1bba05bd5e3743d11f9d4c.1920x1080.jpg"
-                           "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1237950/ss_741f131aba46c488d750062c1b5715c286681e9d.1920x1080.jpg"]}
-         :quotes [{:text "Someone told me once that rebellions are built on hate. I never stopped believing it."
-                  :attrib "Iden Versio, Inferno Squad"}
-                 {:text "A choice to be better. May the Force be with you."
-                  :attrib "Luke Skywalker"}
-                 {:text "Where do you think you're going?"
-                  :attrib "General Grievous, mid-Claw Rush"}
-                 {:text "The intent is to provide players with a sense of pride and accomplishment for unlocking different heroes."
-                  :attrib "EA Community Team, official reply to the loot box backlash, 2017"}
-                 {:text "DICE built the campaign largely to answer the loudest complaint about 2015's Battlefront: no single-player mode."
-                  :attrib "development trivia"}
-                 {:text "Backlash over pay-to-win loot boxes wiped roughly $3 billion off EA's market value within days of launch."
-                  :attrib "development trivia"}
-                 {:text "Every lobby has one player who mains Vader and force-chokes their own teammates by accident."
-                  :attrib "every match, eventually"}
-                 {:text "Grievous's four lightsabers look terrifying until someone just shoots him from across the map."
-                  :attrib "every player, eventually"}]
-         :versions [{:id "public"
-                    :label "Latest — public"
-                    :branch "public"
-                    :build "10351139"
-                    :date "2023-01-31"
-                    :bytes 97174329818
-                    :depots [{:depot-id 1237951
-                             :manifest-gid "1092172661111760910"}
-                            {:depot-id 1237952
-                             :manifest-gid "6816938749349294005"}
-                            {:depot-id 1237953
-                             :manifest-gid "8158434786442585297"}
-                            {:depot-id 1237954
-                             :manifest-gid "3222395978558611342"}
-                            {:depot-id 1237955
-                             :manifest-gid "7175788750451163551"}
-                            {:depot-id 1237956
-                             :manifest-gid "79758105325256702"}
-                            {:depot-id 1237957
-                             :manifest-gid "2834675556270217944"}
-                            {:depot-id 1237958
-                             :manifest-gid "4123698815381533805"}
-                            {:depot-id 1237959
-                             :manifest-gid "1918546214929540544"}
-                            {:depot-id 1237961
-                             :manifest-gid "864458850781568145"}
-                            {:depot-id 1237962
-                             :manifest-gid "5825045303255250937"}
-                            {:depot-id 1237963
-                             :manifest-gid "5111962543797924959"}
-                            {:depot-id 3340991
-                             :manifest-gid "2111133955805833191"}]}]}]}
+                             :manifest-gid "1299082767590167920"}]}]}]}
