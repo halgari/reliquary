@@ -766,6 +766,16 @@
       (fn []
         (let [state (wired {})
               calls (atom 0)
+              ;; `started` is what makes this deterministic. Each login runs on
+              ;; its own daemon thread, so `(swap! calls inc)` happens THERE --
+              ;; whichever thread the scheduler runs first claims number 1. This
+              ;; test failed on CI and passed locally for exactly that reason:
+              ;; the second login won the swap, so the CURRENT login was the one
+              ;; that fired STALE-URL and the assertion caught the test's race
+              ;; rather than the behaviour. Waiting for the first thread to be
+              ;; inside the stub before spawning the second removes the
+              ;; ambiguity entirely -- only one thread exists at that point.
+              started (promise)
               release-stale (promise)]
           (with-redefs [main/fx-run! (fn [f] (f))
                         main/enter-library! (fn [_] nil)
@@ -773,19 +783,22 @@
                         (fn [on-event _]
                           (if (= 1 (swap! calls inc))
                             ;; the soon-to-be-superseded login: parked in a poll
-                            (do (deref release-stale 3000 nil)
+                            (do (deliver started true)
+                                (deref release-stale 5000 nil)
                                 (on-event {:type :qr :challenge-url "STALE-URL"})
                                 nil)
                             (do (on-event {:type :qr :challenge-url "FRESH-URL"})
                                 nil)))]
-            (let [stale (main/start-login! state)
-                  fresh (main/start-login! state)]
-              @fresh
-              (is (= "FRESH-URL" (:challenge-url @state)))
-              (deliver release-stale true)
-              @stale
-              (is (= "FRESH-URL" (:challenge-url @state))
-                  "the abandoned login must not repaint the QR the user is looking at"))))))))
+            (let [stale (main/start-login! state)]
+              (is (true? (deref started 5000 nil))
+                  "the first login must reach the stub before a second is started")
+              (let [fresh (main/start-login! state)]
+                @fresh
+                (is (= "FRESH-URL" (:challenge-url @state)))
+                (deliver release-stale true)
+                @stale
+                (is (= "FRESH-URL" (:challenge-url @state))
+                    "the abandoned login must not repaint the QR the user is looking at")))))))))
 
 (deftest a-failed-credential-login-leaves-a-scannable-qr-not-a-dead-one
   (testing "starting a credential login aborts the QR poll for good, and nothing
@@ -801,11 +814,13 @@
               qr-starts (atom 0)]
           (with-redefs [main/fx-run! (fn [f] (f))
                         main/enter-library! (fn [_] nil)
+                        ;; the URL comes from this call's OWN counter value,
+                        ;; not from re-reading the atom: two live logins would
+                        ;; otherwise be able to report the same URL
                         auth/login-qr! (fn [on-event _]
-                                         (swap! qr-starts inc)
-                                         (on-event {:type :qr :challenge-url
-                                                    (str "URL-" @qr-starts)})
-                                         nil)
+                                         (let [n (swap! qr-starts inc)]
+                                           (on-event {:type :qr :challenge-url (str "URL-" n)})
+                                           nil))
                         auth/login-credentials! (fn [_ _ _ & _]
                                                   (error/raise :incorrect "bad password"))]
             @(main/start-login! state)
@@ -813,10 +828,15 @@
             (swap! state assoc :account "someone" :password "wrong")
             @((:on-submit @state) nil)
             (is (str/includes? (str (:error @state)) "bad password"))
-            (is (= 2 @qr-starts)
+            ;; `on-failure` restarts the QR login, which spawns ANOTHER daemon
+            ;; thread -- so awaiting the credential login's promise says nothing
+            ;; about whether that thread has reached the stub yet. Reading the
+            ;; atom straight afterwards is a race, and CI lost it where this
+            ;; machine won it. Wait for the observable result instead.
+            (is (await-state state #(= "URL-2" (:challenge-url %)))
                 "the QR half must be polling again, or the card on screen is a lie")
-            (is (= "URL-2" (:challenge-url @state))
-                "and showing the challenge that is actually being polled")))))))
+            (is (= 2 @qr-starts)
+                "and exactly one restart, not a storm of them")))))))
 
 (deftest a-login-thread-cannot-die-silently-and-strand-the-button
   (testing "run-login! caught only ExceptionInfo. Anything else on that thread --
