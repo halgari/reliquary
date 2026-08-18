@@ -28,16 +28,26 @@
 (defn find-node [desc type] (first (find-nodes desc type)))
 
 (defn game-cards
-  "Every card's top-level :v-box description, in game order. A card is
-   distinguished from the OTHER :v-box nodes nested inside it (the
-   title/meta-row block) by carrying both a click handler and the card's
-   own rounded-rectangle clip -- the inner block has neither. `find-nodes`
-   recurses through every map value regardless of key name, so this finds
-   cards whether or not they are wrapped in `anim/with-anim`'s
+  "Every card's outer GLOW FRAME description, in game order.
+
+   A card is two nested nodes, and deliberately so: the frame carries the
+   selected state's glow and lift and is unclipped, and the body inside it
+   carries the clip, the background and the border. They cannot be one node --
+   a clip masks its own node's -fx-effect, which is what made the selection
+   glow invisible (see reliquary.ui.clip-test). The frame is the node with the
+   click handler; `card-body` reaches the one with the clip.
+
+   `find-nodes` recurses through every map value regardless of key name, so this
+   finds cards whether or not they are wrapped in `anim/with-anim`'s
    `fx/ext-on-instance-lifecycle`."
   [desc]
-  (filter #(and (:on-mouse-clicked %) (= :rectangle (get-in % [:clip :fx/type])))
-          (find-nodes desc :v-box)))
+  (filter :on-mouse-clicked (find-nodes desc :stack-pane)))
+
+(defn card-body
+  "The clipped :v-box inside a card frame -- background, border, contents."
+  [frame]
+  (first (filter #(= :rectangle (get-in % [:clip :fx/type]))
+                 (find-nodes frame :v-box))))
 
 (def games
   [{:appid 100 :title "Stardew Valley" :studio "ConcernedApe"
@@ -215,14 +225,27 @@
         unselected (get by-appid 100)]
     (is (some? selected))
     (is (some? unselected))
-    (testing "selected: gold ring (border), lift, and a glow beneath"
-      (is (str/includes? (:style selected) (str "-fx-border-color: " (:gold theme/color) ";")))
+    (testing "selected: gold ring on the body, lift and glow on the frame.
+              The split is the point -- the glow has to sit on a node the clip
+              does not touch, or it is cropped to the card and never seen. That
+              is why these assertions read from two different nodes now, and why
+              this test passing was never enough on its own: a style string
+              cannot tell you whether a clip ate the effect. reliquary.ui
+              .clip-test measures the rendered pixels for that."
+      (is (str/includes? (:style (card-body selected))
+                          (str "-fx-border-color: " (:gold theme/color) ";")))
       (is (str/includes? (:style selected) "-fx-translate-y: -2;"))
-      (is (str/includes? (:style selected) "-fx-effect: dropshadow")))
+      (is (str/includes? (:style selected) "-fx-effect: dropshadow"))
+      (is (= :rectangle (get-in (card-body selected) [:clip :fx/type]))
+          "the body is the clipped node")
+      (is (not (str/includes? (or (:style (card-body selected)) "") "-fx-effect"))
+          "the effect must NOT be on the clipped node -- that is the bug"))
     (testing "unselected: plain line border, no lift, no glow"
-      (is (str/includes? (:style unselected) (str "-fx-border-color: " (:line theme/color) ";")))
-      (is (not (str/includes? (:style unselected) "-fx-translate-y")))
-      (is (not (str/includes? (:style unselected) "-fx-effect"))))))
+      (is (str/includes? (:style (card-body unselected))
+                          (str "-fx-border-color: " (:line theme/color) ";")))
+      (is (not (str/includes? (or (:style unselected) "") "-fx-translate-y")))
+      (is (not (str/includes? (or (:style unselected) "") "-fx-effect")))
+      (is (not (str/includes? (or (:style (card-body unselected)) "") "-fx-effect"))))))
 
 (deftest the-card-art-sheen-is-mouse-transparent-and-inside-the-arts-clip
   (let [desc   (library/view {:games games})

@@ -240,41 +240,60 @@
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
                                                       :-fx-text-fill (:text-muted c)})}]})]
-    (-> (cond-> {:fx/type :v-box
-                 ;; A rounded background does NOT clip children in JavaFX --
-                 ;; -fx-background-radius only rounds the fill that is painted
-                 ;; behind them. The capsule art is an ImageView drawn on top, so
-                 ;; without an explicit clip it keeps its square corners and
-                 ;; visibly overhangs the card's rounded border. The clip is a
-                 ;; rounded rectangle over the whole card; arc = 2 x radius,
-                 ;; because JavaFX's arcWidth is the full width of the corner
-                 ;; ellipse rather than its radius.
-                 :clip {:fx/type :rectangle
-                        :width card-width :height card-total-height
-                        :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
+    (-> (cond-> {;; The GLOW FRAME. It carries the selected state's glow and
+                 ;; lift and is deliberately NOT clipped, because a clip and an
+                 ;; -fx-effect on the SAME node compose: the clip masks the
+                 ;; effect's own bleed too, cropping the glow to the card's box
+                 ;; and making it invisible. That is exactly what happened here
+                 ;; -- the gold bloom under a selected card measured identical
+                 ;; to bare background. reliquary.ui.login/qr-panel (glow one
+                 ;; layer out of its clip) and reliquary.ui.download/stage-panel
+                 ;; (shadow on `outer`, clip on `inner`) both already keep the
+                 ;; effect and the clip on separate nodes; this drifted.
+                 ;;
+                 ;; The frame is sized exactly like the card so the FlowPane
+                 ;; still lays the grid out on the old geometry.
+                 :fx/type :stack-pane
                  :min-width card-width :max-width card-width
                  :min-height card-total-height :max-height card-total-height
                  :style (theme/style
-                         (cond-> {:-fx-background-color (:surface c)
-                                  :-fx-background-radius card-radius
-                                  :-fx-border-radius card-radius
-                                  :-fx-border-width 1
-                                  :-fx-border-color (if selected? (:gold c) (:line c))}
-                           ;; dimmed, but not so far that it reads as
-                           ;; inert -- these cards are clickable now
-                           (not owned?) (assoc :-fx-opacity 0.7)
+                         (cond-> {}
                            ;; Selected card gets the ring's glow beneath it and
-                           ;; a 2px lift; the 1px gold ring itself is already
-                           ;; the :-fx-border-color swap above, so this only
-                           ;; adds what that border alone doesn't give.
+                           ;; a 2px lift; the 1px gold ring itself is the
+                           ;; :-fx-border-color swap on the body below, so this
+                           ;; only adds what that border alone doesn't give.
                            selected? (assoc :-fx-translate-y -2
                                              :-fx-effect (theme/glow (:gold c)
                                                                       {:blur 34 :spread -14
                                                                        :dy 10 :alpha 0.6}))))
-                 :children [(capsule-art game capsule-fn)
-                            {:fx/type :v-box :spacing 4
-                             :padding {:top 8 :bottom 10 :left 10 :right 10}
-                             :children [title meta-row]}]}
+                 :children
+                 [{:fx/type :v-box
+                   ;; A rounded background does NOT clip children in JavaFX --
+                   ;; -fx-background-radius only rounds the fill that is painted
+                   ;; behind them. The capsule art is an ImageView drawn on top, so
+                   ;; without an explicit clip it keeps its square corners and
+                   ;; visibly overhangs the card's rounded border. The clip is a
+                   ;; rounded rectangle over the whole card; arc = 2 x radius,
+                   ;; because JavaFX's arcWidth is the full width of the corner
+                   ;; ellipse rather than its radius.
+                   :clip {:fx/type :rectangle
+                          :width card-width :height card-total-height
+                          :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
+                   :min-width card-width :max-width card-width
+                   :min-height card-total-height :max-height card-total-height
+                   :style (theme/style
+                           (cond-> {:-fx-background-color (:surface c)
+                                    :-fx-background-radius card-radius
+                                    :-fx-border-radius card-radius
+                                    :-fx-border-width 1
+                                    :-fx-border-color (if selected? (:gold c) (:line c))}
+                             ;; dimmed, but not so far that it reads as
+                             ;; inert -- these cards are clickable now
+                             (not owned?) (assoc :-fx-opacity 0.7)))
+                   :children [(capsule-art game capsule-fn)
+                              {:fx/type :v-box :spacing 4
+                               :padding {:top 8 :bottom 10 :left 10 :right 10}
+                               :children [title meta-row]}]}]}
           :always (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))
         ;; Fade + rise + settle, ONCE. cljfx's default :children diffing
         ;; (cljfx.lifecycle/wrap-many with no :fx/key on these cards) keys
@@ -526,7 +545,14 @@
               :fit-to-width true
               :style (theme/style {:-fx-background-color "transparent"
                                     :-fx-background "transparent"})
+              ;; The horizontal padding is what gives a SELECTED row's glow
+              ;; somewhere to go. :fit-to-width sizes the content to exactly the
+              ;; viewport, which then clips it, so a row flush to both edges had
+              ;; its glow shaved off flat on the left and right while the 8px
+              ;; :spacing let it bloom above and below -- a glow visible on two
+              ;; sides only. Costs each row 12px of width; the rows have space.
               :content {:fx/type :v-box :spacing 8
+                        :padding {:left 6 :right 6}
                         :children (mapv (fn [v] (version-row {:version v
                                                                :selected? (= selected-version-id (:id v))
                                                                :on-select on-select-version}))

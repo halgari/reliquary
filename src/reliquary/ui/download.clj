@@ -565,17 +565,45 @@
            (fn [node] (anim/sheen! node {:unit sheen-w})))
          :anchor-pane/top 0.0 :anchor-pane/bottom 0.0 :anchor-pane/left 0.0))
 
+(def ^:private panel-radius
+  "The stage panel's corner radius, matching its `-fx-background-radius`."
+  6.0)
+
+(def ^:private panel-border
+  "The panel's hairline. Load-bearing for the artwork's clip -- see
+   `panel-inner-radius`."
+  1.0)
+
+(def ^:private panel-inner-radius
+  "The radius the panel's CONTENT has to follow: the outer radius less the
+   border it sits inside.
+
+   Children of a bordered Region are laid out inside its insets, so the artwork
+   is already inset by `panel-border` on every side -- but it is still square
+   at the corners. Clipping it at the panel's OUTER radius therefore leaves it
+   poking through: along a corner the arc sweeps inward by up to r - r/sqrt(2)
+   (~1.8px at r=6) further than the straight edge does, so a square-cornered
+   child inset by only the border width paints straight over the hairline at
+   each corner. reliquary.ui.library's `art-radius` is the same constant for
+   the same reason on the game cards; the stage panel had the outer radius and
+   the artwork overran all four corners."
+  (- panel-radius panel-border))
+
 (defn- clip-to-live-bounds
-  "Wraps `desc` so its own rendered clip tracks its live width/height,
-   rounded to match the panel's own 6px `-fx-background-radius`. Needed
-   only because of `sheen-highlight` above: it legitimately renders outside
-   its own anchored box while sweeping, and StackPane/AnchorPane do not
-   clip children to the parent's bounds on their own -- without this the
-   sheen paints straight past the panel's edge during its sweep."
-  [desc]
+  "Wraps `desc` so its own rendered clip tracks its live width/height, rounded
+   to `radius`. Needed because Region/StackPane/AnchorPane do not clip children
+   to their own bounds, and two things here legitimately paint outside theirs:
+   `sheen-highlight`, which sweeps past its anchored box by design, and the
+   artwork, whose square corners would otherwise overrun the panel's curve.
+
+   `radius` is a RADIUS; a Rectangle's arcWidth/arcHeight are the full width and
+   height of the corner ellipse, hence the doubling."
+  [desc radius]
   {:fx/type fx/ext-on-instance-lifecycle
    :on-created (fn [^Node node]
-                 (let [rect (doto (Rectangle.) (.setArcWidth 12.0) (.setArcHeight 12.0))]
+                 (let [rect (doto (Rectangle.)
+                              (.setArcWidth (* 2.0 radius))
+                              (.setArcHeight (* 2.0 radius)))]
                    (.bind (.widthProperty rect) (.widthProperty ^Region node))
                    (.bind (.heightProperty rect) (.heightProperty ^Region node))
                    (.setClip node rect)))
@@ -597,8 +625,13 @@
                    ;; grey rectangle pasted on a photo.
                    {:fx/type :v-box
                     :padding {:top 64 :bottom 20 :left 24 :right 24}
+                    ;; inset by the panel's border like everything else here, so
+                    ;; its bottom corners follow the INNER radius -- a 6 here
+                    ;; rounds the fill further than the border's own curve and
+                    ;; leaves a sliver of panel showing through at each corner
                     :style (theme/style {:-fx-background-color scrim
-                                          :-fx-background-radius "0 0 6 6"})
+                                          :-fx-background-radius (str "0 0 " panel-inner-radius
+                                                                      " " panel-inner-radius)})
                     :children [caption]}
                    caption)
         overlay
@@ -623,17 +656,28 @@
                                 (not url) (assoc :-fx-background-color (:surface c))))
          :children
          (if url
-           [{:fx/type :region
-             :style (theme/style {:-fx-background-image (str "url('" url "')")
-                                   :-fx-background-size "cover"
-                                   :-fx-background-position "center center"
-                                   :-fx-background-repeat "no-repeat"})}
-            ;; a gentle vignette over the whole image; the caption's own scrim
-            ;; below is what makes the text readable, and stacking two heavy
-            ;; gradients would just black out the artwork the panel exists to show
-            {:fx/type :region
-             :style (theme/style {:-fx-background-color
-                                   "linear-gradient(to bottom, transparent 50%, rgba(12,12,12,0.45) 100%)"})}
+           ;; The artwork and its vignette are wrapped and clipped TOGETHER at
+           ;; the panel's inner radius. They are square-cornered fills and the
+           ;; panel's own clip rounds at its outer edge, which is not enough to
+           ;; keep them off the hairline in the corners -- see
+           ;; `panel-inner-radius`. The overlay stays outside this wrapper: it
+           ;; is text and chips that never reach a corner, and its caption
+           ;; already rounds its own bottom edge.
+           [(clip-to-live-bounds
+             {:fx/type :stack-pane
+              :children
+              [{:fx/type :region
+                :style (theme/style {:-fx-background-image (str "url('" url "')")
+                                      :-fx-background-size "cover"
+                                      :-fx-background-position "center center"
+                                      :-fx-background-repeat "no-repeat"})}
+               ;; a gentle vignette over the whole image; the caption's own scrim
+               ;; below is what makes the text readable, and stacking two heavy
+               ;; gradients would just black out the artwork the panel exists to show
+               {:fx/type :region
+                :style (theme/style {:-fx-background-color
+                                      "linear-gradient(to bottom, transparent 50%, rgba(12,12,12,0.45) 100%)"})}]}
+             panel-inner-radius)
             overlay]
            [overlay])}
         outer
@@ -643,7 +687,7 @@
          ;; a shadow paints outside its node's own layout bounds by design,
          ;; and clipping that same node to its own bounds (for the sheen's
          ;; sake) would cut the shadow off right where it's meant to bloom
-         :children [(clip-to-live-bounds inner)]}]
+         :children [(clip-to-live-bounds inner panel-radius)]}]
     (assoc (anim/with-anim outer (fn [node] (anim/rise-in! node)))
            :v-box/vgrow :always)))
 
