@@ -68,8 +68,15 @@ jobs:
       # namespace, so a top-level form that only breaks under compilation
       # (or a jar that quietly bundles JavaFX) would otherwise be found for
       # the first time during a release, on a tag, with no way back.
+      #
+      # And it needs the display too. Requiring cljfx.api initialises the
+      # JavaFX toolkit at LOAD time -- verified: `(require 'cljfx.api)` fails
+      # without a display while reliquary.ui.theme loads fine -- and AOT loads
+      # every namespace it compiles. Without xvfb this step dies at
+      # "UnsupportedOperationException: Unable to open DISPLAY" inside
+      # compile-clj, which reads like a code fault and is not one.
       - name: Build the packaging jar
-        run: clojure -T:build uber :omit-javafx true
+        run: xvfb-run -a clojure -T:build uber :omit-javafx true
 
       - name: The packaging jar must stay platform-independent
         run: |

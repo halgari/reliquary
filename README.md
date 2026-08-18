@@ -24,11 +24,14 @@ Needs JDK 26 (`JAVA_HOME`, or `/usr/lib/jvm/java-26-openjdk`) and the Clojure CL
 under a plain `java -jar`. `bin/package.sh` does not need that, because its
 jlink runtime supplies JavaFX as modules.
 
-**The test suite needs a display.** Several tests render real JavaFX scenes and
-measure the resulting pixels, so on a headless machine they abort at
-`Unable to open DISPLAY` before any assertion runs:
+**The tests and the build both need a display.** Several tests render real
+JavaFX scenes and measure the resulting pixels, and the build AOT-compiles —
+which loads `cljfx.api`, and *that* initialises the JavaFX toolkit at load time.
+On a headless machine both abort at `Unable to open DISPLAY` before doing any
+work, which reads like a code fault and is not one:
 
     xvfb-run -a clojure -M:test
+    xvfb-run -a clojure -T:build uber :omit-javafx true
 
 ### Windows
 

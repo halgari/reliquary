@@ -57,8 +57,17 @@ jobs:
           key: deps-${{ runner.os }}-${{ hashFiles('deps.edn') }}
           restore-keys: deps-${{ runner.os }}-
 
+      # AOT needs a display: requiring cljfx.api initialises the JavaFX
+      # toolkit at load time, and compile-clj loads every namespace it
+      # compiles. See the same note in test.yml.
+      - name: Ensure a virtual display is available
+        run: |
+          command -v xvfb-run >/dev/null || {
+            sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xvfb
+          }
+
       - name: Build uberjar
-        run: clojure -T:build uber :omit-javafx true
+        run: xvfb-run -a clojure -T:build uber :omit-javafx true
 
       # The whole cross-platform design rests on this jar being the same
       # everywhere. If a dependency ever starts contributing natives, the
