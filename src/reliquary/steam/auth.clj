@@ -63,27 +63,93 @@
           (contains? s 5) 5
           :else (first (sort (filter code-types s))))))
 
+
+;; ---------------------------------------------------------------------------
+;; a Guard code Steam refuses -- or has already accepted
+
+(def ^:private ^:const max-guard-attempts
+  "Submissions of a typed code per login, including the first."
+  3)
+
+(def ^:private retypable-eresults
+  "The EResults that mean the human mistyped the code -- 65 InvalidLoginAuthCode
+   (emailed) and 88 TwoFactorCodeMismatch (authenticator). Deliberately not
+   \"any :incorrect\": a rate limit (84) or an expired session is not fixed by
+   typing again, and re-prompting on one of those spends the user's next attempt
+   on the same refusal while telling them their code was wrong when it was not."
+  #{"65" "88"})
+
+(defn- retypable?
+  "Is this the kind of refusal a second attempt at the code could fix?"
+  [e]
+  (contains? retypable-eresults (str (:eresult (ex-data e)))))
+
+(defn- already-accepted?
+  "EResult 29 DuplicateRequest: Steam has this confirmation already. It is what
+   comes back when the user approved the prompt in the mobile app and then typed
+   the code as well, and the reference client is explicit that it must not be
+   treated as a failure -- \"authentication will succeed on the next poll\".
+   api/call raises on every non-OK eresult, so this is the one that has to be
+   caught and dropped, or the login dies one poll short of its token."
+  [e]
+  (= "29" (str (:eresult (ex-data e)))))
+
+(defn- submit-guard!
+  "Submit the typed Guard code, re-prompting when Steam says it was wrong.
+
+   Without this a single mistyped character ended the whole login -- api/call
+   raises on the non-OK eresult -- and sent the user back to the password field.
+   Nothing about the session is spent at that point: the client id and steamid
+   are still valid, so only the code needs asking for again. Re-fired events
+   carry :retry? true so the ops layer can say the last one was refused."
+  [client-id steamid code-type on-event first-code]
+  (loop [code first-code attempt 1]
+    (when-not (seq code)
+      (error/raise :incorrect "no steam guard code supplied"))
+    (let [r (try
+              (auth-api/submit-guard client-id steamid code code-type)
+              (catch clojure.lang.ExceptionInfo e
+                (cond
+                  (already-accepted? e) nil
+                  (and (retypable? e) (< attempt max-guard-attempts)) ::refused
+                  :else (throw e))))]
+      (if (= ::refused r)
+        (recur (on-event {:type :guard-needed :code-type code-type :retry? true})
+               (inc attempt))
+        r))))
+
 (defn- poll-until-token
   "Poll until a non-blank refresh token arrives. Re-fires :qr when Steam rotates
-   the challenge, and follows :new-client-id when it does."
-  [client-id request-id interval on-event]
+   the challenge, and follows :new-client-id when it does.
+
+   `abort?` is a 0-arg predicate or nil, and it is checked BEFORE each poll
+   rather than after: an abandoned login must make no further request to Steam.
+   Aborting returns nil, which is neither a token nor an error -- the caller
+   asked for this, so there is nothing to report."
+  [client-id request-id interval on-event abort?]
   (loop [client-id client-id]
-    (let [r (auth-api/poll client-id request-id)]
-      (if (seq (:refresh-token r))
-        (finish r)
-        (do
-          (when-let [u (:new-challenge-url r)]
-            (on-event {:type :qr :challenge-url u}))
-          (sleep-for interval)
-          (recur (or (:new-client-id r) client-id)))))))
+    (if (and abort? (abort?))
+      nil
+      (let [r (auth-api/poll client-id request-id)]
+        (if (seq (:refresh-token r))
+          (finish r)
+          (do
+            (when-let [u (:new-challenge-url r)]
+              (on-event {:type :qr :challenge-url u}))
+            (sleep-for interval)
+            (recur (or (:new-client-id r) client-id))))))))
 
 (defn login-qr!
   "BLOCKING QR login. Fires {:type :qr :challenge-url url} so the caller can
-   render it, then polls until the user approves."
-  [on-event]
-  (let [b (auth-api/begin-qr)]
-    (on-event {:type :qr :challenge-url (:challenge-url b)})
-    (poll-until-token (:client-id b) (:request-id b) (:interval b) on-event)))
+   render it, then polls until the user approves.
+
+   `opts` carries :abort? -- see `poll-until-token`. A nil RETURN means the
+   login was abandoned, not that it failed."
+  ([on-event] (login-qr! on-event nil))
+  ([on-event {:keys [abort?]}]
+   (let [b (auth-api/begin-qr)]
+     (on-event {:type :qr :challenge-url (:challenge-url b)})
+     (poll-until-token (:client-id b) (:request-id b) (:interval b) on-event abort?))))
 
 (defn login-credentials!
   "BLOCKING credential login. Two events can fire, and which one depends on
@@ -94,22 +160,24 @@
 
    The second exists so the ops layer can say `approve this in your Steam mobile
    app` instead of leaving the user watching a silent poll loop. When there is
-   nothing to confirm at all, neither fires."
-  [username password on-event]
-  (let [{:keys [mod exp timestamp]} (auth-api/rsa-key username)
-        _ (when-not mod
-            (error/raise :incorrect (str "steam has no account named " username)))
-        encrypted (crypto/encrypt-password password mod exp)
-        b (auth-api/begin-credentials username encrypted timestamp)
-        want (preferred-confirmation (:confirmations b))]
-    (cond
-      (needs-code? want)
-      (let [code (on-event {:type :guard-needed :code-type want})]
-        (when-not (seq code)
-          (error/raise :incorrect "no steam guard code supplied"))
-        (auth-api/submit-guard (:client-id b) (:steamid b) code want))
+   nothing to confirm at all, neither fires.
 
-      ;; 4 and 5: nothing to submit, but the user must be told to go approve it
-      want
-      (on-event {:type :confirmation-pending :confirmation-type want}))
-    (poll-until-token (:client-id b) (:request-id b) (:interval b) on-event)))
+   `opts` carries :abort? -- see `poll-until-token`. A nil RETURN means the
+   login was abandoned, not that it failed."
+  ([username password on-event] (login-credentials! username password on-event nil))
+  ([username password on-event {:keys [abort?]}]
+   (let [{:keys [mod exp timestamp]} (auth-api/rsa-key username)
+         _ (when-not mod
+             (error/raise :incorrect (str "steam has no account named " username)))
+         encrypted (crypto/encrypt-password password mod exp)
+         b (auth-api/begin-credentials username encrypted timestamp)
+         want (preferred-confirmation (:confirmations b))]
+     (cond
+       (needs-code? want)
+       (submit-guard! (:client-id b) (:steamid b) want on-event
+                      (on-event {:type :guard-needed :code-type want}))
+
+       ;; 4 and 5: nothing to submit, but the user must be told to go approve it
+       want
+       (on-event {:type :confirmation-pending :confirmation-type want}))
+     (poll-until-token (:client-id b) (:request-id b) (:interval b) on-event abort?))))

@@ -144,42 +144,238 @@
 
 ;; ---------------------------------------------------------------------------
 ;; login
+;;
+;; Two flows land here, and the login screen offers both at once: a QR poll
+;; that starts the moment the screen appears, and a credential sign-in the
+;; user starts by pressing a button. Neither knows about the other, so this
+;; layer arbitrates between them.
 
 (declare enter-library!)
 
-(defn start-login!
-  "Run the BLOCKING QR login on a daemon thread, marshalling its events into
+(def ^:private login-epoch*
+  "Which login attempt is the current one. Every start bumps it, and a login
+   whose epoch is stale stops polling and drops whatever it was about to do.
+
+   Without this the QR poll begun on entering the screen runs for the life of
+   the process: the user signs in with a password, the library appears, and a
+   thread behind it keeps asking Steam about a challenge nobody will ever scan,
+   every few seconds, until the window closes. The stale thread can also still
+   SUCCEED -- someone scans an old code -- and would otherwise save its token
+   over the one the user actually chose."
+  (atom 0))
+
+(def ^:private guard-code*
+  "The promise a blocked credential login is waiting on for a typed Steam Guard
+   code, or nil.
+
+   auth/login-credentials! wants the code as the synchronous RETURN value of
+   its event callback, on a thread that must not be the FX thread. The UI has
+   the opposite shape: it puts a field on screen and hears about the code
+   whenever the user gets round to typing it. This promise is where the two
+   shapes meet -- the login thread parks on it, and the Sign in button
+   delivers to it."
+  (atom nil))
+
+(def ^:private login-finished
+  "State keys that must not outlive the login thread they belong to.
+
+   Every one of these describes a login IN PROGRESS: a code some thread is
+   parked waiting for, a button that is inert because a submit is running, a
+   password. When the thread stops -- succeeded, failed or abandoned -- they all
+   have to go, and BOTH exit paths have to do it.
+
+   Clearing only `:credential-state` on the error path left `:guard-type` set,
+   which put a Guard-code field on screen with no login behind it. Pressing Sign
+   in there delivered a code to a promise nobody held, set `:submitting`, and
+   left the button disabled for the rest of the run -- a login screen whose only
+   working control was Sign out."
+  {:credential-state nil
+   :confirmation-type nil
+   :guard-type nil
+   :guard-retry? nil
+   :guard-code nil
+   :password nil})
+
+(defn- end-login!
+  "Drop the Guard promise, waking anything parked on it. Paired with
+   `begin-login-epoch!` around a login's lifetime."
+  []
+  (when-let [p @guard-code*] (deliver p nil))
+  (reset! guard-code* nil))
+
+(defn- begin-login-epoch!
+  "Claim the newest login, returning its epoch.
+
+   Delivering nil to any outstanding Guard promise is not a tidy-up: a login
+   thread parked on a code the user has now abandoned would otherwise stay
+   blocked on that promise forever. Waking it makes it raise, and the epoch
+   check then discards the error rather than showing the user a complaint about
+   a login they walked away from."
+  []
+  (end-login!)
+  (swap! login-epoch* inc))
+
+(defn- run-login!
+  "Run a BLOCKING login on a daemon thread, marshalling its outcome into
    `state`. Returns a promise so callers (and tests) can await it.
 
-   A daemon thread and a promise rather than a `future`: Clojure's agent
-   pool, which `future` uses, is not made of daemon threads and keeps the
-   JVM alive for up to a minute after the window closes.
+   `login` is handed an opts map carrying :abort? and :current?, and returns the
+   token map, or nil if it was abandoned. Both come from the same epoch check and
+   both are load-bearing: :abort? stops the poll loop, and :current? gates the
+   state writes the login makes WHILE running. Gating only the poll left an
+   abandoned thread able to push a rotated challenge over the URL a newer login
+   had already put on screen -- a QR belonging to a session nobody polls, which
+   approves on the phone and never signs the user in. `approved` is merged into the state on success --
+   the QR flow has a card to light up, the credential flow does not.
 
-   The refresh token deliberately never enters `state` -- a token in the
-   state atom is one careless render away from being on screen. It goes
-   straight to config/save-token!."
-  [state]
-  (let [p (promise)]
+   A daemon thread and a promise rather than a `future`: Clojure's agent pool,
+   which `future` uses, is not made of daemon threads and keeps the JVM alive
+   for up to a minute after the window closes.
+
+   The refresh token deliberately never enters `state` -- a token in the state
+   atom is one careless render away from being on screen. It goes straight to
+   config/save-token!."
+  [state {:keys [thread approved on-failure]
+          :or   {on-failure (fn [_] nil)}} login]
+  (let [p (promise)
+        epoch (begin-login-epoch!)
+        current? #(= epoch @login-epoch*)]
     (daemon!
-     "reliquary-login"
+     thread
      (fn []
        (try
-         (let [result (auth/login-qr!
-                       (fn [event]
-                         (when (= :qr (:type event))
-                           (fx-run! #(swap! state assoc
-                                            :challenge-url (:challenge-url event)
-                                            :qr-state :waiting)))
-                         nil))]
-           (config/save-token! result)
-           (fx-run! #(swap! state assoc :qr-state :approved
-                            :signed-in? true
-                            :status-line (or (:account result) "signed in")))
-           (enter-library! state))
-         (catch clojure.lang.ExceptionInfo e
-           (fx-run! #(swap! state assoc :error (ex-message e))))
-         (finally (deliver p :done)))))
+         ;; nil means abandoned: no token, no error, nothing to say
+         (when-let [result (login {:abort? #(not (current?))
+                                   :current? current?})]
+           (when (current?)
+             (config/save-token! result)
+             (fx-run! #(swap! state merge login-finished approved
+                              {:signed-in? true
+                               :status-line (or (:account result) "signed in")}))
+             (enter-library! state)))
+         ;; Throwable, not ExceptionInfo. An IOException out of save-token!, an
+         ;; NPE, a decode failure slipping past api/decode-response -- anything
+         ;; that escaped left :credential-state :submitting with no :error, so
+         ;; the button read "Signing in…" and stayed disabled for the rest of
+         ;; the run with nothing on screen saying why. An uncategorized throw
+         ;; has no message worth showing, so it gets one.
+         (catch Throwable t
+           (when (current?)
+             (fx-run! #(swap! state merge login-finished
+                              {:error (or (not-empty (ex-message t))
+                                          (str "the sign-in failed unexpectedly ("
+                                               (.getName (class t)) ")"))}))
+             (on-failure state)))
+         (finally
+           (when (current?) (end-login!))
+           (deliver p :done)))))
     p))
+
+(defn start-login!
+  "Run the BLOCKING QR login on a daemon thread. Returns a promise."
+  [state]
+  (run-login!
+   state
+   {:thread "reliquary-login" :approved {:qr-state :approved}}
+   (fn [{:keys [current?] :as opts}]
+     (auth/login-qr!
+      (fn [event]
+        (when (and (current?) (= :qr (:type event)))
+          (fx-run! #(swap! state assoc
+                           :challenge-url (:challenge-url event)
+                           :qr-state :waiting)))
+        nil)
+      opts))))
+
+(defn start-credential-login!
+  "Run the BLOCKING credential login on a daemon thread. Returns a promise.
+
+   `password` is a parameter rather than something read out of `state` for the
+   same reason the token never goes in: the caller clears it from the atom as
+   it hands it over, and from here on the only copy is this thread's local."
+  [state username password]
+  (run-login!
+   state
+   {:thread "reliquary-credential-login"
+    ;; Starting this login aborted the QR poll, and nothing else ever restarts
+    ;; it -- `sign-out!` is the only other caller and its button does not render
+    ;; on the login screen. The card stayed on screen animating under "Waiting
+    ;; for approval on your device" with no thread behind it, so a user who
+    ;; mistyped a password and then reached for their phone could scan a
+    ;; challenge nobody was polling and wait forever. A failed credential
+    ;; attempt leaves the user on this screen, so the other half of it has to
+    ;; work.
+    :on-failure start-login!}
+   (fn [{:keys [current?] :as opts}]
+     (auth/login-credentials!
+      username password
+      (fn [event]
+        (when (current?)
+          (case (:type event)
+            ;; MUST return the code: this blocks the login thread until the
+            ;; button delivers one. `guard-code*` is installed before the prompt
+            ;; reaches the screen, so there is no window in which the user can
+            ;; submit a code with nothing waiting for it.
+            :guard-needed
+            (let [p (promise)]
+              (reset! guard-code* p)
+              (fx-run! #(swap! state assoc
+                               :guard-type (:code-type event)
+                               :guard-retry? (boolean (:retry? event))
+                               :guard-code ""
+                               ;; back to pressable: the code is the user's move
+                               :credential-state nil))
+              @p)
+
+            ;; types 4 and 5: nothing to type, but saying nothing leaves the
+            ;; user watching a screen that looks exactly as it did before they
+            ;; pressed
+            ;; the TYPE rides along: 4 is the mobile app and 5 is a link Steam
+            ;; emails, and the panel needs to name the right one
+            :confirmation-pending
+            (do (fx-run! #(swap! state assoc
+                                 :credential-state :confirmation-pending
+                                 :confirmation-type (:confirmation-type event)))
+                nil)
+
+            nil)))
+      opts))))
+
+(defn submit-credentials!
+  "The Sign in button. One control, three outcomes.
+
+   The branch is on the PROMISE, not on `:guard-type`. A parked promise is what
+   actually means \"a login thread is waiting for a code\"; `:guard-type` only
+   means \"a code field is on screen\", and keying on it let the two disagree --
+   a delivery to nothing, `:submitting` left set, and a dead button with no
+   login behind it. On the promise, that disagreement cannot be represented: if
+   nothing is waiting, there is no code to submit, and the honest move is to
+   drop the stale prompt and let the user start over.
+
+   `:credential-state` is set BEFORE the promise is delivered, not after. The
+   delivery unblocks a thread that can finish and clear the state key
+   immediately, and a swap! landing after that would re-disable the button on a
+   screen that is already done with it."
+  [state]
+  (let [{:keys [account password guard-code guard-type]} @state
+        waiting (when guard-type @guard-code*)]
+    (cond
+      waiting
+      (do (swap! state assoc :guard-code "" :guard-retry? false
+                 :credential-state :submitting)
+          (deliver waiting guard-code)
+          nil)
+
+      ;; a code field with nothing behind it: the login it belonged to is gone
+      guard-type
+      (do (swap! state merge login-finished
+                 {:error "That sign-in attempt has lapsed. Please sign in again."})
+          nil)
+
+      :else
+      (do (swap! state assoc :password nil :error nil :guard-retry? false
+                 :credential-state :submitting)
+          (start-credential-login! state account password)))))
 
 ;; ---------------------------------------------------------------------------
 ;; the library screen
@@ -469,7 +665,7 @@
    `:signed-in?` is true, because cljfx cannot coerce a nil :on-action.
    Forgets the stored token, drops the Steam session (the next logon must
    not reuse the one belonging to the account just signed out of), and drops
-   back to a fresh QR login."
+   back to a fresh QR login -- and clears the credential fields with it."
   [state]
   (config/forget-token!)
   (close-session!)
@@ -477,6 +673,11 @@
          :screen :login
          :signed-in? false :status-line "not signed in" :error nil
          :challenge-url nil :qr-state :waiting
+         ;; the credential half of the screen too: the next user of this
+         ;; machine must not find the last one's account name in the field,
+         ;; and a password left in the atom outlives its session
+         :account nil :password nil :guard-code nil :guard-type nil
+         :guard-retry? nil :credential-state nil :confirmation-type nil
          :games [] :owned nil :selected-appid nil :selected-version-id nil
          :snapshot nil)
   (start-login! state))
@@ -525,6 +726,10 @@
    :capsule-fn capsule-image
    :screenshot-fn screenshot-image
    :on-sign-out       (fn [_]  (sign-out! state))
+   :on-account        (fn [v]  (swap! state assoc :account v))
+   :on-password       (fn [v]  (swap! state assoc :password v))
+   :on-guard          (fn [v]  (swap! state assoc :guard-code v))
+   :on-submit         (fn [_]  (submit-credentials! state))
    :on-query-change   (fn [q]  (swap! state assoc :query q))
    :on-select-game    (fn [id] (select-game! state id))
    :on-select-version (fn [id] (select-version! state id))

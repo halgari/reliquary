@@ -11,7 +11,13 @@
    client; Steam rejects unfamiliar combinations."
   (:require [reliquary.steam.api :as api :refer [defcall]]))
 
-(def ^:private device {:device-friendly-name "mauvi" :platform-type 1})
+(def ^:private device
+  "How this client introduces itself. `device-friendly-name` is not cosmetic: it
+   is the name Steam lists on the account's authorized-devices page, where the
+   user decides what to revoke. It read \"mauvi\" until this was noticed --
+   naming a different application on the user's own security page, which is the
+   copy this namespace came from showing through."
+  {:device-friendly-name "Reliquary" :platform-type 1})
 
 (def ^:private base-req
   (assoc device :website-id "Client" :device-details device))
@@ -19,23 +25,26 @@
 (defn- confirmations [resp]
   (mapv :confirmation-type (or (:allowed-confirmations resp) [])))
 
-(defcall begin-qr* "BeginAuthSessionViaQR"
+(defcall begin-qr* "BeginAuthSessionViaQR" :post
   CAuthentication_BeginAuthSessionViaQR_Request
   CAuthentication_BeginAuthSessionViaQR_Response)
 
-(defcall poll* "PollAuthSessionStatus"
+(defcall poll* "PollAuthSessionStatus" :post
   CAuthentication_PollAuthSessionStatus_Request
   CAuthentication_PollAuthSessionStatus_Response)
 
-(defcall rsa-key* "GetPasswordRSAPublicKey"
+;; The one GET on this service. Steam answers it ONLY to GET -- a POST comes
+;; back 405 with an HTML page reading "This API must be called with a HTTP GET
+;; request", which is not a protobuf and used to reach the parser as if it were.
+(defcall rsa-key* "GetPasswordRSAPublicKey" :get
   CAuthentication_GetPasswordRSAPublicKey_Request
   CAuthentication_GetPasswordRSAPublicKey_Response)
 
-(defcall begin-credentials* "BeginAuthSessionViaCredentials"
+(defcall begin-credentials* "BeginAuthSessionViaCredentials" :post
   CAuthentication_BeginAuthSessionViaCredentials_Request
   CAuthentication_BeginAuthSessionViaCredentials_Response)
 
-(defcall submit-guard* "UpdateAuthSessionWithSteamGuardCode"
+(defcall submit-guard* "UpdateAuthSessionWithSteamGuardCode" :post
   CAuthentication_UpdateAuthSessionWithSteamGuardCode_Request
   CAuthentication_UpdateAuthSessionWithSteamGuardCode_Response)
 

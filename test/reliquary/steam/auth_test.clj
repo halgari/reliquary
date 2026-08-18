@@ -8,7 +8,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [reliquary.steam.auth :as auth]
             [reliquary.steam.auth-api :as auth-api]
-            [reliquary.steam.crypto :as crypto])
+            [reliquary.steam.crypto :as crypto]
+            [reliquary.error :as error])
   (:import (java.util Base64)))
 
 (def ^:private token
@@ -208,3 +209,175 @@
                  (catch clojure.lang.ExceptionInfo e e))]
       (is (some? e))
       (is (= :incorrect (:reliquary/error (ex-data e)))))))
+
+;; ---- abandoning a login in flight ----
+;;
+;; The desktop app starts a QR poll the moment the login screen appears, and
+;; that loop otherwise runs for the life of the process. A credential login
+;; that wins the race has to be able to stop it, or the app keeps hitting
+;; Steam's auth API every five seconds forever behind a library screen.
+
+(deftest an-abandoned-qr-login-stops-polling-and-returns-nil
+  (let [polls (atom 0)]
+    (with-redefs [auth-api/begin-qr (fn [] {:client-id 1 :request-id "r"
+                                            :challenge-url "url" :interval 5})
+                  auth-api/poll (fn [_ _] (swap! polls inc) {})]
+      (binding [auth/*poll-sleep-ms* 1]
+        (is (nil? (auth/login-qr! (fn [_]) {:abort? (fn [] (>= @polls 2))}))
+            "an abandoned login yields nil -- there is no token and no error"))
+      (is (= 2 @polls)
+          "abort is checked BEFORE each poll, so the aborting iteration makes no request"))))
+
+(deftest an-abandoned-credential-login-stops-polling-and-returns-nil
+  (let [polls (atom 0)]
+    (with-redefs [auth-api/rsa-key (fn [_] {:mod "c5" :exp "010001" :timestamp 1})
+                  crypto/encrypt-password (fn [_ _ _] "ENCRYPTED-FAKE")
+                  auth-api/begin-credentials (fn [_ _ _] {:client-id 1 :request-id "r"
+                                                          :confirmations [1] :interval 5})
+                  auth-api/poll (fn [_ _] (swap! polls inc) {})]
+      (binding [auth/*poll-sleep-ms* 1]
+        (is (nil? (auth/login-credentials! "me" "pw" (fn [_]) {:abort? (fn [] (>= @polls 2))}))))
+      (is (= 2 @polls)))))
+
+(deftest an-absent-abort-predicate-never-aborts
+  (testing "the one-argument arities the QR flow and the CLI already use must
+            keep polling to completion"
+    (let [polls (atom 0)]
+      (with-redefs [auth-api/begin-qr (fn [] {:client-id 1 :request-id "r" :interval 5})
+                    auth-api/poll (fn [_ _] (if (< (swap! polls inc) 3)
+                                              {}
+                                              {:refresh-token token :account "me"}))]
+        (binding [auth/*poll-sleep-ms* 1]
+          (is (= token (:refresh-token (auth/login-qr! (fn [_])))))
+          (is (= 3 @polls)))))))
+
+;; ---- a code Steam rejects ----
+;;
+;; api/call raises on any non-OK x-eresult, so before this a single mistyped
+;; character in a five-character code ended the whole login and sent the user
+;; back to the password field. The client id and steamid are still perfectly
+;; valid at that point; only the code was wrong.
+;;
+;; The retryable eresults are EResult 65 InvalidLoginAuthCode (a bad emailed
+;; code) and 88 TwoFactorCodeMismatch (a bad authenticator code). That is the
+;; whole set: nothing else on this call is fixed by typing again.
+
+(defn- guard-rejection
+  "What api/call raises when Steam refuses a Guard code -- same shape, since
+   the retry decision reads :eresult out of the ex-data."
+  [eresult]
+  (error/raise :incorrect
+               (str "steam UpdateAuthSessionWithSteamGuardCode failed, eresult " eresult)
+               {:eresult eresult :method "UpdateAuthSessionWithSteamGuardCode"}))
+
+(defn- with-credential-stubs
+  "begin-credentials offering `confirmations`, a submit-guard driven by
+   `submit`, and a poll that immediately succeeds."
+  [confirmations submit f]
+  (with-redefs [auth-api/rsa-key (fn [_] {:mod "c5" :exp "010001" :timestamp 1})
+                crypto/encrypt-password (fn [_ _ _] "ENCRYPTED-FAKE")
+                auth-api/begin-credentials (fn [_ _ _] {:client-id 5 :request-id "r"
+                                                        :steamid "76561198000000000"
+                                                        :confirmations confirmations})
+                auth-api/submit-guard submit
+                auth-api/poll (fn [_ _] {:refresh-token token :account "me"})]
+    (binding [auth/*poll-sleep-ms* 1]
+      (f))))
+
+(deftest a-mistyped-authenticator-code-is-re-prompted-not-fatal
+  (let [codes (atom [])
+        events (atom [])]
+    (with-credential-stubs
+      [3]
+      (fn [_ _ code _]
+        (swap! codes conj code)
+        (if (= "WRONG" code) (guard-rejection "88") {}))
+      (fn []
+        (let [r (auth/login-credentials!
+                 "me" "pw"
+                 (fn [e]
+                   (swap! events conj e)
+                   (if (:retry? e) "RIGHT" "WRONG")))]
+          (is (= token (:refresh-token r))
+              "the login must complete on the second code, not die on the first"))))
+    (is (= ["WRONG" "RIGHT"] @codes))
+    (is (= [{:type :guard-needed :code-type 3}
+            {:type :guard-needed :code-type 3 :retry? true}]
+           @events)
+        ":retry? tells the ops layer to say the last code was refused")))
+
+(deftest a-mistyped-emailed-code-is-re-prompted-too
+  (testing "eresult 65 is the emailed-code equivalent of 88"
+    (let [codes (atom [])]
+      (with-credential-stubs
+        [2]
+        (fn [_ _ code _]
+          (swap! codes conj code)
+          (if (= "BAD" code) (guard-rejection "65") {}))
+        (fn []
+          (auth/login-credentials! "me" "pw" (fn [e] (if (:retry? e) "GOOD" "BAD")))))
+      (is (= ["BAD" "GOOD"] @codes)))))
+
+(deftest a-failure-that-retyping-cannot-fix-is-not-re-prompted
+  (testing "eresult 84 is RateLimitExceeded -- asking for the code again would
+            spend the user's next attempt on the same refusal"
+    (let [attempts (atom 0)]
+      (with-credential-stubs
+        [3]
+        (fn [_ _ _ _] (swap! attempts inc) (guard-rejection "84"))
+        (fn []
+          (let [e (try (auth/login-credentials! "me" "pw" (constantly "12345")) nil
+                       (catch clojure.lang.ExceptionInfo e e))]
+            (is (some? e) "a rate limit must surface, not loop")
+            (is (= "84" (:eresult (ex-data e))) "the original eresult must survive"))))
+      (is (= 1 @attempts) "exactly one submission"))))
+
+(deftest re-prompting-for-a-guard-code-is-bounded
+  (testing "an endlessly wrong code must eventually surface as the error it is"
+    (let [attempts (atom 0)]
+      (with-credential-stubs
+        [3]
+        (fn [_ _ _ _] (swap! attempts inc) (guard-rejection "88"))
+        (fn []
+          (is (thrown? clojure.lang.ExceptionInfo
+                       (auth/login-credentials! "me" "pw" (constantly "00000"))))))
+      (is (= 3 @attempts) "three tries at the code, then the error stands"))))
+
+(deftest an-empty-retyped-code-ends-the-login-rather-than-submitting-blank
+  (let [attempts (atom 0)]
+    (with-credential-stubs
+      [3]
+      (fn [_ _ _ _] (swap! attempts inc) (guard-rejection "88"))
+      (fn []
+        (is (thrown? clojure.lang.ExceptionInfo
+                     (auth/login-credentials! "me" "pw" (fn [e] (if (:retry? e) "" "FIRST")))))))
+    (is (= 1 @attempts) "a blank retry must not reach Steam")))
+
+(deftest a-code-steam-has-already-accepted-is-not-a-failure
+  (testing "EResult 29 DuplicateRequest is what Steam says when the prompt was
+            already approved in the mobile app and a typed code arrives after
+            it. The reference client documents this exactly -- 'we do not throw
+            on it here because authentication will succeed on the next poll' --
+            and api/call raises on every non-OK eresult, so without this the
+            login dies one poll short of the token it was about to get."
+    (let [polls (atom 0)]
+      (with-credential-stubs
+        [3]
+        (fn [_ _ _ _] (guard-rejection "29"))
+        (fn []
+          (with-redefs [auth-api/poll (fn [_ _] (swap! polls inc)
+                                        {:refresh-token token :account "me"})]
+            (is (= token (:refresh-token (auth/login-credentials!
+                                          "me" "pw" (constantly "12345"))))))))
+      (is (= 1 @polls) "it must go on to poll, not raise and not re-prompt"))))
+
+(deftest a-duplicate-request-does-not-consume-a-retry-prompting-again
+  (testing "re-prompting on 29 would ask for a code Steam has already accepted"
+    (let [events (atom [])]
+      (with-credential-stubs
+        [3]
+        (fn [_ _ _ _] (guard-rejection "29"))
+        (fn []
+          (auth/login-credentials! "me" "pw" (fn [e] (swap! events conj e) "12345"))))
+      (is (= [{:type :guard-needed :code-type 3}] @events)
+          "asked once, accepted once"))))

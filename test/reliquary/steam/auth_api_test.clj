@@ -22,20 +22,33 @@
 
 (deftest begin-qr-sends-the-device-identity-steam-expects
   (let [sent (atom nil)]
-    (with-redefs [api/call (fn [_m _rt req-map _st] (reset! sent req-map) {})]
+    (with-redefs [api/call (fn [_m _v _rt req-map _st] (reset! sent req-map) {})]
       (auth-api/begin-qr))
-    (is (= "mauvi" (:device-friendly-name @sent)) "shown in Steam's device list")
+    (is (= "Reliquary" (:device-friendly-name @sent))
+        "this is the name Steam lists on the account's authorized-devices page --
+         a leftover from the mauvi copy named someone else's application there")
     (is (= 1 (:platform-type @sent)))
     (is (= "Client" (:website-id @sent)))))
 
+(deftest both-flows-identify-themselves-as-reliquary
+  (testing "the credential flow sends the same device identity as the QR flow --
+            a login is a login, and an account listing two different device names
+            for one application is the copy showing through"
+    (let [sent (atom nil)]
+      (with-redefs [api/call (fn [_m _v _rt req-map _st] (reset! sent req-map) {})]
+        (auth-api/begin-credentials "me" "Y2lwaGVy" 1))
+      (is (= "Reliquary" (:device-friendly-name @sent)))
+      (is (= "Reliquary" (:device-friendly-name (:device-details @sent)))
+          "nested in device_details too, which is what Steam actually reads"))))
+
 (deftest poll-maps-account-name-onto-account
-  (let [r (with-redefs [api/call (fn [_ _ _ _] {:refresh-token "rt" :account-name "me"})]
+  (let [r (with-redefs [api/call (fn [_ _ _ _ _] {:refresh-token "rt" :account-name "me"})]
             (auth-api/poll 1 "rid"))]
     (is (= "me" (:account r)))
     (is (= "rt" (:refresh-token r)))))
 
 (deftest rsa-key-returns-hex-and-timestamp
-  (let [r (with-redefs [api/call (fn [_ _ _ _] {:publickey-mod "ab" :publickey-exp "010001"
+  (let [r (with-redefs [api/call (fn [_ _ _ _ _] {:publickey-mod "ab" :publickey-exp "010001"
                                                 :timestamp 42})]
             (auth-api/rsa-key "me"))]
     (is (= {:mod "ab" :exp "010001" :timestamp 42} r))))
@@ -43,7 +56,7 @@
 (deftest begin-credentials-echoes-the-encryption-timestamp
   (testing "Steam rejects the login if the timestamp does not match the key it issued"
     (let [sent (atom nil)]
-      (with-redefs [api/call (fn [_m _rt req-map _st] (reset! sent req-map) {})]
+      (with-redefs [api/call (fn [_m _v _rt req-map _st] (reset! sent req-map) {})]
         (auth-api/begin-credentials "me" "Y2lwaGVy" 99))
       (is (= 99 (:encryption-timestamp @sent)))
       (is (= "Y2lwaGVy" (:encrypted-password @sent)))
@@ -51,6 +64,18 @@
 
 (deftest submit-guard-passes-code-and-type-through
   (let [sent (atom nil)]
-    (with-redefs [api/call (fn [_m _rt req-map _st] (reset! sent req-map) {})]
+    (with-redefs [api/call (fn [_m _v _rt req-map _st] (reset! sent req-map) {})]
       (auth-api/submit-guard 7 "76561198000000000" "ABCDE" 2))
     (is (= {:client-id 7 :steamid "76561198000000000" :code "ABCDE" :code-type 2} @sent))))
+
+(deftest the-rsa-key-call-is-a-get-and-every-other-call-is-a-post
+  (testing "the regression test for a login that died on its FIRST call: we
+            POSTed GetPasswordRSAPublicKey, Steam answered 405 with an HTML
+            page saying 'This API must be called with a HTTP GET request', and
+            that page went into the protobuf parser. Probed against the live
+            API -- Steam accepts exactly one verb per method."
+    (is (= :get (:reliquary/http-verb (meta #'auth-api/rsa-key*))))
+    (doseq [v [#'auth-api/begin-qr* #'auth-api/poll*
+               #'auth-api/begin-credentials* #'auth-api/submit-guard*]]
+      (is (= :post (:reliquary/http-verb (meta v)))
+          (str v " must be a POST")))))

@@ -134,3 +134,91 @@
                    {:error "steam is down"}]]
       (let [component @(fx/on-fx-thread (fx/create-component (login/view state)))]
         (is (some? (fx/instance component)) (str "failed to instantiate for " state))))))
+
+;; ---------------------------------------------------------------------------
+;; the credential flow's in-flight states
+;;
+;; A credential sign-in is not instant: an RSA fetch, a submit, then a poll
+;; loop that can wait on a human picking up a phone. With nothing rendered for
+;; any of it the screen sat exactly as it did before the button was pressed --
+;; the QR half animating away, the right half unchanged -- so the only
+;; feedback that anything happened at all was the library eventually
+;; appearing, or not.
+
+(deftest a-sign-in-in-flight-says-so-and-cannot-be-pressed-again
+  (testing "a second press would start a second login against the same account"
+    (let [b (find-node (login/view {:account "someone" :password "x"
+                                    :credential-state :submitting})
+                       :button)]
+      (is (:disable b) "pressing it again must be impossible while one is running")
+      (is (str/includes? (:text b) "Signing in")))))
+
+(deftest a-pending-device-confirmation-is-rendered-not-silent
+  (testing "confirmation type 4 is approved in the mobile app -- with nothing on
+            screen the user has no idea a phone is involved"
+    (let [s (pr-str (login/view {:account "someone"
+                                 :credential-state :confirmation-pending
+                                 :confirmation-type 4}))]
+      (is (str/includes? s "Steam mobile app")))))
+
+(deftest a-refused-guard-code-says-so-rather-than-clearing-silently
+  (let [s (pr-str (login/view {:guard-type 3 :guard-retry? true}))]
+    (is (str/includes? s "not accepted")))
+  (is (not (str/includes? (pr-str (login/view {:guard-type 3})) "not accepted"))
+      "a first prompt must not accuse the user of anything"))
+
+(deftest the-guard-field-enables-submit-on-its-own
+  (testing "the password field is gone by then, so a blank :password must not
+            keep the button dead"
+    (is (not (:disable (find-node (login/view {:account "someone" :password ""
+                                               :guard-type 3 :guard-code "12345"})
+                                  :button))))))
+
+(deftest the-button-is-inert-for-every-in-flight-state-not-just-submitting
+  (testing "during :confirmation-pending a login IS running -- a press would
+            start a second one against the same account. It happened to be
+            disabled only because `submit-credentials!` clears :password on the
+            way in, so the guard was incidental: restore a password to the state
+            and the button came back to life mid-login. `ready?` must test the
+            login, not the emptiness of a field."
+    (doseq [s [:submitting :confirmation-pending]]
+      (let [b (find-node (login/view {:account "someone" :password "still-here"
+                                      :credential-state s})
+                         :button)]
+        (is (:disable b) (str s " must not offer a second sign-in"))))))
+
+(deftest a-guard-code-cannot-be-submitted-twice-while-the-first-is-in-flight
+  (testing "same rule on the code field: :submitting outranks a filled-in code"
+    (is (:disable (find-node (login/view {:account "someone" :guard-type 3
+                                          :guard-code "12345"
+                                          :credential-state :submitting})
+                             :button)))))
+
+(deftest an-email-confirmation-does-not-tell-the-user-to-open-an-app
+  (testing "auth/preferred-confirmation returns 5 (EmailConfirmation -- click a
+            link Steam emails you) whenever 4 is absent, and the panel told
+            every pending confirmation to 'approve in your Steam mobile app'.
+            A user on email confirmation was sent to an app they may not have
+            while the link sat unread. cli/handle-login-event already
+            distinguishes the two; this half had lost it."
+    ;; credential-panel, not view: the QR half's own copy also says "mobile
+    ;; app" ("Approve the request in the mobile app"), so a negative assertion
+    ;; against the whole view could never pass and would prove nothing.
+    (let [app   (pr-str (login/credential-panel
+                         {:account "a" :credential-state :confirmation-pending
+                          :confirmation-type 4}))
+          email (pr-str (login/credential-panel
+                         {:account "a" :credential-state :confirmation-pending
+                          :confirmation-type 5}))]
+      (is (str/includes? app "mobile app"))
+      (is (str/includes? email "email"))
+      (is (not (str/includes? email "mobile app"))))))
+
+(deftest an-unknown-confirmation-type-still-says-something-useful
+  (testing "the type is Steam's to choose, so an unrecognised one must not
+            render a blank note or claim the wrong channel"
+    (let [s (pr-str (login/credential-panel
+                     {:account "a" :credential-state :confirmation-pending}))]
+      (is (str/includes? s "Approve"))
+      (is (not (str/includes? s "mobile app")) "no guess at the channel")
+      (is (not (str/includes? s "email"))))))

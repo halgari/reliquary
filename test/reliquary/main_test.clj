@@ -72,7 +72,7 @@
   (with-tmp
     (fn []
       (let [state (atom {})]
-        (with-redefs [auth/login-qr! (fn [on-event]
+        (with-redefs [auth/login-qr! (fn [on-event & _]
                                         (on-event {:type :qr :challenge-url "https://s.team/q/9"})
                                         {:refresh-token "SECRET" :account "someone"})
                       main/fx-run! (fn [f] (f))   ; identity in tests
@@ -112,7 +112,7 @@
       (config/save-token! {:refresh-token "OLD" :account "someone"})
       (let [state (atom {:signed-in? true :status-line "someone"})
             forgot? (atom false)]
-        (with-redefs [auth/login-qr! (fn [on-event]
+        (with-redefs [auth/login-qr! (fn [on-event & _]
                                         (on-event {:type :qr :challenge-url "https://s.team/q/new"})
                                         {:refresh-token "NEW" :account "someone"})
                       main/fx-run! (fn [f] (f))
@@ -128,7 +128,7 @@
   (with-tmp
     (fn []
       (let [state (atom {})]
-        (with-redefs [auth/login-qr! (fn [_] (error/raise :unavailable "steam is down"))
+        (with-redefs [auth/login-qr! (fn [_ & _] (error/raise :unavailable "steam is down"))
                       main/fx-run! (fn [f] (f))
                       main/enter-library! (fn [_] nil)]
           @(main/start-login! state)
@@ -195,7 +195,7 @@
                      (fn [_ _ _ _]
                        (when-not @in-fx-run?
                          (swap! violations conj @state))))
-          (with-redefs [auth/login-qr! (fn [on-event]
+          (with-redefs [auth/login-qr! (fn [on-event & _]
                                           (on-event {:type :qr :challenge-url "https://s.team/q/9"})
                                           {:refresh-token "SECRET" :account "someone"})
                         main/enter-library! (fn [_] nil)
@@ -449,3 +449,391 @@
           (is (false? (:opened? @state)))
           (is (str/includes? (:error @state) "/tmp/nope"))
           (is (str/includes? (pr-str (main/view @state)) "no file browser is available")))))))
+
+;; ---------------------------------------------------------------------------
+;; credential login
+;;
+;; login/credential-panel has rendered an account field, a password field, a
+;; Guard-code field and a Sign in button since the screen was built, and
+;; auth/login-credentials! has been implemented and unit-tested for just as
+;; long. Nothing connected them: initial-state supplied no :on-account,
+;; :on-password, :on-guard or :on-submit, and the panel defaults a missing
+;; handler to (fn [_]). Every control on that half of the screen rendered
+;; perfectly and did nothing at all.
+
+(defn- await-state
+  "Block until `pred` holds of the state, or give up after three seconds. The
+   login runs on its own thread, so the Guard prompt reaches the atom
+   asynchronously -- a test that reads it straight after the button press is
+   racing it."
+  [state pred]
+  (let [deadline (+ (System/currentTimeMillis) 3000)]
+    (loop []
+      (cond (pred @state) true
+            (> (System/currentTimeMillis) deadline) false
+            :else (do (Thread/sleep 5) (recur))))))
+
+(deftest the-credential-handlers-are-wired-not-defaulted-to-a-no-op
+  (let [s (main/initial-state (atom {}) nil)]
+    (doseq [k [:on-account :on-password :on-guard :on-submit]]
+      (is (fn? (get s k)) (str k " must be a real function")))))
+
+(deftest the-typed-fields-land-in-state
+  (let [state (wired {})]
+    ((:on-account @state) "someone")
+    ((:on-password @state) "hunter2")
+    ((:on-guard @state) "12345")
+    (is (= "someone" (:account @state)))
+    (is (= "hunter2" (:password @state)))
+    (is (= "12345" (:guard-code @state)))))
+
+(deftest pressing-sign-in-hands-the-typed-credentials-to-steam
+  (with-tmp
+    (fn []
+      (let [state (wired {:account "someone" :password "hunter2"})
+            sent (atom nil)]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/enter-library! (fn [_] nil)
+                      auth/login-credentials! (fn [u pw _ & _]
+                                                (reset! sent [u pw])
+                                                {:refresh-token "SECRET" :account "someone"})]
+          @((:on-submit @state) nil)
+          (is (= ["someone" "hunter2"] @sent)))))))
+
+(deftest the-password-leaves-state-as-soon-as-the-login-thread-has-it
+  (testing "the same rule the refresh token follows: a secret in the state atom
+            is one careless render away from being on screen, and every test
+            and log that pr-strs the state prints it"
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "hunter2"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  {:refresh-token "SECRET" :account "someone"})]
+            @((:on-submit @state) nil)
+            (is (not (seq (:password @state)))
+                "the password must be gone from the atom, not merely unrendered")
+            (is (not (str/includes? (pr-str @state) "hunter2")))))))))
+
+(deftest a-credential-login-saves-its-token-and-lands-on-the-library
+  (testing "save-token! is stubbed rather than left to write for real: the login
+            runs on a raw Thread, and a `binding` of config/*config-dir* does
+            not cross one -- see reliquary.config/prop-dir-or-die"
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "pw"})
+              saved (atom nil)
+              landed? (atom false)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] (reset! landed? true))
+                        config/save-token! (fn [t] (reset! saved t) t)
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  {:refresh-token "SECRET" :account "someone"})]
+            @((:on-submit @state) nil)
+            (is (= "SECRET" (:refresh-token @saved)) "the token must reach config")
+            (is (not (str/includes? (pr-str @state) "SECRET"))
+                "the token must never enter the state atom")
+            (is (true? (:signed-in? @state)))
+            (is @landed?)))))))
+
+(deftest a-typed-guard-code-reaches-the-blocked-login-thread
+  (testing "auth/login-credentials! wants the code as a synchronous RETURN from
+            its event callback, on a thread that is not the FX thread; the UI
+            collects it from a field whenever the user gets round to it. The
+            handoff is what makes the two shapes meet."
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "pw"})
+              got (promise)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-credentials!
+                        (fn [_ _ on-event & _]
+                          (deliver got (on-event {:type :guard-needed :code-type 3}))
+                          {:refresh-token "SECRET" :account "someone"})]
+            (let [p ((:on-submit @state) nil)]
+              (is (await-state state #(= 3 (:guard-type %)))
+                  "the prompt must reach the screen, or there is no field to type into")
+              (is (not (:password @state)) "the password is spent by now")
+              ((:on-guard @state) "12345")
+              ((:on-submit @state) nil)
+              (is (= "12345" (deref got 3000 :timed-out)))
+              @p)))))))
+
+(deftest a-refused-guard-code-is-shown-as-refused
+  (with-tmp
+    (fn []
+      (let [state (wired {:account "someone" :password "pw"})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/enter-library! (fn [_] nil)
+                      auth/login-credentials!
+                      (fn [_ _ on-event & _]
+                        (on-event {:type :guard-needed :code-type 3})
+                        (on-event {:type :guard-needed :code-type 3 :retry? true})
+                        {:refresh-token "SECRET" :account "someone"})]
+          (let [p ((:on-submit @state) nil)]
+            (is (await-state state #(= 3 (:guard-type %))))
+            ((:on-guard @state) "WRONG")
+            ((:on-submit @state) nil)
+            (is (await-state state :guard-retry?)
+                "a refusal must be visible; the field otherwise just clears")
+            (is (not (seq (:guard-code @state)))
+                "the refused code must not sit in the field pretending to be new")
+            ((:on-guard @state) "RIGHT")
+            ((:on-submit @state) nil)
+            @p))))))
+
+(deftest a-pending-device-confirmation-becomes-a-rendered-state
+  (with-tmp
+    (fn []
+      (let [state (wired {:account "someone" :password "pw"})
+            release (promise)]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/enter-library! (fn [_] nil)
+                      config/save-token! identity
+                      auth/login-credentials!
+                      (fn [_ _ on-event & _]
+                        (on-event {:type :confirmation-pending :confirmation-type 4})
+                        ;; stand where the real poll loop stands: waiting on a
+                        ;; human with a phone. Success clears this state, and
+                        ;; should -- so asserting after the login returns would
+                        ;; prove nothing.
+                        (deref release 3000 nil)
+                        {:refresh-token "SECRET" :account "someone"})]
+          (let [p ((:on-submit @state) nil)]
+            (is (await-state state #(= :confirmation-pending (:credential-state %)))
+                "type 4 needs a phone, and the screen has to say so")
+            (deliver release true)
+            @p))))))
+
+(deftest a-failed-credential-login-leaves-the-button-pressable-again
+  (testing "an error that left :credential-state :submitting would disable the
+            Sign in button for good -- a dead screen whose only working control
+            is Sign out"
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "pw"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  (error/raise :incorrect "bad password"))]
+            @((:on-submit @state) nil)
+            (is (str/includes? (str (:error @state)) "bad password"))
+            (is (nil? (:credential-state @state)))))))))
+
+(deftest starting-a-credential-login-abandons-the-qr-poll
+  (testing "the QR poll otherwise runs for the life of the process, hitting
+            Steam's auth API every few seconds behind a library screen"
+    (with-tmp
+      (fn []
+        (let [state (wired {})
+              abort-fn (promise)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-qr! (fn [_ opts]
+                                         (deliver abort-fn (:abort? opts))
+                                         ;; the real poll loop, minus the network
+                                         (loop []
+                                           (if ((:abort? opts))
+                                             nil
+                                             (do (Thread/sleep 5) (recur)))))
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  {:refresh-token "SECRET" :account "someone"})]
+            (let [qr (main/start-login! state)
+                  abort? (deref abort-fn 3000 nil)]
+              (is (fn? abort?) "the QR login must be handed a way to be abandoned")
+              (is (not (abort?)) "nothing supersedes it while it is the only login")
+              (swap! state assoc :account "someone" :password "pw")
+              @((:on-submit @state) nil)
+              (is (abort?) "the credential login supersedes the QR poll")
+              (is (= :done (deref qr 3000 :timed-out))
+                  "and the QR thread actually finishes rather than looping on"))))))))
+
+(deftest a-superseded-login-cannot-sign-the-user-in
+  (testing "a QR approval that lands after a credential login already succeeded
+            must not save its token over the one the user actually asked for.
+            The abort check happens before each poll, so this window is small --
+            and it is exactly one poll wide, which is not the same as closed."
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "chosen" :password "pw"})
+              credential-done (promise)
+              saved (atom [])]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-qr! (fn [_ _]
+                                         ;; approved, but only after the
+                                         ;; credential login has already landed
+                                         (deref credential-done 3000 nil)
+                                         {:refresh-token "STALE" :account "stale"})
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  {:refresh-token "CHOSEN" :account "chosen"})
+                        config/save-token! (fn [t] (swap! saved conj (:account t)) t)]
+            (let [qr (main/start-login! state)]
+              @((:on-submit @state) nil)
+              (deliver credential-done true)
+              (is (= :done (deref qr 3000 :timed-out)))
+              (is (= ["chosen"] @saved)
+                  "the stale QR token must never be saved at all")
+              (is (= "chosen" (:status-line @state))))))))))
+
+(deftest signing-out-clears-the-credential-fields
+  (testing "the next user of this machine must not find the last one's account
+            name sitting in the field, and a password left in the atom outlives
+            the session it belonged to"
+    (with-tmp
+      (fn []
+        (let [state (wired {:signed-in? true
+                            :account "someone" :password "hunter2"
+                            :guard-code "12345" :guard-type 3 :guard-retry? true
+                            :credential-state :submitting})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        config/forget-token! (fn [] nil)
+                        auth/login-qr! (fn [_ & _] nil)]
+            @(main/sign-out! state)
+            (doseq [k [:account :password :guard-code :guard-type :guard-retry?
+                       :credential-state]]
+              (is (not (get @state k)) (str k " must not survive a sign-out")))))))))
+
+(deftest a-failure-after-a-guard-prompt-does-not-dead-end-the-screen
+  (testing "walk the whole sequence: prompt, typed code, then a refusal that
+            retyping cannot fix (eresult 84 is a rate limit). The error path
+            cleared :credential-state but left :guard-type set, so the screen
+            still showed a Guard field with no login thread behind it -- and
+            pressing Sign in there delivered a code to a dead promise, set
+            :submitting, and disabled the button for the rest of the run. A
+            login screen whose only working control is Sign out."
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "pw"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        config/save-token! identity
+                        auth/login-credentials!
+                        (fn [_ _ on-event & _]
+                          (on-event {:type :guard-needed :code-type 3})
+                          (error/raise :incorrect "too many attempts"))]
+            (let [p ((:on-submit @state) nil)]
+              (is (await-state state #(= 3 (:guard-type %))))
+              ((:on-guard @state) "12345")
+              ((:on-submit @state) nil)
+              @p
+              (is (str/includes? (str (:error @state)) "too many attempts"))
+              (is (nil? (:guard-type @state))
+                  "no login is waiting for a code, so no code field may be shown")
+              (is (not= :submitting (:credential-state @state))
+                  "the Sign in button must be pressable again")
+              (is (not (seq (:guard-code @state)))
+                  "and no stale code may sit in a field that is no longer shown")
+              ;; the promise the dead login was parked on must be released too,
+              ;; or the next login's `begin-login-epoch!` is what finally frees
+              ;; that thread -- one leaked thread per failed login until then
+              (is (nil? @@#'main/guard-code*)))))))))
+
+(deftest pressing-sign-in-with-no-login-waiting-for-a-code-is-recoverable
+  (testing "the guard branch used to key on :guard-type -- a state key -- while
+            the promise is what actually decides whether a thread is waiting for
+            a code. If the two ever disagree, `when-let` delivered to nothing,
+            :submitting stayed set, and the button was dead with no login behind
+            it. Keying on the promise makes that disagreement unrepresentable;
+            this pins the recovery so a future edit cannot reintroduce a silent
+            dead end."
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :guard-type 3 :guard-code "12345"})]
+          (with-redefs [main/fx-run! (fn [f] (f))]
+            ;; no login thread, so nothing is parked on a promise
+            (is (nil? @@#'main/guard-code*))
+            ((:on-submit @state) nil)
+            (is (not= :submitting (:credential-state @state))
+                "a submit with nothing to submit to must not disable the button")
+            (is (nil? (:guard-type @state))
+                "and must not keep showing a code field nothing is waiting for")
+            (is (seq (:error @state))
+                "the user needs telling why the code went nowhere")))))))
+
+(deftest a-superseded-login-cannot-overwrite-the-live-challenge-url
+  (testing "the epoch gated POLLING and the two state writes at the END of a
+            login, but not the events fired mid-flight. So an abandoned QR
+            thread sitting in a poll could still push a rotated challenge into
+            state after a newer login had already put its own there -- leaving
+            the screen showing a QR belonging to a session nobody polls. Scanning
+            it approves on the phone and the app never moves: exactly the failure
+            `the-screen-key-selects-the-screen` was written for."
+    (with-tmp
+      (fn []
+        (let [state (wired {})
+              calls (atom 0)
+              release-stale (promise)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-qr!
+                        (fn [on-event _]
+                          (if (= 1 (swap! calls inc))
+                            ;; the soon-to-be-superseded login: parked in a poll
+                            (do (deref release-stale 3000 nil)
+                                (on-event {:type :qr :challenge-url "STALE-URL"})
+                                nil)
+                            (do (on-event {:type :qr :challenge-url "FRESH-URL"})
+                                nil)))]
+            (let [stale (main/start-login! state)
+                  fresh (main/start-login! state)]
+              @fresh
+              (is (= "FRESH-URL" (:challenge-url @state)))
+              (deliver release-stale true)
+              @stale
+              (is (= "FRESH-URL" (:challenge-url @state))
+                  "the abandoned login must not repaint the QR the user is looking at"))))))))
+
+(deftest a-failed-credential-login-leaves-a-scannable-qr-not-a-dead-one
+  (testing "starting a credential login aborts the QR poll for good, and nothing
+            restarts it -- sign-out's button is the only caller and it does not
+            render on the login screen. But :challenge-url and :qr-state stayed
+            in state, so the card kept animating under 'Waiting for approval on
+            your device'. Mistype a password, decide to use the phone after all,
+            scan: nothing happens, ever, because no thread is polling that
+            challenge."
+    (with-tmp
+      (fn []
+        (let [state (wired {})
+              qr-starts (atom 0)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-qr! (fn [on-event _]
+                                         (swap! qr-starts inc)
+                                         (on-event {:type :qr :challenge-url
+                                                    (str "URL-" @qr-starts)})
+                                         nil)
+                        auth/login-credentials! (fn [_ _ _ & _]
+                                                  (error/raise :incorrect "bad password"))]
+            @(main/start-login! state)
+            (is (= "URL-1" (:challenge-url @state)))
+            (swap! state assoc :account "someone" :password "wrong")
+            @((:on-submit @state) nil)
+            (is (str/includes? (str (:error @state)) "bad password"))
+            (is (= 2 @qr-starts)
+                "the QR half must be polling again, or the card on screen is a lie")
+            (is (= "URL-2" (:challenge-url @state))
+                "and showing the challenge that is actually being polled")))))))
+
+(deftest a-login-thread-cannot-die-silently-and-strand-the-button
+  (testing "run-login! caught only ExceptionInfo. Anything else on that thread --
+            an IOException out of save-token!, an NPE, a decode failure slipping
+            past decode-response -- escaped, leaving :credential-state
+            :submitting with no :error. The button then read 'Signing in…' and
+            was disabled for the rest of the run, with nothing on screen saying
+            why: the exact dead-screen shape `login-finished` exists to prevent."
+    (with-tmp
+      (fn []
+        (let [state (wired {:account "someone" :password "pw"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        auth/login-qr! (fn [_ _] nil)
+                        auth/login-credentials!
+                        (fn [_ _ _ & _] (throw (java.io.IOException. "disk went away")))]
+            @((:on-submit @state) nil)
+            (is (not= :submitting (:credential-state @state))
+                "the button must not be stranded by a non-ExceptionInfo throw")
+            (is (seq (:error @state)) "and the screen must say something")))))))

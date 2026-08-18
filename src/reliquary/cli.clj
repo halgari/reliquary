@@ -36,27 +36,109 @@
     (format "%.1f GB" (/ (double bytes) (* 1024.0 1024 1024)))
     "size unknown"))
 
-(defn- render-login-event
-  "auth/login-qr! fires events; this is the only place that renders them.
+(defn terminal
+  "The controlling terminal, or nil when there is not one.
+
+   `System/console` is not that question. Since JDK 22 it returns a Console
+   even when stdin is a pipe or a file, so a non-nil answer says nothing about
+   whether echo can be turned off; `.isTerminal` is the part that matters."
+  ^java.io.Console []
+  (when-let [c (System/console)]
+    (when (.isTerminal c) c)))
+
+(defn read-password-chars
+  "The raw `Console.readPassword` call, as its own var so a test can stand in for
+   it without a tty. Returns a char[], or nil at end of input."
+  ^chars [c ^String prompt]
+  (.readPassword ^java.io.Console c "%s" (into-array Object [prompt])))
+
+(defn read-secret
+  "Read a password from the terminal WITHOUT echoing it.
+
+   Three refusals, all of them replacing a worse outcome:
+
+   - No terminal: there is no way to suppress the echo, and a password read off
+     a pipe is a password printed into whatever captures that output.
+   - End of input (Ctrl-D): `readPassword` returns nil, and that nil used to
+     travel into `crypto/encrypt-password`, NPE inside its catch-all, and
+     surface as \"steam returned an unusable RSA public key\" -- a message about
+     Steam's key for something that happened at a prompt.
+   - An empty password: Steam rate-limits per account (eresult 84), so spending
+     one of the few attempts the user gets to be told a blank password is wrong
+     is worse than saying so here, where the answer is already known."
+  ^String [^String prompt]
+  (let [c (or (terminal)
+              (error/raise :incorrect
+                           (str "no terminal here to read a password without echoing it -- "
+                                "run `reliquary login` with no account name and scan the QR")))
+        chars (read-password-chars c prompt)
+        pw (when chars (String. ^chars chars))]
+    (when-not (seq pw)
+      (error/raise :incorrect "no password entered"))
+    pw))
+
+(defn read-visible
+  "Read an echoed line from the terminal. A Steam Guard code is not worth
+   hiding from the person typing it, and hiding a five-character code makes it
+   much easier to mistype -- which costs a whole login attempt."
+  ^String [^String prompt]
+  (if-let [c (terminal)]
+    (.readLine c "%s" (into-array Object [prompt]))
+    (do (print prompt) (flush) (read-line))))
+
+(defn- handle-login-event
+  "Both login flows fire events; this is the only place that renders them --
+   and, for :guard-needed, the only place that ANSWERS one. That code has to be
+   the return value: printing a prompt and returning nil raises \"no steam
+   guard code supplied\" on an otherwise perfectly good login.
 
    The refresh token never passes through here -- it is returned by the login
    call and goes straight to config/save-token!."
   [event]
-  (when (= :qr (:type event))
-    (println)
-    (println (qr/terminal-string (:challenge-url event)))
-    (println "  Scan with the Steam mobile app.")
-    (println "  If the blocks will not scan, open this on your phone:")
-    (println "   " (:challenge-url event))
-    (println)
-    (println "  Waiting for approval — this completes on its own.")
-    (flush))
-  nil)
+  (case (:type event)
+    :qr
+    (do (println)
+        (println (qr/terminal-string (:challenge-url event)))
+        (println "  Scan with the Steam mobile app.")
+        (println "  If the blocks will not scan, open this on your phone:")
+        (println "   " (:challenge-url event))
+        (println)
+        (println "  Waiting for approval — this completes on its own.")
+        (flush)
+        nil)
+
+    :guard-needed
+    (do (when (:retry? event)
+          (println "  That code was not accepted. Check it and try again."))
+        (read-visible (case (:code-type event)
+                        2 "  Steam Guard code (emailed to you): "
+                        3 "  Steam Guard code (authenticator app): "
+                        "  Steam Guard code: ")))
+
+    :confirmation-pending
+    (do (println)
+        (println (if (= 5 (:confirmation-type event))
+                   "  Approve the sign-in using the link Steam just emailed you."
+                   "  Approve the sign-in request in your Steam mobile app."))
+        (println "  This completes on its own — there is nothing to type.")
+        (flush)
+        nil)
+
+    nil))
 
 (defn login
-  "QR login, to a saved refresh token. Blocks until approved."
-  [_]
-  (let [{:keys [account steam-id] :as result} (auth/login-qr! render-login-event)]
+  "Sign in, to a saved refresh token. Blocks until the login is approved.
+
+   With no account name this is the QR flow, which needs a phone. With one it
+   is account name and password, for a machine that has no phone to hand or an
+   authenticator that lives somewhere else."
+  [[account-name]]
+  (let [{:keys [account steam-id] :as result}
+        (if (seq account-name)
+          (auth/login-credentials! account-name
+                                   (read-secret (str "Password for " account-name ": "))
+                                   handle-login-event)
+          (auth/login-qr! handle-login-event))]
     (config/save-token! result)
     ;; never print the token, not even truncated
     (println)
@@ -250,6 +332,7 @@
     (do (println "usage: reliquary <login|logout|status|list|download>")
         (println)
         (println "  login    scan a QR with the Steam mobile app; saves a refresh token")
+        (println "  login <account>   sign in with a password instead of a phone")
         (println "  status   confirm the saved token still logs on to Steam")
         (println "  list     show the bundled catalog's games and versions")
         (println "  download <appid> <version-id> <dest>   fetch a version to disk")

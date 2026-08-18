@@ -55,44 +55,102 @@
                                      :-fx-border-radius 3 :-fx-background-radius 3
                                      :-fx-text-fill (:text c) :-fx-font-size 14})}]})
 
+(defn- note
+  "A one-line status under the button. `tone` is :muted for information the
+   user merely needs (a phone is involved) and :gold for a soft refusal (the
+   code was wrong). Never red: Gilt is explicit that an error here is
+   information, not an emergency -- same rule `error-strip` follows."
+  [tone text]
+  {:fx/type :label :text text :wrap-text true
+   :style (theme/style {:-fx-font-size 12
+                        :-fx-text-fill (if (= :gold tone) (:gold c) (:text-muted c))})})
+
 (defn credential-panel
   "The right half. When Steam demands a TYPED Guard code -- confirmation types
    2 (emailed) and 3 (authenticator) -- the password field is replaced by a code
    field. Types 4 and 5 are approved elsewhere and need no field. Without this
-   swap the credential flow blocks forever with no explanation (spec 5)."
-  [{:keys [account password guard-code guard-type on-account on-password on-guard on-submit]}]
+   swap the credential flow blocks forever with no explanation (spec 5).
+
+   `:credential-state` renders the parts of a credential sign-in that are not
+   instant. A submit is an RSA fetch, a POST, and then a poll loop that can sit
+   waiting on a human picking up a phone; with none of it drawn, the screen
+   after the button press looked exactly like the screen before it, and the
+   only feedback was the library eventually appearing -- or not.
+
+     :submitting            -- a login is in flight; the button says so and is
+                               inert, because a second press would start a
+                               second login against the same account
+     :confirmation-pending  -- type 4 or 5, approved out of band; there is
+                               nothing to type and nothing to press.
+                               `:confirmation-type` decides WHERE: 4 is the
+                               mobile app, 5 is a link Steam emails
+
+   Both are in-flight states and both make the button inert; only the note under
+   it differs.
+
+   `:guard-retry?` is set when Steam refused the last code (see
+   `auth/submit-guard!`). Saying so matters: the field otherwise just clears,
+   which reads as the app losing the code rather than Steam rejecting it."
+  [{:keys [account password guard-code guard-type credential-state guard-retry?
+           confirmation-type on-account on-password on-guard on-submit]}]
   (let [guard? (boolean (#{2 3} guard-type))
-        ready? (if guard? (seq guard-code) (and (seq account) (seq password)))]
+        ;; BOTH credential states mean a login is running, and neither can take
+        ;; a second press. :confirmation-pending used to be disabled only
+        ;; because `submit-credentials!` clears :password on the way in -- an
+        ;; incidental guard that a password back in the state would undo.
+        in-flight? (boolean (#{:submitting :confirmation-pending} credential-state))
+        ready? (and (not in-flight?)
+                    (if guard? (seq guard-code) (and (seq account) (seq password))))]
     {:fx/type :v-box :spacing 18 :alignment :center-left
      :padding {:left 72 :right 72}
      :children
-     [{:fx/type :label :text "Or use your account"
-       :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
-                             :-fx-text-fill (:text-muted c)})}
-      (field {:label "Account name" :value account :on-change on-account})
-      (if guard?
-        (field {:label (str "Steam Guard code ("
-                             (case guard-type 2 "emailed to you" 3 "from your authenticator app")
-                             ")")
-                :value guard-code :on-change on-guard})
-        (field {:label "Password" :value password :on-change on-password :secret? true}))
-      ;; The gradient/glow are accents on an otherwise-flat surface (design
-      ;; delta: "No gradients, glows or drop shadows on surfaces ... almost
-      ;; entirely on accents"). A DISABLED button is not an accent -- it is
-      ;; explicitly the flat, inert state -- so it keeps the old solid
-      ;; surface/text-muted styling and carries NO :-fx-effect key at all,
-      ;; not even a dim one.
-      {:fx/type :button :text "Sign in" :disable (not ready?)
-       :on-action (or on-submit (fn [_]))
-       :min-height 42 :max-width Double/MAX_VALUE
-       :style (theme/style (if ready?
-                              {:-fx-background-color (:button theme/gradients)
-                               :-fx-text-fill (:bg c)
-                               :-fx-background-radius 3 :-fx-font-size 14
-                               :-fx-effect (theme/glow (:gold c)
-                                                        {:blur 22 :spread -10 :dy 6 :alpha 0.9})}
-                              {:-fx-background-color (:surface c) :-fx-text-fill (:text-muted c)
-                               :-fx-background-radius 3 :-fx-font-size 14}))}]}))
+     (into
+      [{:fx/type :label :text "Or use your account"
+        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
+                              :-fx-text-fill (:text-muted c)})}
+       (field {:label "Account name" :value account :on-change on-account})
+       (if guard?
+         (field {:label (str "Steam Guard code ("
+                              (case guard-type 2 "emailed to you" 3 "from your authenticator app")
+                              ")")
+                 :value guard-code :on-change on-guard})
+         (field {:label "Password" :value password :on-change on-password :secret? true}))
+       ;; The gradient/glow are accents on an otherwise-flat surface (design
+       ;; delta: "No gradients, glows or drop shadows on surfaces ... almost
+       ;; entirely on accents"). A DISABLED button is not an accent -- it is
+       ;; explicitly the flat, inert state -- so it keeps the old solid
+       ;; surface/text-muted styling and carries NO :-fx-effect key at all,
+       ;; not even a dim one.
+       {:fx/type :button :text (if in-flight? "Signing in…" "Sign in")
+        :disable (not ready?)
+        :on-action (or on-submit (fn [_]))
+        :min-height 42 :max-width Double/MAX_VALUE
+        :style (theme/style (if ready?
+                               {:-fx-background-color (:button theme/gradients)
+                                :-fx-text-fill (:bg c)
+                                :-fx-background-radius 3 :-fx-font-size 14
+                                :-fx-effect (theme/glow (:gold c)
+                                                         {:blur 22 :spread -10 :dy 6 :alpha 0.9})}
+                               {:-fx-background-color (:surface c) :-fx-text-fill (:text-muted c)
+                                :-fx-background-radius 3 :-fx-font-size 14}))}]
+      ;; The two notes are appended rather than held in the vector above so a
+      ;; state with neither renders byte-for-byte the panel that shipped
+      ;; before them -- no stray empty label changing the v-box's spacing.
+      (cond-> []
+        guard-retry?
+        (conj (note :gold "That code was not accepted. Check it and try again."))
+
+        (= :confirmation-pending credential-state)
+        ;; WHERE to approve depends on the type Steam chose: 5 is
+        ;; EmailConfirmation, a link it emails, and telling that user to open a
+        ;; mobile app sends them hunting for an app they may not have while the
+        ;; link sits unread. An unrecognised type gets neutral wording rather
+        ;; than a guess at the channel.
+        (conj (note :muted (str (case confirmation-type
+                                  5 "Approve the sign-in using the link Steam just emailed you. "
+                                  4 "Approve the sign-in request in your Steam mobile app. "
+                                  "Approve the sign-in request Steam just sent you. ")
+                                "This completes on its own.")))))}))
 
 (def ^:private frame-size
   "The QR card's full outer box -- the 200px matrix plus 18px of cream

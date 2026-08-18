@@ -80,7 +80,7 @@
   "Print a scannable QR for text to stdout and also drop a PNG in the temp dir,
   printing its path. Returns the PNG path."
   [^String text]
-  (let [png (str (System/getProperty "java.io.tmpdir") "/mauvi-steam-qr.png")]
+  (let [png (str (System/getProperty "java.io.tmpdir") "/reliquary-steam-qr.png")]
     (println (terminal-string text))
     (write-png! text png)
     (println "  (if the blocks don't scan, open the image:" png ")")
