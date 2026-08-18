@@ -63,6 +63,13 @@ def windows_depots(depots, branch, denied=frozenset()):
             continue
         if v.get("dlcappid") or v.get("optional"):
             continue
+        # A shared redistributable belongs to ANOTHER app, so its key has to be
+        # requested under that app's id. Selected here, it would be requested
+        # under the game's -- and denied. Both README.md and verify_depots.clj
+        # already said these were "dropped on sight"; only the code disagreed.
+        # Latent rather than live: no currently-selected version lists one.
+        if v.get("depotfromapp") or v.get("sharedinstall"):
+            continue
         cfg = v.get("config") or {}
         oslist = cfg.get("oslist")
         if oslist and "windows" not in oslist:

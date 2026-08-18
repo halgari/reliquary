@@ -67,20 +67,34 @@
               d     (:depots v)]
           (long (:depot-id d)))))
 
+(def ^:private access-denied
+  "EResult 15, AccessDenied -- the ONE answer that means the game's licence does
+   not cover this depot."
+  15)
+
 (defn- probe
-  "nil if Steam grants the key, or the EResult if it refuses.
+  "nil if Steam grants the key, or the EResult if it refuses on licence grounds.
 
    Only a refusal is recorded. A network blip or a dead connection would
    otherwise be written into the catalog as `this depot is not part of the
    game`, which is a lie that persists until someone re-runs this by hand --
-   so anything that is not a categorized refusal is rethrown."
+   so anything that is not a categorized refusal is rethrown.
+
+   The gate is on 15 SPECIFICALLY, and that is the whole point:
+   `content/depot-key` raises with :eresult for EVERY non-1 result, so testing
+   only for the key's PRESENCE accepted 20 ServiceUnavailable, 21 NotLoggedOn,
+   16 Timeout and 84 RateLimitExceeded as licence answers too. A session that
+   dropped or got rate-limited partway through a sweep therefore recorded every
+   remaining real game depot as unowned -- and since `fetch_versions.py` and
+   `assemble.py` both read that file from then on, the catalog shipped versions
+   missing base game content, with nothing failing until a user downloaded one."
   [conn app-id depot-id]
   (try
     (content/depot-key conn app-id depot-id)
     nil
     (catch clojure.lang.ExceptionInfo e
-      (if-let [er (:eresult (ex-data e))]
-        er
+      (if (= access-denied (:eresult (ex-data e)))
+        access-denied
         (throw e)))))
 
 (defn -main [& args]

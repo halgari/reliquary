@@ -18,7 +18,12 @@
 
  :aliases
  {:test
-  {:extra-paths ["test" "test/resources"]
+  ;; tool/catalog is on the TEST path, not just :catalog-tool: verify_depots
+  ;; writes license-denied-depots.json, which both fetch_versions.py and
+  ;; assemble.py read to decide what ships in resources/catalog.edn. A mistake
+  ;; there ends up in the shipped catalog as a version quietly missing base game
+  ;; content, so it is exactly the kind of code that needs tests.
+  {:extra-paths ["test" "test/resources" "tool/catalog"]
    :extra-deps  {io.github.cognitect-labs/test-runner
                  {:git/tag "v0.5.1" :git/sha "dfb30dd"}
                  org.clojure/test.check {:mvn/version "1.1.3"}}
