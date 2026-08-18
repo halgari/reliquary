@@ -1,0 +1,86 @@
+# Reliquary — Copyright (C) 2026 Timothy Baldridge
+# Licensed under the GNU General Public License v3 or later. See LICENSE.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run's answer worthless.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # JDK 26 is not a preference: deps.edn's :test alias passes
+      # --enable-native-access=ALL-UNNAMED, and the project targets 26.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '26'
+
+      - uses: DeLaGuardo/setup-clojure@13
+        with:
+          cli: latest
+
+      - name: Cache Maven and gitlibs
+        uses: actions/cache@v6
+        with:
+          # .cpcache is deliberately NOT cached: it stores absolute classpath
+          # strings, and a stale one silently pins a previous dependency set.
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: deps-${{ runner.os }}-${{ hashFiles('deps.edn') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      # xvfb is present on the ubuntu runner images, but this suite is
+      # unrunnable without a display, so a missing package should read as one
+      # clear line rather than as a JavaFX stack trace.
+      - name: Ensure a virtual display is available
+        run: |
+          command -v xvfb-run >/dev/null || {
+            sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xvfb
+          }
+          xvfb-run --help >/dev/null && echo "xvfb-run: $(command -v xvfb-run)"
+
+      # The suite renders real JavaFX scenes -- reliquary.ui.clip-test measures
+      # actual pixels, and shot-test snapshots a Scene. With no DISPLAY the
+      # whole run dies at "UnsupportedOperationException: Unable to open
+      # DISPLAY" before a single assertion executes, so this is not optional
+      # hardening; it is the only way these tests run on a runner.
+      - name: Run tests
+        run: xvfb-run -a clojure -M:test
+
+      # Compiling is a separate question from testing: AOT loads every
+      # namespace, so a top-level form that only breaks under compilation
+      # (or a jar that quietly bundles JavaFX) would otherwise be found for
+      # the first time during a release, on a tag, with no way back.
+      - name: Build the packaging jar
+        run: clojure -T:build uber :omit-javafx true
+
+      - name: The packaging jar must stay platform-independent
+        run: |
+          set -euo pipefail
+          jar=target/lib/reliquary.jar
+          if unzip -l "$jar" | grep -qiE '\.(so|dll|dylib)$'; then
+            echo "::error file=build.clj::$jar contains native libraries; the release ships one jar for every OS"
+            exit 1
+          fi
+          if unzip -l "$jar" | grep -q 'javafx/'; then
+            echo "::error file=build.clj::$jar bundles JavaFX; drop-javafx should have removed it"
+            exit 1
+          fi
+          echo "$jar is $(du -h "$jar" | cut -f1), no natives, no JavaFX"

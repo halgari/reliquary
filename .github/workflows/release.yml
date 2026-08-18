@@ -1,0 +1,229 @@
+# Reliquary — Copyright (C) 2026 Timothy Baldridge
+# Licensed under the GNU General Public License v3 or later. See LICENSE.
+#
+# Tag a release:  git tag v0.1.0 && git push origin v0.1.0
+#
+# The result is a DRAFT release with a signed, portable Windows ZIP and a
+# SHA256SUMS file. Draft on purpose: publishing is an outward-facing act and
+# stays a human decision.
+#
+# Shape of the build, and why it is split this way: `drop-javafx` in build.clj
+# strips every org.openjfx artifact, so target/lib/reliquary.jar carries no
+# JavaFX and no native libraries at all -- it is the same jar on every OS. Only
+# the jlink runtime is platform-specific. So the jar is built ONCE on Linux,
+# where deps.edn's $linux JavaFX classifiers resolve natively, and each
+# platform job merely links, packages and signs it. That is also why a Windows
+# release needs no change to deps.edn: the Windows natives come from Gluon's
+# jmods by way of jlink, never from Maven.
+#
+# Linux packaging is deliberately not here yet. Authenticode does not apply to
+# an ELF binary, so a Linux release needs a different signing story
+# (checksums plus a detached GPG or minisign signature) rather than a copy of
+# the job below.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  # Build and sign without publishing anything, to prove the pipeline.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  jar:
+    name: build the platform-independent jar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '26'
+
+      - uses: DeLaGuardo/setup-clojure@13
+        with:
+          cli: latest
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: deps-${{ runner.os }}-${{ hashFiles('deps.edn') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Build uberjar
+        run: clojure -T:build uber :omit-javafx true
+
+      # The whole cross-platform design rests on this jar being the same
+      # everywhere. If a dependency ever starts contributing natives, the
+      # Windows job would ship Linux .so files inside a Windows image -- an
+      # app that looks built and cannot start. Fail here instead.
+      - name: The jar must carry no natives and no JavaFX
+        run: |
+          set -euo pipefail
+          jar=target/lib/reliquary.jar
+          if unzip -l "$jar" | grep -qiE '\.(so|dll|dylib)$'; then
+            echo "::error::$jar contains native libraries; it cannot be shared across platforms"
+            exit 1
+          fi
+          if unzip -l "$jar" | grep -q 'javafx/'; then
+            echo "::error::$jar bundles JavaFX; the jlink runtime is supposed to supply it"
+            exit 1
+          fi
+          echo "$jar: $(du -h "$jar" | cut -f1), portable"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: jar
+          path: target/lib/reliquary.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  windows:
+    name: package and sign for Windows
+    needs: jar
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      # Secrets are not readable in a step-level `if:`, so the presence test
+      # happens once here and the steps below branch on this string.
+      HAVE_SIGNING: ${{ secrets.CODE_SIGN_USER != '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '26'
+
+      # The jar comes from the Linux job rather than being rebuilt: rebuilding
+      # here would compile against deps.edn's $linux JavaFX classifiers on a
+      # Windows runner, which is exactly the ambiguity this split removes.
+      - uses: actions/download-artifact@v8
+        with:
+          name: jar
+          path: target/lib
+
+      - name: Derive the version from the tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            v="${GITHUB_REF#refs/tags/}"; v="${v#v}"
+          else
+            v="0.0.0"
+          fi
+          echo "APP_VERSION=$v" >> "$GITHUB_ENV"
+          echo "version: $v"
+
+      # A tag push is a real release, and a real release must not be unsigned.
+      # A manual run is allowed through unsigned so the pipeline can be proven
+      # (in a fork, say) without the certificate.
+      - name: Refuse to build an unsigned release from a tag
+        if: startsWith(github.ref, 'refs/tags/') && env.HAVE_SIGNING != 'true'
+        shell: bash
+        run: |
+          echo "::error::CODE_SIGN_USER is not set, so this tag would produce an unsigned binary."
+          echo "Add CODE_SIGN_USER, CODE_SIGN_PASS, CODE_SIGN_TOTP_SECRET (and"
+          echo "CODE_SIGN_CREDENTIAL_ID if your eSigner account has more than one"
+          echo "certificate) as repository secrets, then re-run."
+          exit 1
+
+      - name: Build the Windows app image
+        shell: pwsh
+        run: ./bin/package-windows.ps1
+
+      # SSL.com eSigner, the same service and the same three secrets Wabbajack
+      # uses. Its own action rather than a hand-rolled CodeSignTool download,
+      # so the tool version and its JVM plumbing are SSL.com's problem.
+      - name: Sign Reliquary.exe
+        if: env.HAVE_SIGNING == 'true'
+        uses: SSLcom/esigner-codesign@v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.CODE_SIGN_USER }}
+          password: ${{ secrets.CODE_SIGN_PASS }}
+          totp_secret: ${{ secrets.CODE_SIGN_TOTP_SECRET }}
+          credential_id: ${{ secrets.CODE_SIGN_CREDENTIAL_ID }}
+          file_path: ${{ github.workspace }}\target\app\Reliquary\Reliquary.exe
+          override: 'true'
+          malware_block: 'false'
+
+      # Trusting the signing step's exit code is not the same as knowing the
+      # binary is signed. Ask Windows.
+      - name: Verify the signature
+        if: env.HAVE_SIGNING == 'true'
+        shell: pwsh
+        run: |
+          $exe = 'target/app/Reliquary/Reliquary.exe'
+          $sig = Get-AuthenticodeSignature $exe
+          "status : $($sig.Status)"
+          "signer : $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') {
+            throw "$exe is not validly signed (status $($sig.Status))"
+          }
+
+      - name: Warn that this build is unsigned
+        if: env.HAVE_SIGNING != 'true'
+        shell: bash
+        run: echo "::warning::No signing secrets available; this artifact is UNSIGNED and must not be published."
+
+      # Zip the directory itself, not its contents, so it unpacks into
+      # Reliquary\ rather than strewing a runtime across the user's Downloads.
+      - name: Package the portable ZIP
+        shell: pwsh
+        run: |
+          $zip = "Reliquary-$env:APP_VERSION-win-x64.zip"
+          Compress-Archive -Path target/app/Reliquary -DestinationPath $zip -CompressionLevel Optimal
+          "ZIP_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "{0} -- {1:N1} MB" -f $zip, ((Get-Item $zip).Length / 1MB)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-zip
+          path: ${{ env.ZIP_NAME }}
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  release:
+    name: draft the GitHub release
+    needs: windows
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows-zip
+          path: dist
+
+      - name: Checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum ./*.zip > SHA256SUMS
+          cat SHA256SUMS
+
+      # Draft, not published: a release is outward-facing and irreversible in
+      # practice once people have the URL, so the last step stays a human one.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Reliquary $tag" \
+            --generate-notes \
+            --draft \
+            --verify-tag \
+            dist/*.zip dist/SHA256SUMS
+          echo "Draft release $tag created. Review it, then publish."

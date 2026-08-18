@@ -11,8 +11,11 @@ refuses to emit a catalog that the app would then silently ignore.
 """
 import json, glob, os, re, sys, datetime
 
-ROOT = "/home/tbaldrid/oss/reliquary"
-TOOL = f"{ROOT}/tool/catalog"
+# Derived from this file's own location, not hardcoded: an absolute path to one
+# developer's home directory makes the tool unrunnable for anyone else who
+# clones the repo, and publishes that developer's username besides.
+TOOL = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(TOOL))
 SCHEMA = 1
 
 
@@ -252,4 +255,8 @@ def main():
         for d, why in skipped:
             print(f"  {d}: {why}")
 
-main()
+# Guarded, like fetch_versions.py: `main()` at import time means merely
+# importing this module rewrites resources/catalog.edn -- which it did, churning
+# the shipped catalog's :generated timestamp during an unrelated check.
+if __name__ == "__main__":
+    main()

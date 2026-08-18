@@ -129,7 +129,7 @@ if __name__ == "__main__":
             r = versions_for(int(appid))
         except Exception as e:
             print(f"  {domain:22} FAILED {e}", file=sys.stderr); continue
-        p = f"/home/tbaldrid/oss/reliquary/tool/catalog/versions/{domain}.json"
+        p = f"{os.path.dirname(os.path.abspath(__file__))}/versions/{domain}.json"
         json.dump(r, open(p, "w"), indent=1)
         print(f"  {domain:22} {r['name'][:34]:34} {len(r['versions'])} version(s): "
               + ", ".join(f"{v['id']}({v['bytes']/2**30:.1f}G)" for v in r["versions"]))
