@@ -1,0 +1,148 @@
+# Reliquary — Copyright (C) 2026 Timothy Baldridge
+# Licensed under the GNU General Public License v3 or later. See LICENSE.
+#
+# Publish a release's Windows ZIP to the Nexus Mods page.
+#
+# WHEN THIS RUNS. Not on a tag. `release.yml` builds a tag into a DRAFT release
+# precisely because publishing is outward-facing and stays a human decision, and
+# a Nexus upload is further out still: it is public the moment it lands, it
+# notifies everyone tracking the mod, and there is no unpublishing it in any way
+# that matters. So this hangs off the act that already IS the human decision --
+# publishing the draft -- and does nothing until someone does that.
+#
+#   tag  ->  release.yml  ->  draft release  ->  [you press publish]  ->  here
+#
+# `workflow_dispatch` is there for a re-run when an upload fails halfway, and
+# takes the tag to publish so it cannot be pointed at nothing by accident.
+#
+# WHAT IT UPLOADS. The ZIP attached to the GitHub release, not a fresh build.
+# The release asset is the artifact that was signed, checksummed and actually
+# tested; rebuilding here would upload something no one has run.
+name: nexus
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload (e.g. v0.1.3)'
+        required: true
+
+permissions:
+  contents: read
+
+# The Nexus page is a single shared resource: two of these running at once would
+# race to add a version to the same file.
+concurrency:
+  group: nexus-upload
+  cancel-in-progress: false
+
+env:
+  # https://www.nexusmods.com/site/mods/2188 -- the number in the URL, used to
+  # look the mod up. It is NOT the id the upload API wants; see `Resolve` below.
+  NEXUS_GAME_DOMAIN: site
+  NEXUS_MOD_PAGE_ID: 2188
+  # The FILE to add a new version to, from the mod page's Files tab under
+  # "API Info". A Nexus file is a container that holds successive versions, so
+  # this stays the same forever and each release becomes a version inside it.
+  # Uploading with the wrong one here would add a version to somebody's file.
+  NEXUS_FILE_ID: 7832877
+
+jobs:
+  upload:
+    name: upload to Nexus Mods
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Work out which tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${EVENT_TAG:-$INPUT_TAG}"
+          [ -n "$tag" ] || { echo "::error::no tag to upload"; exit 1; }
+          # Nexus versions are plain numbers; the tag carries a leading v.
+          echo "tag=$tag"                >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}"        >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the release's ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Into the workspace root, and the action is given a bare filename:
+          # that is the shape its own example uses, and there is nothing else
+          # here to collide with -- this job deliberately does not check the
+          # repo out, since it needs the gh CLI and nothing else.
+          #
+          # The signed, checksummed artifact people are actually downloading --
+          # not a rebuild, which would put something untested on the mod page.
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.zip' --dir .
+          ls -l ./*.zip
+          [ "$(ls ./*.zip | wc -l)" = "1" ] || {
+            echo "::error::expected exactly one zip on the release"; exit 1; }
+          echo "ZIP=$(basename "$(ls ./*.zip)")" >> "$GITHUB_ENV"
+
+      # The upload API's mod id is an internal one, NOT the number in the mod
+      # page URL. Resolved here rather than hardcoded so there is no second
+      # number to keep in step with the first, and so a wrong guess fails loudly
+      # in its own step instead of quietly attaching a changelog to another mod.
+      - name: Resolve the internal mod id
+        id: mod
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "${NEXUS_API_KEY:-}" ] || {
+            echo "::error::NEXUSMODS_API_KEY is not set"; exit 1; }
+          body=$(curl -sS --fail-with-body \
+            -H "apikey: $NEXUS_API_KEY" \
+            -H 'accept: application/json' \
+            "https://api.nexusmods.com/v3/games/${NEXUS_GAME_DOMAIN}/mods/${NEXUS_MOD_PAGE_ID}")
+          id=$(echo "$body" | jq -er '.id')
+          echo "Resolved ${NEXUS_GAME_DOMAIN}/${NEXUS_MOD_PAGE_ID} to internal id $id"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Changelog from the release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # The release body, with GitHub's compare link dropped: it means
+          # nothing to a reader on a mod page.
+          notes=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' \
+                  | sed '/^\*\*Full Changelog\*\*/d')
+          {
+            echo 'body<<NEXUS_EOF'
+            echo "$notes"
+            echo 'NEXUS_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload
+        uses: Nexus-Mods/upload-action@c96019556046053aa26044b44396cd38929daf23 # v1.0.0-beta.10
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ env.NEXUS_FILE_ID }}
+          filename: ${{ env.ZIP }}
+          display_name: Reliquary ${{ steps.tag.outputs.version }} (Windows x64)
+          version: ${{ steps.tag.outputs.version }}
+          category: main
+          mod_id: ${{ steps.mod.outputs.id }}
+          changelog: ${{ steps.notes.outputs.body }}
+          # the mod page's version should track what is actually on it
+          update_mod_version: true
+          # Reliquary is an application, not something a mod manager installs
+          # into a game folder. Offering it as a mod manager download would put
+          # a portable .exe and a Java runtime somewhere nobody wants them.
+          allow_mod_manager_download: false
+          primary_mod_manager_download: false
+          # older versions stay visible: someone on a build that works with
+          # their setup should be able to stay on it
+          archive_existing_version: false
