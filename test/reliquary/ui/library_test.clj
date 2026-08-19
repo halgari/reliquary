@@ -524,3 +524,38 @@
                                    :selected-version-id "v1"
                                    :folder "/home/me/games"})))]
       (is (str/includes? s "INSTALL TO") (str "on " tab)))))
+
+(deftest the-panel-calls-a-forced-switch-what-the-screen-calls-it
+  (testing "a panel that says `Switch to` opening a screen that says `Force
+            switch to` reads as two different actions"
+    (let [s (pr-str (panel {:install install
+                            :installed-version nil
+                            :selected-version-id "public"}))]
+      (is (str/includes? s "Force switch to")))))
+
+(defn- switch-button [extra]
+  (first (filter #(str/includes? (str/lower-case (str (:text %))) "switch to")
+                 (find-nodes (panel (merge {:install install} extra)) :button))))
+
+(deftest the-forced-switch-button-is-pressable
+  (testing "readiness used to be `(str/starts-with? label \"Switch\")`, so
+            renaming the label to `Force switch to …` disabled the button
+            without changing a line of logic. It comes from the data now."
+    (let [b (switch-button {:installed-version nil :selected-version-id "public"})]
+      (is (some? b))
+      (is (not (:disable b)) "the whole point of the button is that it works"))))
+
+(deftest the-ordinary-switch-button-is-pressable
+  (let [b (switch-button {:installed-version {:id "1_5_97" :label "1.5.97"}
+                          :selected-version-id "public"})]
+    (is (some? b))
+    (is (not (:disable b)))))
+
+(deftest a-version-already-installed-is-not-pressable
+  (let [b (first (filter #(= "Already installed" (:text %))
+                         (find-nodes (panel {:install install
+                                             :installed-version {:id "public" :label "Latest"}
+                                             :selected-version-id "public"})
+                                     :button)))]
+    (is (some? b))
+    (is (true? (:disable b)))))

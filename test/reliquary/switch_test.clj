@@ -141,3 +141,62 @@
                        (switch/run! {:session :s :game game :install {:path (str d)}
                                      :from from :to to}))))
         (finally (rm-rf d))))))
+
+;; ---------------------------------------------------------------------------
+;; forcing a switch onto an install we cannot name
+;;
+;; A build the catalog does not carry is the normal state of a hand-downgraded
+;; game, and it is exactly the install most likely to want changing. Refusing it
+;; left the one user who needs this feature with a dead button.
+;;
+;; The boundary map is the TARGET's manifest in that case. It is safe for the
+;; same reason the ordinary path is: chunk-index hashes every chunk and records
+;; only those whose bytes match the id they claim, so a wrongly-guessed boundary
+;; produces no index entry rather than a corrupt one. It simply reuses less --
+;; a file unchanged between builds is byte-identical and matches at the target's
+;; own boundaries, and a file that did change was going to be fetched anyway.
+
+(defn- run-forced [root opts]
+  (with-redefs [download/version-manifests
+                (fn [_ _ v]
+                  (when-not v
+                    (throw (AssertionError. "must not fetch manifests for an unknown source")))
+                  (manifests-for [{:id sha-abc :offset "0" :cb-original 3}
+                                  {:id sha-new :offset "3" :cb-original 3}]))
+                chunk/fetch-decoded (fn [{:keys [chunk]}]
+                                      (when (= sha-new (:id chunk))
+                                        (.getBytes "NEW" "UTF-8")))]
+    (switch/run! (merge {:session :a-session :game game :install {:path (str root)}
+                         :from nil :to to}
+                        opts))))
+
+(deftest a-forced-switch-converges-without-knowing-what-was-there
+  (let [d (tmp-dir)]
+    (try
+      ;; "abc" is already the target's first chunk; "xyz" is not its second
+      (spit (io/file d "a.bin") "abcxyz")
+      (run-forced d {})
+      (is (= "abcNEW" (slurp (io/file d "a.bin")))
+          "what already matched was kept, what did not was fetched")
+      (finally (rm-rf d)))))
+
+(deftest a-forced-switch-still-reuses-what-is-already-correct
+  (testing "this is the whole reason not to just re-download: a hand-downgraded
+            15 GB install is mostly already the bytes the target wants"
+    (let [d (tmp-dir)]
+      (try
+        (spit (io/file d "a.bin") "abcxyz")
+        (let [plan (atom nil)]
+          (run-forced d {:on-plan #(reset! plan %)})
+          (is (= 1 (count (:in-place @plan))) "the chunk that was already right")
+          (is (= 1 (count (:fetch @plan))) "and only the one that was not"))
+        (finally (rm-rf d))))))
+
+(deftest a-forced-switch-does-not-ask-steam-about-a-version-it-has-no-name-for
+  (testing "there is no `from` to fetch manifests for -- asking would raise on a
+            nil version id long before anything useful happened"
+    (let [d (tmp-dir)]
+      (try
+        (spit (io/file d "a.bin") "abcxyz")
+        (is (some? (run-forced d {})) "it ran at all")
+        (finally (rm-rf d))))))

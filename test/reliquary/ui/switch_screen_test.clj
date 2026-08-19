@@ -48,14 +48,37 @@
     ((:on-action btn) nil)
     (is @fired)))
 
-(deftest an-unidentified-install-cannot-be-switched
-  (testing "the chunk index is built with the INSTALLED version's manifest as its
-            boundary map, so without knowing which version that is there are no
-            boundaries. Offering the button anyway would promise something the
-            engine refuses."
+(deftest an-unidentified-install-is-offered-a-forced-switch
+  (testing "a hand-downgraded game is a build the catalog cannot name, and it is
+            the install most likely to want changing. The screen used to say
+            `Unrecognised build` and offer nothing, which left the one user who
+            needs this feature looking at a dead end."
     (let [s (pr-str (view {:installed-version nil}))]
       (is (str/includes? s "Unrecognised"))
-      (is (not (str/includes? s "Switch to 1.6.1130"))))))
+      (is (str/includes? s "Force switch to 1.6.1130")))))
+
+(deftest a-forced-switch-says-what-is-different-about-it
+  (testing "it is not the ordinary path: without a source manifest the boundary
+            map is the target's own, so less is reused and more is fetched. The
+            user is about to rewrite a game in place and should know which of
+            the two they are getting."
+    (let [s (pr-str (view {:installed-version nil}))]
+      (is (str/includes? s "verify"))
+      (is (str/includes? s "fetch")))))
+
+(deftest a-forced-switch-is-wired-to-the-same-handler
+  (let [fired (atom false)
+        v (view {:installed-version nil :on-switch (fn [_] (reset! fired true))})
+        btn (first (filter #(str/includes? (str (:text %)) "Force switch")
+                           (switch-screen/buttons v)))]
+    (is (some? btn))
+    ((:on-action btn) nil)
+    (is @fired)))
+
+(deftest a-recognised-install-is-not-offered-a-forced-switch
+  (testing "the ordinary path reuses more and should not be bypassed"
+    (let [s (pr-str (view {}))]
+      (is (not (str/includes? s "Force switch"))))))
 
 (deftest switching-to-what-is-already-installed-is-not-offered
   (let [s (pr-str (view {:target-version from}))]

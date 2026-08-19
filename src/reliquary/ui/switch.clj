@@ -166,18 +166,45 @@
        [(button "Open folder" true on-open)
         (button "Back to library" false on-back)]
 
-       ;; ready. No button at all when there is nothing to offer -- an
-       ;; unidentified install cannot be switched, because the chunk index is
-       ;; built with the installed version's manifest as its boundary map.
+       ;; ready.
        (cond-> []
          (and installed-version target-version (not same?))
          (conj (button (str "Switch to " (:label target-version)) true on-switch))
+
+         ;; An install the catalog cannot name is still switchable, by force:
+         ;; the target's own manifest becomes the boundary map. Named
+         ;; differently because it is a different bargain -- see forced-note.
+         (and (nil? installed-version) target-version)
+         (conj (button (str "Force switch to " (:label target-version)) true on-switch))
 
          same?
          (conj (assoc (button "Already installed" false nil) :disable true))
 
          :always
          (conj (button "Back to library" false on-back))))}))
+
+(defn- forced-note
+  "What `Force switch` costs, said before it is pressed.
+
+   The user is about to rewrite a game in place. With no source manifest there
+   are no source boundaries, so the target's own are used: every chunk is still
+   hash-verified, and what already matches is kept -- but less lines up, so more
+   is fetched than an ordinary switch of the same two versions."
+  []
+  {:fx/type :label
+   ;; states the COST, not a reassurance. "Nothing is deleted that it cannot
+   ;; replace" was the first draft and it is a weaselly non-promise: nothing is
+   ;; deleted at all, and what the user actually needs to weigh is how much this
+   ;; will fetch compared with the ordinary path.
+   :text (str "This build is not in the catalog, so Reliquary will verify every "
+              "file against the target and fetch whatever does not already match. "
+              "Far less than a full download, but more than a switch between two "
+              "builds it knows.")
+   :wrap-text true :max-width block-width
+   :alignment :center
+   :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
+                         :-fx-text-fill (:text-muted c)
+                         :-fx-text-alignment "center"})})
 
 (defn view
   "`{:game :install :installed-version :target-version :snapshot}` plus the
@@ -228,5 +255,10 @@
         (conj (progress-block snapshot))
 
         (= :failed stage) (conj (failure-block snapshot))
+
+        ;; only before it runs: once it is going, the progress box says what is
+        ;; happening and this would be restating a decision already taken
+        (and (nil? stage) (nil? installed-version) target-version)
+        (conj (forced-note))
 
         :always (conj (action-row state))))}))

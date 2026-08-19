@@ -1236,18 +1236,18 @@
             (is (true? (:switch? (:snapshot @state)))
                 "so the panel says `switch interrupted`, not `download`")))))))
 
-(deftest a-switch-without-an-identified-version-refuses
-  (testing "the chunk index is built with the INSTALLED version's manifest as its
-            boundary map. Without knowing which version that is there are no
-            boundaries, and guessing one would index garbage."
+(deftest a-switch-still-refuses-with-nothing-to-switch
+  (testing "no install, or no version chosen. NOT the same as an install whose
+            build the catalog cannot name -- that one is forced, see
+            `an-unnameable-install-can-still-be-switched-by-force`."
     (with-tmp
       (fn []
-        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+        (let [state (wired {:games [game] :selected-appid 413150 :install nil
                             :installed-version nil :selected-version-id "public"})]
           (with-redefs [main/fx-run! (fn [f] (f))
                         switch/run! (fn [_] (throw (AssertionError. "must not run")))]
             @(main/switch-install! state)
-            (is (str/includes? (str (:error @state)) "which version"))))))))
+            (is (str/includes? (str (:error @state)) "Nothing to switch"))))))))
 
 ;; ---------------------------------------------------------------------------
 ;; the installed version is decided by hashing the executable
@@ -1667,3 +1667,37 @@
           (is (= "" (:query @state)))
           (is (nil? (:selected-appid @state)))
           (is (nil? (:install @state))))))))
+
+(deftest an-unnameable-install-can-still-be-switched-by-force
+  (testing "a hand-downgraded game is a build the catalog cannot name, and it is
+            precisely the install most likely to want changing. Refusing it left
+            the one user who needs this with a dead button."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version nil
+                            :selected-version-id "public"})
+              from* (atom :unset)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [{:keys [from]}] (reset! from* from) {:fetch-bytes 0})]
+            @(main/switch-install! state)
+            (is (nil? @from*)
+                "no source version is claimed -- the engine reads that as `use the target`")
+            (is (= :done (:stage (:snapshot @state))))
+            (is (nil? (:error @state)) "and it is not reported as a refusal")))))))
+
+(deftest a-forced-switch-records-what-is-now-installed
+  (testing "it was unnameable before and is the target afterwards"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version nil
+                            :selected-version-id "public"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [_] {:fetch-bytes 0})]
+            @(main/switch-install! state)
+            (is (= "public" (:id (:installed-version @state))))))))))

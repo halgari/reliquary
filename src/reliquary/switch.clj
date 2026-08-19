@@ -57,6 +57,18 @@
      :from :to     catalog versions. `from` must be what is actually on disk:
                    it supplies the chunk boundaries the index is built with, so
                    identifying it (reliquary.steam.local/identify) comes first.
+
+                   `from` may be NIL, meaning the install is a build the catalog
+                   cannot name -- a hand-downgraded game, or one Steam updated
+                   past the catalog. The TARGET's manifest is then the boundary
+                   map. That is safe for the same reason the ordinary path is:
+                   `chunk-index` hashes every chunk and records only those whose
+                   bytes match the id they claim, so a boundary that does not
+                   line up yields no entry rather than a wrong one. It reuses
+                   less, and only where it must -- a file unchanged between two
+                   builds is byte-identical and matches at the target's own
+                   boundaries, and a file that did change was going to be
+                   fetched either way.
      :on-progress  {:phase :hashing|:staging|:applying :done :total :path}
      :on-plan      called once with the plan, before anything is written -- the
                    panel shows what a switch will cost before it starts costing
@@ -68,13 +80,18 @@
   (let [root     (:path install)
         progress (fn [phase] (when on-progress
                                (fn [p] (on-progress (assoc p :phase phase)))))
-        src      (download/version-manifests session game from)
-        ;; the version on disk supplies the boundaries; see the ns docstring
-        index    (local/chunk-index root (files-of src)
+        ;; The target is fetched first now, because with no `from` it is also the
+        ;; boundary map. Fetching it second and indexing against a nil source was
+        ;; the shape that made an unnameable install unswitchable.
+        tgt      (download/version-manifests session game to)
+        src      (when from (download/version-manifests session game from))
+        ;; the version on disk supplies the boundaries; see the ns docstring for
+        ;; why the target's own manifest is a safe stand-in when it cannot
+        index    (local/chunk-index root (files-of (or src tgt))
                                     {:on-progress (progress :hashing) :abort? abort?})]
     (when-not (and abort? (abort?))
-      (let [tgt   (download/version-manifests session game to)
-            plan  (local/plan-switch index (files-of tgt))
+      (let [plan  (assoc (local/plan-switch index (files-of tgt))
+                         :forced? (nil? from))
             _     (when on-plan (on-plan plan))
             srcs  (chunk-sources tgt)
             hosts (:hosts tgt)]

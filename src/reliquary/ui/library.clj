@@ -518,6 +518,9 @@
     (nil? selected-version) "Select a version"
     (and installed-version (= (:id installed-version) (:id selected-version)))
     "Already installed"
+    ;; the same word the screen uses. A panel that says `Switch to` and a screen
+    ;; that then says `Force switch to` reads as two different actions
+    (nil? installed-version) (str "Force switch to " (:label selected-version))
     :else (str "Switch to " (:label selected-version))))
 
 (defn- hashing-panel
@@ -583,8 +586,17 @@
      ;; disabled, which is what the design shows and what stops a second pass
      ;; being started over the first
      (not hashing)
-     (conj (let [label (switch-action-label installed-version selected-version)
-                 ready? (str/starts-with? label "Switch")]
+     (conj (let [label  (switch-action-label installed-version selected-version)
+                 ;; from the DATA, not from the label's prefix. It used to be
+                 ;; (str/starts-with? label "Switch"), so renaming the label to
+                 ;; "Force switch to …" disabled the button without touching a
+                 ;; line of logic -- and no test noticed, because they all
+                 ;; asserted on the text.
+                 ready? (boolean
+                         (and selected-version
+                              (not (and installed-version
+                                        (= (:id installed-version)
+                                           (:id selected-version))))))]
              {:fx/type :button :text label
               :disable (not ready?)
               :on-action (or on-analyze (fn [_]))

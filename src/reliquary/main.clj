@@ -765,13 +765,12 @@
       (do (swap! state assoc :error "Nothing to switch: pick an installed game and a version.")
           (deliver p :done))
 
-      (nil? installed-version)
-      (do (swap! state assoc
-                 :error (str "Reliquary cannot tell which version is installed, so it "
-                             "cannot work out what to change. Reinstall from Steam, or "
-                             "download this version to a new folder instead."))
-          (deliver p :done))
-
+      ;; NO refusal for an install the catalog cannot name. It used to stop here,
+      ;; on the grounds that the chunk index needs the installed version's
+      ;; manifest for boundaries -- but a hand-downgraded game is exactly that
+      ;; case, and exactly the install most likely to want changing. `switch/run!`
+      ;; takes a nil `from` and uses the target's own manifest instead; every
+      ;; chunk is hash-verified either way, so the cost is reuse, not safety.
       :else
       (daemon!
        "reliquary-switch"
