@@ -560,3 +560,44 @@
           (is (= 3 (:size @got)) "the size the chunk must decode to")
           (is (= "a.bin" (-> @got :to :path)) "and where it is going, for an error message"))
         (finally (rm-rf d))))))
+
+;; ---------------------------------------------------------------------------
+;; identifying from the catalog alone
+;;
+;; The catalog carries each version's executable hashes, so which version an
+;; install IS can be settled offline, in milliseconds, before the user has even
+;; signed in -- no session, no manifest fetch, no reliance on Steam's own
+;; bookkeeping about what it installed.
+
+(def ^:private catalog-versions
+  [{:id "public" :label "Latest"
+    :executables {"SkyrimSE.exe" "aaaa1111" "SkyrimSELauncher.exe" "bbbb2222"}}
+   {:id "1_5_97" :label "1.5.97"
+    :executables {"SkyrimSE.exe" "eeee5555" "SkyrimSELauncher.exe" "bbbb2222"}}])
+
+(deftest the-catalog-alone-identifies-an-install
+  (let [cands (local/catalog-candidates catalog-versions)
+        r (local/identify {"SkyrimSE.exe" "eeee5555"
+                           "SkyrimSELauncher.exe" "bbbb2222"} cands)]
+    (is (= "1_5_97" (-> r :version :id)))
+    (is (= :exact (:confidence r)))))
+
+(deftest the-paths-to-hash-come-from-the-catalog
+  (testing "so the caller knows which two files to read without opening a
+            manifest or scanning the directory"
+    (is (= ["SkyrimSE.exe" "SkyrimSELauncher.exe"]
+           (sort (distinct (mapcat #(local/exe-paths (:files %))
+                                   (local/catalog-candidates catalog-versions))))))))
+
+(deftest a-version-with-no-executable-hashes-is-not-a-candidate
+  (testing "a catalog generated before the field existed must not match
+            everything by matching nothing"
+    (let [cands (local/catalog-candidates [{:id "old" :label "Old"}])]
+      (is (empty? cands))
+      (is (nil? (:version (local/identify {"SkyrimSE.exe" "x"} cands)))))))
+
+(deftest an-executable-the-catalog-does-not-know-is-unidentified
+  (let [r (local/identify {"SkyrimSE.exe" "UNKNOWN"}
+                          (local/catalog-candidates catalog-versions))]
+    (is (nil? (:version r)))
+    (is (= :unknown (:confidence r)))))

@@ -242,6 +242,29 @@
           {:exe-matched 0 :exe-mismatched 0 :matched 0 :mismatched 0}
           file-index))
 
+(defn catalog-candidates
+  "Catalog versions as `identify` candidates, from the executable hashes the
+   catalog carries.
+
+   This is what makes identification free. A manifest is immutable, so a
+   version's executable hash never changes; the catalog tool resolves it once
+   with a session and every installation afterwards settles which version it has
+   by hashing two files and looking them up -- no session, no manifest fetch, no
+   network at all, and none of it dependent on Steam's own record of what it
+   installed.
+
+   A version with no executable hashes is not a candidate. A catalog generated
+   before the field existed would otherwise match everything by matching
+   nothing."
+  [versions]
+  (into []
+        (keep (fn [v]
+                (when (seq (:executables v))
+                  {:version v
+                   :files (into {} (map (fn [[path sha]] [path {:sha sha}]))
+                                (:executables v))})))
+        versions))
+
 (defn identify
   "Which candidate version the local files are, with the evidence for it.
 

@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-17T18:37:21Z"
+ :generated "2026-08-19T19:45:06Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -32,6 +32,8 @@
                     :build "13189953"
                     :date "2024-01-17"
                     :bytes 16095731388
+                    :executables {"SkyrimSELauncher.exe" "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d"
+                                 "SkyrimSE.exe" "1c9636207b4613254b03d76c410540e10b539dc9"}
                     :depots [{:depot-id 489831
                              :manifest-gid "8442952117333549665"}
                             {:depot-id 489832
@@ -44,6 +46,8 @@
                     :build ""
                     :date "2019-11-20"
                     :bytes 13628807699
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "001c5add65383e188dc863c7acc9a3fde548019e"}
                     :depots [{:depot-id 489831
                              :manifest-gid "7848722008564294070"}
                             {:depot-id 489832
@@ -56,6 +60,8 @@
                     :build ""
                     :date "2021-11-11"
                     :bytes 13730835105
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "c6809f0af47a663155cf85f3fff332a4669ea56b"}
                     :depots [{:depot-id 489831
                              :manifest-gid "8893533186410323048"}
                             {:depot-id 489832
@@ -68,6 +74,8 @@
                     :build ""
                     :date "2021-11-11"
                     :bytes 15317170732
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "3f42a76b2895711faa9f8b0358fa1a0519948258"}
                     :depots [{:depot-id 489831
                              :manifest-gid "1985552842565684891"}
                             {:depot-id 489832
@@ -80,6 +88,8 @@
                     :build ""
                     :date "2021-11-22"
                     :bytes 15317264590
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "8a79756d4e5261f679625c43129adee9775b553c"}
                     :depots [{:depot-id 489831
                              :manifest-gid "6913241376784585188"}
                             {:depot-id 489832
@@ -92,6 +102,8 @@
                     :build ""
                     :date "2021-12-13"
                     :bytes 15317165631
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "b4394addce2eb123cd2544b50723944c45854aec"}
                     :depots [{:depot-id 489831
                              :manifest-gid "349141704917442044"}
                             {:depot-id 489832
@@ -104,6 +116,8 @@
                     :build ""
                     :date "2022-01-06"
                     :bytes 15317364810
+                    :executables {"SkyrimSELauncher.exe" "7662d5453d5b4666cd23977ad8435cec68d22a73"
+                                 "SkyrimSE.exe" "94d2546495618e4fa35d289473c882ef185c9965"}
                     :depots [{:depot-id 489831
                              :manifest-gid "7089166303853251347"}
                             {:depot-id 489832
@@ -116,6 +130,8 @@
                     :build ""
                     :date "2022-09-15"
                     :bytes 15345521094
+                    :executables {"SkyrimSELauncher.exe" "295b1b0e6b9bfcad1948d885f1afaa39af4b74eb"
+                                 "SkyrimSE.exe" "98668d6cb3ec92f2f3eb1bfff52d2eb5f3ad17c0"}
                     :depots [{:depot-id 489831
                              :manifest-gid "3660787314279169352"}
                             {:depot-id 489832
@@ -128,6 +144,8 @@
                     :build ""
                     :date "2022-09-20"
                     :bytes 15345519558
+                    :executables {"SkyrimSELauncher.exe" "295b1b0e6b9bfcad1948d885f1afaa39af4b74eb"
+                                 "SkyrimSE.exe" "94f375eeb455a9161fb1f1c7b2ac03d5a57769f4"}
                     :depots [{:depot-id 489831
                              :manifest-gid "3660787314279169352"}
                             {:depot-id 489832
@@ -140,6 +158,8 @@
                     :build ""
                     :date "2023-12-05"
                     :bytes 16095467175
+                    :executables {"SkyrimSELauncher.exe" "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d"
+                                 "SkyrimSE.exe" "dc6f7836386d44c848aabe497e1d136b28de7a94"}
                     :depots [{:depot-id 489831
                              :manifest-gid "3737743381894105176"}
                             {:depot-id 489832
@@ -177,6 +197,7 @@
                     :build "22848228"
                     :date "2026-05-27"
                     :bytes 30410020902
+                    :executables {}
                     :depots [{:depot-id 377161
                              :manifest-gid "5983086794954940044"}
                             {:depot-id 377162
@@ -191,6 +212,7 @@
                     :build ""
                     :date "2024-05-13"
                     :bytes 31289015478
+                    :executables {}
                     :depots [{:depot-id 377161
                              :manifest-gid "7332110922360867314"}
                             {:depot-id 377162
@@ -238,6 +260,7 @@
                     :build "15039560"
                     :date "2024-09-05"
                     :bytes 6013532400
+                    :executables {}
                     :depots [{:depot-id 72851
                              :manifest-gid "430694959351693705"}
                             {:depot-id 72853
@@ -273,6 +296,7 @@
                     :build "1510068"
                     :date "2018-05-08"
                     :bytes 9539179509
+                    :executables {}
                     :depots [{:depot-id 22381
                              :manifest-gid "8327177303444281069"}
                             {:depot-id 22382
@@ -320,6 +344,7 @@
                     :build "1510065"
                     :date "2018-05-08"
                     :bytes 5931321158
+                    :executables {}
                     :depots [{:depot-id 22331
                              :manifest-gid "7977703601170745652"}]}]}
         {:appid 413150
@@ -354,6 +379,7 @@
                     :build "16826371"
                     :date "2024-12-22"
                     :bytes 691846347
+                    :executables {}
                     :depots [{:depot-id 413151
                              :manifest-gid "4278718763097142923"}]}
                    {:id "compatibility"
@@ -362,6 +388,7 @@
                     :build "16826373"
                     :date "2024-12-22"
                     :bytes 580712810
+                    :executables {}
                     :depots [{:depot-id 413151
                              :manifest-gid "4848991934266309406"}]}
                    {:id "previous_version"
@@ -370,6 +397,7 @@
                     :build "16375315"
                     :date "2024-12-20"
                     :bytes 690853004
+                    :executables {}
                     :depots [{:depot-id 413151
                              :manifest-gid "1364246008775303529"}]}
                    {:id "legacy_1.6.8"
@@ -378,6 +406,7 @@
                     :build "14198583"
                     :date "2024-11-04"
                     :bytes 675607362
+                    :executables {}
                     :depots [{:depot-id 413151
                              :manifest-gid "1777024427851858279"}]}
                    {:id "legacy_1.5.6"
@@ -386,6 +415,7 @@
                     :build "8043676"
                     :date "2024-03-18"
                     :bytes 650810621
+                    :executables {}
                     :depots [{:depot-id 413151
                              :manifest-gid "5609262347030774375"}]}]}
         {:appid 1091500
@@ -420,6 +450,7 @@
                     :build "20383525"
                     :date "2025-10-14"
                     :bytes 66366228927
+                    :executables {}
                     :depots [{:depot-id 1091501
                              :manifest-gid "3389237510439361019"}]}
                    {:id "2_30_old"
@@ -428,6 +459,7 @@
                     :build "19260982"
                     :date "2025-09-11"
                     :bytes 67331782951
+                    :executables {}
                     :depots [{:depot-id 1091501
                              :manifest-gid "6814019010317238099"}]}
                    {:id "2_21_old"
@@ -436,6 +468,7 @@
                     :build "17055519"
                     :date "2025-07-17"
                     :bytes 66043436302
+                    :executables {}
                     :depots [{:depot-id 1091501
                              :manifest-gid "8420445566849588826"}]}
                    {:id "2_13_old"
@@ -444,6 +477,7 @@
                     :build "15646965"
                     :date "2024-12-10"
                     :bytes 65871998280
+                    :executables {}
                     :depots [{:depot-id 1091501
                              :manifest-gid "4350623720177810551"}]}
                    {:id "1_63_legacy_patch"
@@ -452,6 +486,7 @@
                     :build "11545061"
                     :date "2023-09-21"
                     :bytes 69245530209
+                    :executables {}
                     :depots [{:depot-id 1091501
                              :manifest-gid "6594873489665865240"}]}]}
         {:appid 1086940
@@ -486,6 +521,7 @@
                     :build "24532579"
                     :date "2026-08-03"
                     :bytes 155343283550
+                    :executables {}
                     :depots [{:depot-id 1086941
                              :manifest-gid "4288948197859959444"}
                             {:depot-id 1086942
@@ -500,6 +536,7 @@
                     :build "16065077"
                     :date "2025-03-27"
                     :bytes 154377614894
+                    :executables {}
                     :depots [{:depot-id 1086941
                              :manifest-gid "5026713417664092526"}
                             {:depot-id 1086942
@@ -514,6 +551,7 @@
                     :build "13981165"
                     :date "2024-04-08"
                     :bytes 152785305901
+                    :executables {}
                     :depots [{:depot-id 1086941
                              :manifest-gid "4016443084035836922"}
                             {:depot-id 1086942
@@ -554,6 +592,7 @@
                     :build "14365463"
                     :date "2024-06-04"
                     :bytes 9347718020
+                    :executables {}
                     :depots [{:depot-id 22371
                              :manifest-gid "2416786561786063548"}]}]}
         {:appid 22320
@@ -588,6 +627,7 @@
                     :build "1510067"
                     :date "2018-05-08"
                     :bytes 1142479546
+                    :executables {}
                     :depots [{:depot-id 22321
                              :manifest-gid "1293785437610275498"}]}]}
         {:appid 1716740
@@ -622,6 +662,7 @@
                     :build "23518663"
                     :date "2026-06-11"
                     :bytes 137931370869
+                    :executables {}
                     :depots [{:depot-id 1716741
                              :manifest-gid "6026043903923231328"}
                             {:depot-id 1716742

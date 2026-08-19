@@ -13,6 +13,7 @@
             [reliquary.steam.auth :as auth]
             [reliquary.catalog :as catalog]
             [reliquary.steam.installs :as installs]
+            [reliquary.steam.local :as local]
             [reliquary.switch :as switch]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done])
@@ -967,8 +968,12 @@
             property rather than any binding, so the write lands in the shared
             target/test-state/data and is cleaned up here -- a future-dated
             catalog left there shadows the bundled one for every later test."
-    (let [body   (-> (slurp (io/resource "catalog.edn"))
-                     (.replace "2026-08-17T18:37:21Z" "2099-12-31T00:00:00Z")
+    ;; the CURRENT :generated, read from the bundled catalog rather than written
+    ;; in here as a literal: hardcoding it meant regenerating the catalog broke
+    ;; this test, which has nothing to do with what it is testing
+    (let [raw    (slurp (io/resource "catalog.edn"))
+          body   (-> raw
+                     (.replace (:generated (catalog/parse raw)) "2099-12-31T00:00:00Z")
                      (.replace "Stardew Valley" "Stardew Valley (FROM THE WIRE)"))
           bytes  (.getBytes ^String body "UTF-8")
           server (doto (HttpServer/create (InetSocketAddress. "127.0.0.1" 0) 0)
@@ -1194,3 +1199,57 @@
                         switch/run! (fn [_] (throw (AssertionError. "must not run")))]
             @(main/switch-install! state)
             (is (str/includes? (str (:error @state)) "which version"))))))))
+
+;; ---------------------------------------------------------------------------
+;; the installed version is decided by hashing the executable
+
+(def ^:private game-with-exes
+  (assoc game :versions
+         [{:id "public" :label "Latest" :branch "public" :bytes 1
+           :depots [{:depot-id 1 :manifest-gid "a"}]
+           :executables {"Game.exe" "aaaa"}}
+          {:id "old" :label "1.5.97" :branch "public" :bytes 1
+           :depots [{:depot-id 1 :manifest-gid "b"}]
+           :executables {"Game.exe" "bbbb"}}]))
+
+(deftest the-installed-version-comes-from-the-executables-hash
+  (testing "not from Steam's appmanifest, which is bookkeeping: it goes stale
+            when files are swapped by hand and says nothing after a half-applied
+            switch. The bytes on disk are the authority."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes]})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths (fn [_ paths _]
+                                           (is (= ["Game.exe"] (vec paths))
+                                               "only the executables are read")
+                                           {"Game.exe" "bbbb"})
+                        installs/installed-version
+                        (fn [_ _] (throw (AssertionError. "must not consult steam's records")))]
+            @(main/select-game! state 413150)
+            (is (= "old" (:id (:installed-version @state))))))))))
+
+(deftest an-executable-matching-no-version-is-unidentified
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game-with-exes]})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      installs/find-install (constantly an-install)
+                      local/hash-paths (constantly {"Game.exe" "something-else"})]
+          @(main/select-game! state 413150)
+          (is (nil? (:installed-version @state))))))))
+
+(deftest a-catalog-without-executable-hashes-falls-back-to-steams-record
+  (testing "the shipped catalog predates the field, so this keeps the panel
+            working until it is regenerated -- but the hash wins whenever the
+            catalog can answer"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game]})]   ; no :executables anywhere
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths (fn [_ _ _] (throw (AssertionError. "nothing to hash")))
+                        installs/installed-version (constantly {:id "public" :label "Latest"})]
+            @(main/select-game! state 413150)
+            (is (= "public" (:id (:installed-version @state))))))))))

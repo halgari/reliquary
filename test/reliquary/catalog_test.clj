@@ -327,3 +327,48 @@
               (is (not= :timeout c) "a newer catalog must still reach on-done")
               (is (= "2099-06-01T00:00:00Z" (:generated c))))
             (finally (.stop server 0))))))))))
+
+;; ---------------------------------------------------------------------------
+;; executable hashes
+;;
+;; Which version an install IS gets decided by hashing its executable, so the
+;; catalog carries the hash each version's executable should have. A manifest is
+;; immutable, so this is resolved once by the catalog tool and never fetched
+;; again -- the app identifies an install offline, in milliseconds, before the
+;; user has even signed in.
+
+(deftest a-version-carries-its-executable-hashes
+  (let [c (catalog/parse
+           (pr-str {:schema-version 1 :generated "2026-01-01T00:00:00Z"
+                    :games [{:appid 1 :title "G"
+                             :versions [{:id "v" :label "V" :branch "public"
+                                         :depots [{:depot-id 1 :manifest-gid "9"}]
+                                         :executables {"Game.exe" "aabb"}}]}]}))]
+    (is (= {"Game.exe" "aabb"}
+           (-> c :games first :versions first :executables)))))
+
+(deftest a-version-without-executable-hashes-still-parses
+  (testing "the catalog predates this field, and an app that refused to load one
+            without it would refuse to load the copy it ships with"
+    (let [c (catalog/parse
+             (pr-str {:schema-version 1 :generated "2026-01-01T00:00:00Z"
+                      :games [{:appid 1 :title "G"
+                               :versions [{:id "v" :label "V" :branch "public"
+                                           :depots [{:depot-id 1 :manifest-gid "9"}]}]}]}))]
+      (is (some? c))
+      (is (empty? (-> c :games first :versions first :executables))))))
+
+(deftest executable-entries-that-are-not-hashes-are-dropped
+  (testing "this map decides which version a user is told they have, and it
+            arrives over the network"
+    (let [c (catalog/parse
+             (pr-str {:schema-version 1 :generated "2026-01-01T00:00:00Z"
+                      :games [{:appid 1 :title "G"
+                               :versions [{:id "v" :label "V" :branch "public"
+                                           :depots [{:depot-id 1 :manifest-gid "9"}]
+                                           :executables {"Game.exe" "aabb"
+                                                         "" "cc"
+                                                         "Bad.exe" ""
+                                                         "Worse.exe" 42}}]}]}))]
+      (is (= {"Game.exe" "aabb"}
+             (-> c :games first :versions first :executables))))))

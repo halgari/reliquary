@@ -1,38 +1,42 @@
 {
- "appid": 489830,
- "name": "The Elder Scrolls V: Skyrim Special Edition",
- "foreign-language-depots": [
-  489834,
-  489835,
-  489836,
-  489837,
-  489838,
-  489839,
-  544860,
-  544861
- ],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "13189953",
-   "date": "2024-01-17",
-   "bytes": 16095731388,
-   "depots": [
+  "appid": 489830,
+  "name": "The Elder Scrolls V: Skyrim Special Edition",
+  "foreign-language-depots": [
+    489834,
+    489835,
+    489836,
+    489837,
+    489838,
+    489839,
+    544860,
+    544861
+  ],
+  "versions": [
     {
-     "depot-id": 489831,
-     "manifest-gid": "8442952117333549665"
-    },
-    {
-     "depot-id": 489832,
-     "manifest-gid": "8042843504692938467"
-    },
-    {
-     "depot-id": 489833,
-     "manifest-gid": "1914580699073641964"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "13189953",
+      "date": "2024-01-17",
+      "bytes": 16095731388,
+      "depots": [
+        {
+          "depot-id": 489831,
+          "manifest-gid": "8442952117333549665"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "8042843504692938467"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "1914580699073641964"
+        }
+      ],
+      "executables": {
+        "SkyrimSELauncher.exe": "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d",
+        "SkyrimSE.exe": "1c9636207b4613254b03d76c410540e10b539dc9"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

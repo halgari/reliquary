@@ -482,6 +482,30 @@
   [state]
   (catalog/version (selected-game state) (:selected-version-id state)))
 
+(defn- identify-installed
+  "Which version this install IS, decided by hashing its executable.
+
+   NOT from Steam's appmanifest. That is bookkeeping: it goes stale the moment
+   files are swapped by hand, it says nothing after a half-applied switch, and it
+   is exactly what this app makes untrue. The bytes are the authority.
+
+   Free, and offline. The catalog carries each version's executable hashes -- a
+   manifest is immutable, so they are resolved once by the catalog tool and never
+   fetched again -- so this reads two files (about 40 ms on a real Skyrim
+   install) and looks them up. No session, no manifest, no network.
+
+   Falls back to the appmanifest's manifest ids when the catalog has no
+   executable hashes for this game, which is true of every catalog generated
+   before the field existed, including the one currently shipped. The hash wins
+   wherever the catalog can answer."
+  [game install]
+  (let [candidates (local/catalog-candidates (catalog/versions game))]
+    (if (seq candidates)
+      (let [paths  (distinct (mapcat #(local/exe-paths (:files %)) candidates))
+            hashes (local/hash-paths (:path install) paths {})]
+        (:version (local/identify hashes candidates)))
+      (installs/installed-version game install))))
+
 (defn detect-install!
   "Look for an existing Steam install of `appid` and, if it is still the selected
    game when the answer arrives, put it on the panel. Returns a promise.
@@ -504,7 +528,7 @@
        (try
          (let [install (installs/find-install appid)
                game    (first (filter #(= appid (:appid %)) (:games @state)))
-               version (when (and install game) (installs/installed-version game install))]
+               version (when (and install game) (identify-installed game install))]
            (fx-run! #(swap! state (fn [s]
                                     (if (= appid (:selected-appid s))
                                       (assoc s :install install :installed-version version)

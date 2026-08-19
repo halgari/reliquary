@@ -43,10 +43,29 @@
     (when (and id (string? gid) (seq gid))
       {:depot-id id :manifest-gid gid})))
 
+(defn- norm-executables
+  "{path sha} for a version's executables, keeping only usable pairs.
+
+   This map decides which version a user is told they have, and it arrives over
+   the network, so an entry with a blank path or a non-string hash is dropped
+   rather than carried into the identification.
+
+   Absent is fine and is the common case for now: the catalog predates the
+   field, and an app that refused a catalog without it would refuse the copy it
+   ships with."
+  [v]
+  (into {}
+        (keep (fn [[path sha]]
+                (let [path (str path)]
+                  (when (and (seq path) (string? sha) (seq sha))
+                    [path sha]))))
+        (:executables v)))
+
 (defn- norm-version [v]
   (let [depots (into [] (keep norm-depot) (:depots v))]
     (when (and (seq (:id v)) (seq (:label v)) (seq (:branch v)) (seq depots))
-      {:id     (:id v)
+      {:executables (norm-executables v)
+       :id     (:id v)
        :label  (:label v)
        :branch (:branch v)
        :build  (str (:build v))

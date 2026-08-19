@@ -19,6 +19,21 @@ ROOT = os.path.dirname(os.path.dirname(TOOL))
 SCHEMA = 1
 
 
+KEYWORDISH = re.compile(r"^[a-z][a-z0-9-]*$")
+
+
+def edn_key(k):
+    """A map key: a keyword where that is what it is, a string otherwise.
+
+    The catalog's own schema keys are keywords, and should be. But the
+    executables map is keyed by FILENAME -- "SkyrimSE.exe" -- and emitting that
+    as a keyword produced `:SkyrimSE.exe`, which read back as the string
+    ":SkyrimSE.exe", colon and all, and matched no file on any disk. A filename
+    is data, not an identifier."""
+    k = str(k)
+    return f":{k}" if KEYWORDISH.match(k) else to_edn(k)
+
+
 def to_edn(v, indent=0):
     """Emit EDN. The catalog is Clojure data, so it is stored as Clojure data:
     read by clojure.edn/read-string with no parser dependency, and keywords
@@ -28,7 +43,7 @@ def to_edn(v, indent=0):
         if not v:
             return "{}"
         return "{" + ("\n" + pad + " ").join(
-            f":{k} {to_edn(val, indent + 2 + len(str(k)))}" for k, val in v.items()) + "}"
+            f"{edn_key(k)} {to_edn(val, indent + 2 + len(str(k)))}" for k, val in v.items()) + "}"
     if isinstance(v, list):
         if not v:
             return "[]"
@@ -180,6 +195,10 @@ def build_game(domain):
                          "branch": v["branch"],
                          "build": str(v.get("build") or ""), "date": v.get("date"),
                          "bytes": int(v.get("bytes") or 0),
+                         # resolved once by exe_hashes.clj; this is what lets the
+                         # app identify an install offline instead of trusting
+                         # Steam's own record of what it put there
+                         "executables": v.get("executables") or {},
                          "depots": norm_depots(v["depots"])})
     # A historical entry whose depots match the current build IS the current
     # build: Skyrim SE's 1.6.1170 is byte-identical to "Latest - public" on
@@ -214,6 +233,7 @@ def build_game(domain):
                          "branch": "public",
                          "build": str(v.get("build") or ""), "date": v.get("date"),
                          "bytes": int(v.get("bytes") or 0),
+                         "executables": v.get("executables") or {},
                          "depots": norm_depots(drop_excluded(v["depots"], excluded))})
     if not versions:
         return None, "no versions from any source"
