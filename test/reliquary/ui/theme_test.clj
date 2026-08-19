@@ -7,8 +7,14 @@
 
 (deftest every-gilt-token-is-present-and-exact
   (testing "these hex values are the brand spec; a drift here is a brand bug"
+    ;; :text-dim came from the switch-mode design, which uses #6f6f6f twice --
+    ;; the "from steam" tag and the hashing detail line -- for captions that sit
+    ;; UNDER a text-muted label and must not compete with it. Added here rather
+    ;; than hardcoded in the view, so this test stays the one place the palette
+    ;; is defined and a drift is still a brand bug.
     (is (= {:bg "#0C0C0C" :surface "#161616" :line "#292929" :line-strong "#383838"
-            :text "#F2F0EE" :text-muted "#9A9A9A" :gold "#C2A35F" :amethyst "#7D6B91"}
+            :text "#F2F0EE" :text-muted "#9A9A9A" :text-dim "#6F6F6F"
+            :gold "#C2A35F" :amethyst "#7D6B91"}
            theme/color))))
 
 (deftest fonts-load-from-the-bundle-not-the-network

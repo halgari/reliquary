@@ -21,10 +21,12 @@
    until Task E wires the real thing in. A missing or failed image must
    never be treated differently from a game that simply has no art -- both
    render the same placeholder."
-  (:require [clojure.string :as str]
+  (:require [cljfx.api :as fx]
+            [clojure.string :as str]
             [reliquary.catalog :as catalog]
             [reliquary.ui.anim :as anim]
-            [reliquary.ui.theme :as theme]))
+            [reliquary.ui.theme :as theme])
+  (:import (javafx.scene.layout Region StackPane)))
 
 (def ^:private c theme/color)
 
@@ -454,7 +456,169 @@
      (pos? (or (:bytes selected-version) 0)) (str "Download " (size-label (:bytes selected-version)))
      :else                                   "Download")))
 
+(defn- gb [bytes]
+  (if (and bytes (pos? bytes))
+    (format "%.1f GB" (/ (double bytes) (* 1024.0 1024 1024)))
+    "size unknown"))
+
+(defn- switch-action-label
+  "What the button offers, given what is on disk and what is selected.
+
+   Naming the target version rather than saying \"Switch\" is the whole point:
+   this is a destructive act on an existing install, and the user should read
+   what it will do before they press it."
+  [installed-version selected-version]
+  (cond
+    (nil? selected-version) "Select a version"
+    (and installed-version (= (:id installed-version) (:id selected-version)))
+    "Already installed"
+    :else (str "Switch to " (:label selected-version))))
+
+(defn- hashing-panel
+  "The design's `analyzing` state: a bar over the install being read.
+
+   Progress is in BYTES, not files -- depot files are wildly uneven, and a
+   per-file bar sits at 2% and then jumps to 98% on one .bsa. Measured on a real
+   15 GB install this takes about sixteen seconds, so this is a bar that
+   genuinely moves rather than a spinner standing in for one."
+  [{:keys [done total]}]
+  (let [done (or done 0)
+        total (or total 0)
+        ;; the first callback can arrive before a total is known
+        frac (if (pos? total) (/ (double done) total) 0.0)]
+    {:fx/type :v-box :spacing 9
+     :padding 14
+     :style (theme/style {:-fx-background-color (:bg c)
+                           :-fx-border-color (:line c)
+                           :-fx-border-radius 3
+                           :-fx-background-radius 3})
+     :children
+     [{:fx/type :h-box :spacing 10
+       :children [{:fx/type :label :text "Hashing local files"
+                   :style (theme/style {:-fx-font-family (theme/mono-font)
+                                         :-fx-font-size 11
+                                         :-fx-text-fill (:text c)})}
+                  {:fx/type :region :h-box/hgrow :always}
+                  {:fx/type :label :text (format "%d%%" (long (* 100 frac)))
+                   :style (theme/style {:-fx-font-family (theme/mono-font)
+                                         :-fx-font-size 11
+                                         :-fx-text-fill (:gold c)})}]}
+      ;; A 3px track with a gold fill sized by fraction. A :progress-bar would
+      ;; drag JavaFX's Modena skin in and need overriding in four places.
+      ;;
+      ;; The fill's width is BOUND to the track's live width rather than computed
+      ;; from a pixel constant. The first version used a hardcoded 236 inside a
+      ;; track that is about 324 wide, so a completed pass rendered
+      ;; three-quarters full -- a number that looked entirely reasonable in the
+      ;; description map and was wrong on screen. Binding also survives the panel
+      ;; being re-laid out, which a constant does not.
+      {:fx/type fx/ext-on-instance-lifecycle
+       :on-created
+       (fn [^StackPane track]
+         (when-let [fill (first (.getChildren track))]
+           (.bind (.maxWidthProperty ^Region fill)
+                  (.multiply (.widthProperty track) (double frac)))))
+       :desc
+       {:fx/type :stack-pane
+        :alignment :center-left
+        :min-height 3 :max-height 3
+        :style (theme/style {:-fx-background-color (:line c) :-fx-background-radius 2})
+        :children [{:fx/type :region
+                    :min-height 3 :max-height 3
+                    :style (theme/style {:-fx-background-color (:gold c)
+                                          :-fx-background-radius 2})}]}}
+      {:fx/type :label :text (str (gb done) " of " (gb total))
+       :style (theme/style {:-fx-font-family (theme/mono-font)
+                             :-fx-font-size 10
+                             :-fx-text-fill (:text-dim c)})}]}))
+
+(defn- switch-footer
+  "The panel when the game is ALREADY installed: where Steam put it, what
+   version those bytes are, and the one action worth offering.
+
+   This replaces the install-to section rather than joining it. A user changing
+   an existing install is not choosing a folder -- the folder is Steam's, and
+   offering to pick another would invite them to install a second copy of a game
+   they already have."
+  [{:keys [install installed-version selected-version hashing on-analyze]}]
+  {:fx/type :v-box :spacing 14
+   :children
+   (cond-> [{:fx/type :v-box :spacing 6
+             :children
+             [{:fx/type :h-box :spacing 10 :alignment :center-left
+               :children [{:fx/type :label :text (tracked "Installed at")
+                           :style (theme/style {:-fx-font-family (theme/mono-font)
+                                                 :-fx-font-size 11
+                                                 :-fx-text-fill (:text-muted c)})}
+                          {:fx/type :region :h-box/hgrow :always}
+                          ;; The design labels the source, and it earns its
+                          ;; place: this path is Steam's, not one the user chose
+                          ;; here. Uppercased in the literal because JavaFX has
+                          ;; no text-transform, the same reason `tracked` exists
+                          ;; for letter-spacing. Its .1em tracking is finer than
+                          ;; `tracked` produces, so it is left plain rather than
+                          ;; spaced out to twice the intended width at 10px.
+                          {:fx/type :label :text "FROM STEAM"
+                           :style (theme/style {:-fx-font-family (theme/mono-font)
+                                                 :-fx-font-size 10
+                                                 :-fx-text-fill (:text-dim c)})}]}
+              {:fx/type :label :text (str (:path install))
+               :wrap-text true :max-width 300
+               :style (theme/style {:-fx-font-family (theme/mono-font)
+                                     :-fx-font-size 12
+                                     :-fx-text-fill (:text c)})}
+              {:fx/type :label
+               :text (str (if installed-version
+                            (:label installed-version)
+                            ;; identification is by content; when the bytes match
+                            ;; no version we carry, saying so beats naming the
+                            ;; nearest one and being believed
+                            "Unrecognised build")
+                          " · " (gb (:bytes install)))
+               :style (theme/style {:-fx-font-family (theme/mono-font)
+                                     :-fx-font-size 11
+                                     :-fx-text-fill (:text-muted c)})}]}]
+
+     hashing (conj (hashing-panel hashing))
+
+     ;; while hashing there is nothing to press: the button is GONE rather than
+     ;; disabled, which is what the design shows and what stops a second pass
+     ;; being started over the first
+     (not hashing)
+     (conj (let [label (switch-action-label installed-version selected-version)
+                 ready? (str/starts-with? label "Switch")]
+             {:fx/type :button :text label
+              :disable (not ready?)
+              :on-action (or on-analyze (fn [_]))
+              :min-height 44 :max-width Double/MAX_VALUE
+              :style (theme/style
+                      (if ready?
+                        {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)
+                         :-fx-background-radius 3 :-fx-font-size 14
+                         :-fx-font-family (theme/ui-semibold-font)
+                         :-fx-effect (theme/glow (:gold c)
+                                                  {:blur 22 :spread -10 :dy 6 :alpha 0.9})}
+                        ;; recessed and outlined, exactly like the disabled
+                        ;; download button: a disabled control must read as
+                        ;; inert, and surface-on-surface has no visible bounds
+                        {:-fx-background-color (:bg c) :-fx-text-fill (:text-muted c)
+                         :-fx-border-color (:line c)
+                         :-fx-border-radius 3
+                         :-fx-background-radius 3 :-fx-font-size 14}))})))})
+
+(declare panel-download-footer)
+
 (defn- panel-footer
+  "Which footer the side panel gets. An install Reliquary can see turns this into
+   switch mode; otherwise it is the ordinary pick-a-folder-and-download path."
+  [{:keys [folder selected-version owned? install installed-version hashing
+           on-change-folder on-download on-analyze]
+    :as   state}]
+  (if install
+    (switch-footer state)
+    (panel-download-footer state)))
+
+(defn- panel-download-footer
   [{:keys [folder selected-version owned? on-change-folder on-download]}]
   (let [owned?   (not (false? owned?))
         ready?   (and owned? (some? selected-version))
@@ -510,7 +674,9 @@
                                :-fx-background-radius 3 :-fx-font-size 14}))}]}))
 
 (defn- side-panel
-  [{:keys [game selected-version-id folder owned? on-select-version on-change-folder on-download]}]
+  [{:keys [game selected-version-id folder owned? install installed-version hashing
+           on-select-version on-change-folder on-download on-analyze]
+    :as   state}]
   (let [versions         (catalog/versions game)
         selected-version (find-version game selected-version-id)]
     ;; :border-pane, not a :v-box with a :v-box/vgrow :always middle child.
@@ -559,9 +725,13 @@
                                         versions)}}
      :bottom {:fx/type :v-box
               :border-pane/margin {:top 16}
-              :children [(panel-footer {:folder folder :selected-version selected-version
-                                             :owned? owned?
-                                         :on-change-folder on-change-folder :on-download on-download})]}}))
+              ;; the whole panel state is forwarded, plus the version resolved
+              ;; here, so switch mode's keys reach the footer without every
+              ;; layer having to enumerate them
+              :children [(panel-footer (assoc state
+                                              :folder folder
+                                              :selected-version selected-version
+                                              :owned? owned?))]}}))
 
 ;; ---------------------------------------------------------------------
 ;; Top level
@@ -578,13 +748,16 @@
    present in `:games` -- an id left over from a previous, now-filtered-out
    library must not conjure a panel for a game the grid isn't showing."
   [{:keys [games query selected-appid selected-version-id owned folder capsule-fn
-           on-query-change on-select-game on-select-version on-change-folder on-download]
+           install installed-version hashing
+           on-query-change on-select-game on-select-version on-change-folder
+           on-download on-analyze]
     :or   {capsule-fn         (constantly nil)
            on-query-change    (fn [_])
            on-select-game     (fn [_])
            on-select-version  (fn [_])
            on-change-folder   (fn [_])
-           on-download        (fn [_])}}]
+           on-download        (fn [_])
+           on-analyze         (fn [_])}}]
   (let [games         (or games [])
         filtered      (filter-games games query)
         selected-game (find-game games selected-appid)]
@@ -600,6 +773,11 @@
                            :selected-version-id selected-version-id
                            :folder folder
                            :owned? (owned?* owned (:appid selected-game))
+                           ;; switch mode -- see panel-footer
+                           :install install
+                           :installed-version installed-version
+                           :hashing hashing
                            :on-select-version on-select-version
                            :on-change-folder on-change-folder
-                           :on-download on-download})))}))
+                           :on-download on-download
+                           :on-analyze on-analyze})))}))

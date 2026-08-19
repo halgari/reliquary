@@ -237,3 +237,48 @@
         (is (> (max-goldness img (- row-x 5) (- row-x 1) y0 y1) 4)
             "no gold to the left of the selected row -- its glow is shaved off
              flat against the scroll viewport")))))
+
+;; ---------------------------------------------------------------------------
+;; the hashing bar actually spans its track
+;;
+;; A progress bar whose fill is sized from a guessed pixel width is a bar that
+;; never reaches the end. The first version used a hardcoded 236px basis inside a
+;; track that is ~324px wide, so 100% rendered as about three-quarters full --
+;; visible in a screenshot, invisible to any assertion over the description map,
+;; because the number in it looked perfectly reasonable.
+
+(defn- hashing-panel-at [frac]
+  (let [g {:appid 1 :title "G" :studio "S" :art {:capsule nil :screenshots []} :quotes []
+           :versions [{:id "public" :label "Latest" :branch "public"
+                       :date "2026-01-01" :bytes 1 :depots [{}]}]}]
+    (library/view {:games [g] :selected-appid 1
+                   :install {:appid 1 :path "/x" :bytes 1000}
+                   :installed-version {:id "public" :label "Latest"}
+                   :hashing {:done (long (* 1000 frac)) :total 1000}})))
+
+(defn- gold-run
+  "The widest horizontal run of gold pixels INSIDE THE SIDE PANEL -- the bar's
+   fill.
+
+   Restricted to x >= 820 deliberately: the selected card in the grid carries a
+   gold border, which is a ~166px horizontal run and wider than a half-full bar.
+   Measuring the whole image reported that border instead and made a broken bar
+   look like a working one at 50%."
+  [^BufferedImage img]
+  (apply max 0
+         (for [y (range (.getHeight img))]
+           (let [row (for [x (range 820 (.getWidth img))
+                           :let [[r _ b] (chan img x y)]]
+                       (> (- r b) 40))]
+             (->> row (partition-by identity) (filter first) (map count) (apply max 0))))))
+
+(deftest the-hashing-bar-fills-its-track-at-100-percent
+  (let [full (gold-run (render! (hashing-panel-at 1.0) 1200 900 "hash-full.png"))
+        half (gold-run (render! (hashing-panel-at 0.5) 1200 900 "hash-half.png"))]
+    (is (pos? full) "the bar must render at all")
+    ;; the track sits inside a 400px panel: 24px panel padding and 14px box
+    ;; padding a side leaves ~324
+    (is (> full 300)
+        (str "at 100% the fill should span the whole track (~324px), got " full))
+    (is (< (Math/abs (- half (/ full 2.0))) 12)
+        (str "and 50% should be half of it -- got " half " against " (/ full 2.0)))))

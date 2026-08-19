@@ -325,3 +325,100 @@
       (is (some? card) "a card-sized node must exist in the real scene graph")
       (is (= 1.0 (.getOpacity ^Node card))
           "rise-in! never ran, so nothing set opacity away from its default"))))
+
+;; ---------------------------------------------------------------------------
+;; switch mode: the panel when the game is already installed
+;;
+;; The design replaces "Install to <folder>" with "Installed at <steam path>"
+;; whenever Reliquary can see the game in a Steam library, and adds a hashing
+;; state -- because changing an install starts by reading it, not by downloading.
+
+(def ^:private install
+  {:appid 100 :name "Stardew Valley" :build "16826371" :bytes 16095731388
+   :path "/home/me/.local/share/Steam/steamapps/common/Stardew Valley"})
+
+(defn- panel [extra]
+  (library/view (merge {:games games :selected-appid 100 :folder "/tmp/x"} extra)))
+
+(deftest with-no-detected-install-the-panel-is-unchanged
+  (testing "the download path is the common case and must not shift under it"
+    (let [s (pr-str (panel {}))]
+      (is (str/includes? s (#'library/tracked "Install to")))
+      (is (not (str/includes? s "Installed at"))))))
+
+(deftest a-detected-install-shows-where-steam-put-it
+  (let [s (pr-str (panel {:install install}))]
+    (is (str/includes? s (#'library/tracked "Installed at")))
+    ;; the design writes "from steam" with text-transform:uppercase, and JavaFX
+    ;; has no text-transform -- so the literal is uppercased, the same way
+    ;; `tracked` stands in for letter-spacing
+    (is (str/includes? s "FROM STEAM")
+        "the design labels the source, so a user knows this is not a folder they chose")
+    (is (str/includes? s (:path install)))
+    (is (not (str/includes? s (#'library/tracked "Install to")))
+        "switch mode REPLACES the install-to section rather than sitting beside it")))
+
+(deftest the-meta-line-names-the-version-actually-on-disk
+  (testing "identified by hashing, so this is what the bytes are -- not what
+            Steam's bookkeeping claims"
+    (let [s (pr-str (panel {:install install
+                            :installed-version {:id "1_5_97" :label "1.5.97"}}))]
+      (is (str/includes? s "1.5.97"))
+      (is (str/includes? s "15.0 GB") "and how much of the disk it is using"))))
+
+(deftest an-unrecognised-build-says-so-rather-than-guessing
+  (testing "the state a user is in right after Steam updates the game. Showing a
+            nearby version would tell them they have something they do not."
+    (let [s (pr-str (panel {:install install :installed-version nil}))]
+      (is (str/includes? s "Unrecognised"))
+      (is (not (str/includes? s "1.5.97"))))))
+
+(deftest the-action-names-the-version-it-would-switch-to
+  (let [s (pr-str (panel {:install install
+                          :installed-version {:id "public" :label "Latest"}
+                          :selected-version-id "public"}))]
+    ;; games' only version id is "public"; selecting the installed one
+    (is (str/includes? s "Already installed")
+        "switching to what is already there is not an action to offer")))
+
+(deftest switching-to-a-different-version-is-offered-by-name
+  (let [g (assoc-in (first games) [:versions]
+                    [{:id "public" :label "Latest" :branch "public" :bytes 10 :depots [{}]}
+                     {:id "1_5_97" :label "1.5.97" :branch "public" :bytes 10 :depots [{}]}])
+        s (pr-str (library/view {:games [g] :selected-appid (:appid g)
+                                 :install install
+                                 :installed-version {:id "public" :label "Latest"}
+                                 :selected-version-id "1_5_97"}))]
+    (is (str/includes? s "Switch to 1.5.97"))))
+
+(deftest hashing-replaces-the-action-with-progress
+  (testing "the design's analyzing state: while the install is being read there
+            is nothing to press, and the bar is what says the app is working"
+    (let [s (pr-str (panel {:install install
+                            :hashing {:done 9000000000 :total 15000000000}}))]
+      (is (str/includes? s "Hashing local files"))
+      (is (str/includes? s "60%") "a percentage, tabular so it does not jitter")
+      (is (str/includes? s "8.4 GB of 14.0 GB") "and the absolute figures beneath")
+      (is (not (str/includes? s "Switch to"))
+          "the action button is gone while it runs, not merely disabled"))))
+
+(deftest hashing-at-zero-does-not-divide-by-zero
+  (testing "the first progress callback can arrive before any total is known"
+    (is (str/includes? (pr-str (panel {:install install :hashing {:done 0 :total 0}}))
+                       "Hashing local files"))))
+
+(deftest the-analyze-action-is-wired
+  (let [fired (atom false)
+        g (assoc-in (first games) [:versions]
+                    [{:id "public" :label "Latest" :branch "public" :bytes 10 :depots [{}]}
+                     {:id "1_5_97" :label "1.5.97" :branch "public" :bytes 10 :depots [{}]}])
+        v (library/view {:games [g] :selected-appid (:appid g)
+                         :install install
+                         :installed-version {:id "public" :label "Latest"}
+                         :selected-version-id "1_5_97"
+                         :on-analyze (fn [_] (reset! fired true))})
+        btn (first (filter #(str/includes? (str (:text %)) "Switch to")
+                           (find-nodes v :button)))]
+    (is (some? btn))
+    ((:on-action btn) nil)
+    (is @fired)))

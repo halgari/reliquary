@@ -21,6 +21,10 @@
    :line-strong "#383838"
    :text        "#F2F0EE"
    :text-muted  "#9A9A9A"
+   ;; a step dimmer than text-muted, for the second rank of captions: the
+   ;; "from steam" tag and the hashing detail line, where a muted grey would
+   ;; compete with the label it sits under (design: #6f6f6f)
+   :text-dim    "#6F6F6F"
    :gold        "#C2A35F"
    :amethyst    "#7D6B91"})
 
