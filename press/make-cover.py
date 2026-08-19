@@ -19,7 +19,6 @@ W, H = 1280, 720
 BG = (12, 12, 12)
 GOLD = (194, 163, 95)
 TEXT = (242, 240, 238)
-MUTED = (154, 154, 154)
 
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.dirname(here)
@@ -39,7 +38,15 @@ img = Image.composite(Image.new("RGB", (W, H), GOLD), img, halo.point(lambda v: 
 logo = Image.open(os.path.join(here, "reliquary-logo-full.png")).convert("RGBA")
 target_w = 760
 logo = logo.resize((target_w, round(logo.height * target_w / logo.width)), Image.LANCZOS)
-lx, ly = (W - logo.width) // 2, H // 2 - logo.height // 2 - 46
+
+# Centre the logo AND the tagline as one block rather than centring the logo
+# and hanging text off it. The first cut offset the logo by a fixed 46px to
+# leave room for a rule and a disclaimer line underneath; with those gone the
+# same offset left the whole composition sitting high.
+GAP, TAGLINE_H = 40, 38
+block_h = logo.height + GAP + TAGLINE_H
+ly = (H - block_h) // 2
+lx = (W - logo.width) // 2
 img.paste(logo, (lx, ly), logo)
 
 d = ImageDraw.Draw(img)
@@ -57,14 +64,8 @@ def centre(text, y, f, fill, tracking=0):
     else:
         d.text(((W - d.textlength(text, font=f)) / 2, y), text, font=f, fill=fill)
 
-tagline_y = ly + logo.height + 40
-centre("Install any version of a Steam game", tagline_y, font("HankenGrotesk-Regular.ttf", 30), TEXT)
-
-rule_y = tagline_y + 62
-d.line([(W // 2 - 90, rule_y), (W // 2 + 90, rule_y)], fill=(56, 56, 56), width=1)
-
-centre("NOT AFFILIATED WITH VALVE OR STEAM", rule_y + 26,
-       font("DMMono-Regular.ttf", 15), MUTED, tracking=2.2)
+centre("Install any version of a Steam game", ly + logo.height + GAP,
+       font("HankenGrotesk-Regular.ttf", 30), TEXT)
 
 img.save(os.path.join(here, "cover.png"))
 print("wrote", os.path.join(here, "cover.png"), img.size)
