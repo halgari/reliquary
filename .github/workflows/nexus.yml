@@ -29,8 +29,13 @@ on:
         description: 'Release tag to upload (e.g. v0.1.3)'
         required: true
 
+# `write`, not `read`, and only for one reason: a DRAFT release is invisible to
+# a read-only token. The normal path -- publish, which fires this -- would be
+# happy with read, but then a manual re-run against a release that has not been
+# published yet fails with "release not found" while the release is plainly
+# sitting there. That is the exact case the manual trigger exists for.
 permissions:
-  contents: read
+  contents: write
 
 # The Nexus page is a single shared resource: two of these running at once would
 # race to add a version to the same file.
