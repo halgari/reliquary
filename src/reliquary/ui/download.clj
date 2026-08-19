@@ -122,15 +122,11 @@
 (def ^:private moving-stages
   "Stages that are actively moving bytes.
 
-   :switching is one: changing an existing install transfers over the network
-   exactly as a download does, it simply transfers far less of it.
-
-   :hashing and :staging are too, and that matters more than it looks. They move
-   bytes off a disk rather than over a wire -- 15 GB of it, at about a gigabyte a
-   second -- and leaving them out gated the ETA off entirely, so the screen sat
-   at 0.0 MB/s and --:-- for sixteen seconds while working flat out. On the one
-   operation that rewrites a game in place, that reads as hung."
-  #{:downloading :switching :hashing :staging})
+   Downloads only. Changing an existing install has its own screen --
+   reliquary.ui.switch -- because its phases need their own buttons: Cancel has
+   to stop a hash pass rather than a download context, and Resume has to re-hash
+   rather than fetch a whole game into a folder nobody chose."
+  #{:downloading})
 
 (defn- paused?
   "'Paused', for this screen, means anything other than actively pulling
@@ -143,9 +139,7 @@
   "Whether the Cancel button belongs on screen at all -- not before the run
    starts and not once it has stopped, one way or another."
   [stage]
-  ;; :hashing and :staging are a switch's preparation, and both take real time on
-  ;; a 15 GB install -- a user must be able to stop them, not only the transfer
-  (contains? #{:preparing :downloading :copying :hashing :staging :switching} stage))
+  (contains? #{:preparing :downloading :copying} stage))
 
 (defn- track
   "Manual letter-spacing, the same technique ui/app.clj's wordmark uses:
@@ -172,14 +166,7 @@
 (defn- header
   [game version snapshot]
   (let [stage  (or (:stage snapshot) :idle)
-        ;; A switch must not call itself a download: the user is changing a game
-        ;; they already have, and "Downloading" over a 0.21 GB transfer into an
-        ;; existing folder reads as a fresh 15 GB install.
-        kicker (track (cond (= :switching stage) "Switching"
-                            (= :hashing stage)   "Reading install"
-                            (= :staging stage)   "Preparing"
-                            (paused? stage)      "Paused"
-                            :else                "Downloading"))]
+        kicker (track (if (paused? stage) "Paused" "Downloading"))]
     {:fx/type :v-box
      :spacing 4
      :max-width header-text-width
@@ -192,15 +179,8 @@
        :style (theme/style {:-fx-font-family (theme/ui-bold-font) :-fx-font-size 25
                              :-fx-text-fill (:text c)})}
       {:fx/type :label
-       ;; A switch names what it will MOVE, not the size of the finished
-       ;; install. Rendering the real window showed `1.6.1130 · 15.0 GB`
-       ;; directly above `153 MB / 215 MB`: the install size is true, and next
-       ;; to a 215 MB transfer it reads as a 15 GB download -- contradicting the
-       ;; one number that makes switching worth doing.
        :text (str (:label version) " · "
-                  (if (:switch? snapshot)
-                    (fmt-size (:bytes-total snapshot))
-                    (fmt-size (:bytes version))))
+                  (fmt-size (:bytes version)))
        :max-width header-text-width
        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
                              :-fx-text-fill (:text-muted c)})}]}))
@@ -725,10 +705,6 @@
 ;; the stage panel entirely (same slot) whenever `:error` is set.
 
 (defn- interrupted-panel
-  "The failure panel. Its copy follows the KIND of run that failed: a switch that
-   calls itself an interrupted download, and offers to `Resume download`, is
-   promising the wrong thing -- re-running a switch re-hashes the install and
-   converges from whatever is on disk now, rather than continuing a transfer."
   [{:keys [category message]} snapshot on-retry on-back]
   {:fx/type :v-box
    :v-box/vgrow :always
@@ -740,8 +716,7 @@
                          :-fx-border-radius 6
                          :-fx-border-width 1})
    :children
-   [{:fx/type :label :text (str/upper-case
-                           (if (:switch? snapshot) "Switch interrupted" "Download interrupted"))
+   [{:fx/type :label :text (str/upper-case "Download interrupted")
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                            :-fx-text-fill (:gold c)})}
     ;; BOTH alignments, and they are not the same thing: -fx-text-alignment
@@ -755,15 +730,9 @@
      :style (theme/style {:-fx-font-family (theme/ui-font) :-fx-font-size 18
                            :-fx-text-fill (:text c) :-fx-text-alignment "center"})}
     {:fx/type :label
-     ;; "nothing needs to be re-fetched" is true of a DOWNLOAD, whose progress
-     ;; file records exactly what landed. A switch keeps no such record on
-     ;; purpose: re-running re-hashes the install and works out what is still
-     ;; needed, which may include re-fetching a file it had half written.
      :text (str (str/upper-case (name (or category :unknown))) " · "
-                (fmt-bytes (:bytes-done snapshot))
-                (if (:switch? snapshot)
-                  " already written · re-running will re-check the install and carry on"
-                  " kept on disk · nothing needs to be re-fetched"))
+                (fmt-bytes (:bytes-done snapshot)) " kept on disk · "
+                "nothing needs to be re-fetched")
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
                            :-fx-text-fill (:text-muted c)})}
     {:fx/type :region :min-height 8 :max-height 8}
@@ -771,7 +740,7 @@
      :alignment :center
      :spacing 12
      :children
-     [{:fx/type :button :text (if (:switch? snapshot) "Resume switch" "Resume download")
+     [{:fx/type :button :text "Resume download"
        :on-action (or on-retry (fn [_]))
        :min-height 40 :min-width 160
        :style (theme/style {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)

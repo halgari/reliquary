@@ -1122,16 +1122,15 @@
         (with-redefs [main/fx-run! (fn [f] (f))
                       main/open-session! (fn [] (error/raise :unauthenticated "not signed in"))]
           @(main/switch-install! state)
-          ;; on the transfer screen, where the interrupted panel renders it --
-          ;; the library has nowhere to show an error, so a failure raised before
-          ;; the screen moved would be invisible
-          (is (= :download (:screen @state)))
+          ;; on the switch screen, which has somewhere to show it. The library
+          ;; does not, so a failure raised before the screen moved is invisible.
+          (is (= :switch (:screen @state)))
           (is (= :failed (:stage (:snapshot @state))))
           (is (str/includes? (str (:error (:snapshot @state))) "not signed in")))))))
 
-(deftest a-switch-moves-to-the-download-screen-and-reports-progress
-  (testing "a switch is a transfer, so it reuses that screen rather than growing
-            a second one -- but it must arrive there saying `switching`"
+(deftest a-switch-reports-every-phase-on-its-own-screen
+  (testing "the switch screen owns the flow; it does not borrow the download
+            screen, whose buttons belong to a download"
     (with-tmp
       (fn []
         (let [state (wired {:games [game] :selected-appid 413150 :install an-install
@@ -1151,14 +1150,13 @@
                                          (swap! stages conj [(:screen s) st]))))
             @(main/switch-install! state)
             (remove-watch state ::probe)
-            ;; the screen VISITED, not the one it ends on -- a completed switch
-            ;; correctly finishes on :done
-            (is (some #(= :download (first %)) @stages) "it uses the transfer screen")
+            (is (every? #(= :switch (first %)) @stages)
+                "every phase is reported on the switch screen")
             (let [stages (map second @stages)]
               (is (some #{:hashing} stages) "the hashing phase is visible")
               (is (some #{:switching} stages) "and the transfer reads as a switch"))))))))
 
-(deftest a-finished-switch-lands-on-done
+(deftest a-finished-switch-stays-on-the-switch-screen
   (with-tmp
     (fn []
       (let [state (wired {:games [game] :selected-appid 413150 :install an-install
@@ -1169,13 +1167,48 @@
                       main/close-session! (fn [] nil)
                       switch/run! (fn [_] {:fetch-bytes 0})]
           @(main/switch-install! state)
-          (is (= :done (:screen @state)))
+          ;; the switch screen carries its own finished state rather than handing
+          ;; off to the download flow's done screen
+          (is (= :switch (:screen @state)))
+          (is (= :done (:stage (:snapshot @state))))
           ;; ui/done reads :path -- not :folder -- and main only ever set it on
           ;; the download path. Rendering the done screen after a switch showed
           ;; an empty box where the location goes, and Open folder had nothing
           ;; to open.
           (is (= (:path an-install) (:path @state))
               "the done screen shows where the switched install lives"))))))
+
+(deftest a-finished-switch-updates-what-is-installed
+  (testing "the install IS the target now. Leaving :installed-version at the old
+            one means the library goes on offering to switch to the version that
+            is already on disk, and the next switch would index with the wrong
+            manifest as its boundary map."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "old" :label "1.5.97"}
+                            :selected-version-id "public"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [_] {:fetch-bytes 0})]
+            @(main/switch-install! state)
+            (is (= "public" (:id (:installed-version @state))))))))))
+
+(deftest a-failed-switch-leaves-what-is-installed-alone
+  (testing "a half-applied switch is neither version; claiming the target would
+            send the next run's chunk index off the wrong manifest"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "old" :label "1.5.97"}
+                            :selected-version-id "public"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [_] (error/raise :unavailable "cdn went away"))]
+            @(main/switch-install! state)
+            (is (= "old" (:id (:installed-version @state))))))))))
 
 (deftest a-failed-switch-is-reported-not-swallowed
   (testing "it rewrites a game in place; a failure that left the screen looking
@@ -1440,3 +1473,55 @@
                       main/switch-install! (fn [_] (throw (AssertionError. "must not switch")))]
           ((:on-retry (main/initial-state state nil)) nil)
           (is @downloaded))))))
+
+;; ---------------------------------------------------------------------------
+;; the switch screen owns the flow now
+
+(deftest pressing-switch-opens-the-switch-screen-rather-than-starting-at-once
+  (testing "this rewrites a game in place. The screen states what it will do --
+            which version is there, which it would become, where -- and asks."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "public" :label "Latest"}
+                            :selected-version-id "public"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        switch/run! (fn [_] (throw (AssertionError. "must not run yet")))]
+            ((:on-analyze @state) nil)
+            (is (= :switch (:screen @state)))
+            (is (nil? (:snapshot @state)) "no run has started")))))))
+
+(deftest the-switch-screen-is-dispatched
+  (is (= :v-box (:fx/type (main/screen {:screen :switch
+                                        :game game
+                                        :install an-install
+                                        :installed-version {:id "public" :label "Latest"}
+                                        :target-version {:id "old" :label "1.5.97"}})))))
+
+(deftest the-switch-screens-handlers-are-all-wired
+  (testing "ui/switch defaults each to a no-op, so an unwired one renders a
+            button that looks right and does nothing"
+    (let [s (main/initial-state (atom {}) nil)]
+      (doseq [k [:on-switch :on-cancel :on-retry :on-open :on-back]]
+        (is (fn? (get s k)) (str k " must be a real function"))))))
+
+(deftest a-switch-runs-on-the-switch-screen-not-the-download-screen
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                          :installed-version {:id "public" :label "Latest"}
+                          :target-version {:id "public" :label "Latest"}
+                          :selected-version-id "public"})
+            screens (atom #{})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/open-session! (constantly {:conn :fake})
+                      main/close-session! (fn [] nil)
+                      switch/run! (fn [{:keys [on-progress]}]
+                                    (on-progress {:phase :hashing :done 1 :total 2})
+                                    {:fetch-bytes 0})]
+          (add-watch state ::probe (fn [_ _ _ s] (swap! screens conj (:screen s))))
+          @(main/switch-install! state)
+          (remove-watch state ::probe)
+          (is (not (contains? @screens :download))
+              "the download screen is for downloads; its buttons are a download's")
+          (is (contains? @screens :switch)))))))

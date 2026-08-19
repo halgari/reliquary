@@ -60,6 +60,7 @@
             [reliquary.ui.download :as download-screen]
             [reliquary.ui.library :as library]
             [reliquary.ui.login :as login]
+            [reliquary.ui.switch :as switch-screen]
             [reliquary.ui.theme :as theme])
   (:import (java.io File)
            (java.util.concurrent Executors ScheduledExecutorService ThreadFactory TimeUnit)
@@ -629,6 +630,22 @@
    :samples     (:samples rate [])
    :error       nil})
 
+(defn open-switch-screen!
+  "The library panel's Switch button: show the switch screen, ready.
+
+   Nothing runs yet. The screen names the install, the version on it and the
+   version it would become, and offers the action -- which is the least a screen
+   can do before rewriting a game in place."
+  [state]
+  (let [{:keys [games selected-appid selected-version-id]} @state
+        game (first (filter #(= selected-appid (:appid %)) games))]
+    (swap! state assoc
+           :screen :switch
+           :game game
+           :target-version (first (filter #(= selected-version-id (:id %))
+                                          (catalog/versions game)))
+           :snapshot nil)))
+
 (defn switch-install!
   "Change the selected install to the selected version. Returns a promise.
 
@@ -647,7 +664,8 @@
   (let [p (promise)
         {:keys [install installed-version games selected-appid selected-version-id]} @state
         game    (first (filter #(= selected-appid (:appid %)) games))
-        version (first (filter #(= selected-version-id (:id %)) (catalog/versions game)))]
+        version (or (:target-version @state)
+                    (first (filter #(= selected-version-id (:id %)) (catalog/versions game))))]
     (cond
       (not (and install game version))
       (do (swap! state assoc :error "Nothing to switch: pick an installed game and a version.")
@@ -670,9 +688,9 @@
            ;; before the move would land in a snapshot on a screen the user is
            ;; not looking at -- they would press Switch and watch nothing happen.
            (let [_ (fx-run! #(swap! state assoc
-                                    :screen :download
+                                    :screen :switch
                                     :game game :version version
-                                    :hashing nil
+                                    :target-version version
                                     :snapshot (switch-snapshot :hashing {} nil nil)))
                  _ (reset! switch-cancelled* false)
                  session (open-session!)
@@ -700,7 +718,14 @@
                ;; finished. The install is simply in another state to hash from.
                (fx-run! #(swap! state assoc :screen :library :snapshot nil))
                (fx-run! #(swap! state assoc
-                              :screen :done
+                              :screen :switch
+                              ;; those bytes ARE the target now. Left at the old
+                              ;; version, the library goes on offering a switch
+                              ;; to what is already on disk, and the NEXT switch
+                              ;; would build its chunk index from the wrong
+                              ;; manifest -- the boundary map has to match what
+                              ;; is actually there.
+                              :installed-version version
                               ;; ui/done reads :path, and open-install-folder!
                               ;; opens it. Without this the done screen after a
                               ;; switch showed an empty box and the button did
@@ -935,6 +960,7 @@
   [state]
   (case (:screen state)
     :library  (library/view state)
+    :switch   (switch-screen/view state)
     :download (download-screen/view state)
     :done     (done/view state)
     (login/view state)))
@@ -1046,7 +1072,10 @@
    ;; the Switch button. Hashing and the switch itself land next; wiring the
    ;; handler now keeps library/view from silently defaulting it to a no-op,
    ;; which renders a working-looking button that does nothing.
-   :on-analyze        (fn [_]  (switch-install! state))
+   ;; opens the screen; it does not start the run. This rewrites a game in
+   ;; place, so the screen states what it will do and asks.
+   :on-analyze        (fn [_]  (open-switch-screen! state))
+   :on-switch         (fn [_]  (switch-install! state))
    :on-cancel         (fn [_]  (cancel-transfer! state))
    ;; the button says "Resume switch" after a switch, and it must mean it:
    ;; run-download! resolves the version and downloads the WHOLE game into
