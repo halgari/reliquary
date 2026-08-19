@@ -12,6 +12,7 @@
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
             [reliquary.catalog :as catalog]
+            [reliquary.steam.installs :as installs]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done])
   (:import (com.sun.net.httpserver HttpExchange HttpHandler HttpServer)
@@ -997,3 +998,108 @@
           (remove-watch state ::probe)
           (.stop server 0)
           (io/delete-file cache true))))))
+
+;; ---------------------------------------------------------------------------
+;; detecting an install when a game is selected
+;;
+;; The switch-mode panel is inert without this: it renders whatever :install and
+;; :installed-version say, and nothing was setting them.
+
+(def ^:private an-install
+  {:appid 413150 :name "Stardew Valley" :build "16826371" :bytes 100
+   :path "/steam/common/Stardew Valley"
+   :manifests {1 "aaaa"}})
+
+(deftest selecting-a-game-looks-for-an-existing-install
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game]})
+            asked (atom nil)]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      installs/find-install (fn [appid] (reset! asked appid) an-install)
+                      installs/installed-version (fn [_ _] nil)]
+          ;; select-game! returns detect-install!'s promise: the lookup is on a
+          ;; daemon thread, so reading state without awaiting it races the thread
+          @(main/select-game! state 413150)
+          (is (= 413150 @asked) "it must look for THIS game")
+          (is (= an-install (:install @state))))))))
+
+(deftest a-game-with-no-install-clears-the-switch-state
+  (testing "selecting an uninstalled game after an installed one must not leave
+            the previous game's path on screen -- that is someone else's folder
+            with a Switch button under it"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :install an-install
+                            :installed-version {:id "public"}})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly nil)]
+            (main/select-game! state 413150)
+            (is (nil? (:install @state)))
+            (is (nil? (:installed-version @state)))))))))
+
+(deftest the-installed-version-is-resolved-from-the-catalog
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game]})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      installs/find-install (constantly an-install)
+                      installs/installed-version (fn [g i]
+                                                   (is (= 413150 (:appid g)))
+                                                   (is (= an-install i))
+                                                   {:id "public" :label "Latest"})]
+          @(main/select-game! state 413150)
+          (is (= "Latest" (:label (:installed-version @state)))))))))
+
+(deftest install-detection-never-blocks-the-fx-thread
+  (testing "find-install walks every Steam library and stats every manifest. On a
+            spinning disk with several libraries that is not instant, and
+            select-game! is a click handler."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game]})
+              on-fx (atom nil)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (fn [_]
+                                                (reset! on-fx (Thread/currentThread))
+                                                an-install)
+                        installs/installed-version (constantly nil)]
+            @(main/detect-install! state 413150)
+            (is (not= (Thread/currentThread) @on-fx)
+                "the lookup must happen off the calling thread")))))))
+
+(deftest a-stale-detection-does-not-overwrite-a-newer-selection
+  (testing "click Skyrim, then click Stardew before the first lookup returns --
+            the slow answer must not paint Skyrim's path under Stardew's versions"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 999})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        installs/installed-version (constantly nil)]
+            ;; the detection is for 413150 while the user is now on 999
+            @(main/detect-install! state 413150)
+            (is (nil? (:install @state))
+                "an answer about a game that is no longer selected is dropped")))))))
+
+(deftest the-analyze-handler-is-wired-like-every-other
+  (testing "library/view defaults a missing :on-analyze to a no-op, so an unwired
+            Switch button renders perfectly and does nothing -- the same trap
+            every other handler in initial-state exists to avoid"
+    (is (fn? (:on-analyze (main/initial-state (atom {}) nil))))))
+
+(deftest signing-out-clears-the-detected-install
+  (testing "the next user of this machine must not find the last one's Steam path
+            on screen"
+    (with-tmp
+      (fn []
+        (let [state (wired {:signed-in? true :install an-install
+                            :installed-version {:id "public"}
+                            :hashing {:done 1 :total 2}})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/enter-library! (fn [_] nil)
+                        config/forget-token! (fn [] nil)
+                        auth/login-qr! (fn [_ & _] nil)]
+            @(main/sign-out! state)
+            (doseq [k [:install :installed-version :hashing]]
+              (is (nil? (get @state k)) (str k " must not survive a sign-out")))))))))

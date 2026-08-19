@@ -51,6 +51,8 @@
             [reliquary.download :as download]
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
+            [reliquary.steam.installs :as installs]
+            [reliquary.steam.local :as local]
             [reliquary.ui.app :as app]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done]
@@ -479,6 +481,74 @@
   [state]
   (catalog/version (selected-game state) (:selected-version-id state)))
 
+(defn detect-install!
+  "Look for an existing Steam install of `appid` and, if it is still the selected
+   game when the answer arrives, put it on the panel. Returns a promise.
+
+   Off the calling thread, and not as a precaution: `installs/find-install` walks
+   every Steam library and reads every appmanifest in each, and `select-game!` is
+   a click handler. On a machine with several libraries on a spinning disk that
+   is long enough to drop a frame.
+
+   The selection is re-checked after the lookup. Clicking Skyrim and then Stardew
+   before the first answer returns would otherwise paint Skyrim's install path
+   underneath Stardew's version list -- someone else's folder with a Switch
+   button under it, which is the one thing a destructive action must never
+   show."
+  [state appid]
+  (let [p (promise)]
+    (daemon!
+     "reliquary-install-detect"
+     (fn []
+       (try
+         (let [install (installs/find-install appid)
+               game    (first (filter #(= appid (:appid %)) (:games @state)))
+               version (when (and install game) (installs/installed-version game install))]
+           (fx-run! #(swap! state (fn [s]
+                                    (if (= appid (:selected-appid s))
+                                      (assoc s :install install :installed-version version)
+                                      s)))))
+         ;; a Steam directory we cannot read is not an error the user needs: the
+         ;; panel simply stays in its ordinary download shape
+         (catch Throwable _ nil)
+         (finally (deliver p :done)))))
+    p))
+
+(defn analyze-install!
+  "The Switch button: read the install and work out what changing it would move.
+
+   Only the hashing pass is wired today -- the plan it produces is not yet
+   applied, because writing into a Steam library is the destructive half and gets
+   its own pass. What this does prove end to end is the expensive part: on a real
+   15 GB install the whole tree hashes in about sixteen seconds.
+
+   On a daemon thread with progress marshalled through `fx-run!`, and abandoned
+   the moment the selection changes -- a user who clicks another game must not
+   leave a thread reading sixteen gigabytes on their behalf."
+  [state]
+  (let [{:keys [install selected-appid]} @state]
+    (when install
+      (swap! state assoc :hashing {:done 0 :total 0})
+      (daemon!
+       "reliquary-install-hash"
+       (fn []
+         (try
+           (let [stale? #(not= selected-appid (:selected-appid @state))]
+             ;; TODO: the installed version's manifest supplies the chunk
+             ;; boundaries; fetching it needs a session, which lands with the
+             ;; apply step. Until then this reports the tree it can see.
+             (local/hash-paths
+              (:path install)
+              (keys (:manifests install))
+              {:abort? stale?
+               :on-progress (fn [{:keys [done total path]}]
+                              (when-not (stale?)
+                                (fx-run! #(swap! state assoc
+                                                 :hashing {:done done :total total
+                                                           :path path}))))}))
+           (catch Throwable _ nil)
+           (finally (fx-run! #(swap! state assoc :hashing nil)))))))))
+
 (defn select-game!
   "Selecting a DIFFERENT game clears the version selection: version ids are
    only unique within a game (`public` exists for all of them), so carrying
@@ -487,7 +557,12 @@
   [state appid]
   (swap! state (fn [s]
                  (cond-> (assoc s :selected-appid appid)
-                   (not= appid (:selected-appid s)) (assoc :selected-version-id nil)))))
+                   (not= appid (:selected-appid s)) (assoc :selected-version-id nil))))
+  ;; and clear the PREVIOUS game's install immediately rather than waiting for
+  ;; the lookup: leaving it up means the panel briefly shows another game's
+  ;; folder under this game's versions
+  (swap! state assoc :install nil :installed-version nil :hashing nil)
+  (detect-install! state appid))
 
 (defn select-version! [state version-id]
   (swap! state assoc :selected-version-id version-id))
@@ -709,6 +784,9 @@
          ;; and a password left in the atom outlives its session
          :account nil :password nil :guard-code nil :guard-type nil
          :guard-retry? nil :credential-state nil :confirmation-type nil
+         ;; the detected install too: the next user of this machine must not
+         ;; find the last one's Steam path on screen
+         :install nil :installed-version nil :hashing nil
          :games [] :owned nil :selected-appid nil :selected-version-id nil
          :snapshot nil)
   (start-login! state))
@@ -786,6 +864,10 @@
    :on-select-version (fn [id] (select-version! state id))
    :on-change-folder  (fn [_]  (choose-folder! state))
    :on-download       (fn [_]  (download-pressed! state))
+   ;; the Switch button. Hashing and the switch itself land next; wiring the
+   ;; handler now keeps library/view from silently defaulting it to a no-op,
+   ;; which renders a working-looking button that does nothing.
+   :on-analyze        (fn [_]  (analyze-install! state))
    :on-cancel         (fn [_]  (cancel-download! state))
    :on-retry          (fn [_]  (run-download! state))
    :on-back           (fn [_]  (back-to-library! state))
