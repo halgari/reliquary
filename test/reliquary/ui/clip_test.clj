@@ -252,6 +252,9 @@
            :versions [{:id "public" :label "Latest" :branch "public"
                        :date "2026-01-01" :bytes 1 :depots [{}]}]}]
     (library/view {:games [g] :selected-appid 1
+                   ;; the switch footer, and so the hashing bar, lives on the
+                   ;; Installed tab
+                   :tab :installed
                    :install {:appid 1 :path "/x" :bytes 1000}
                    :installed-version {:id "public" :label "Latest"}
                    :hashing {:done (long (* 1000 frac)) :total 1000}})))

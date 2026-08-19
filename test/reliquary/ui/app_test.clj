@@ -257,3 +257,36 @@
     (is (= 2 (count btns)))
     (doseq [b btns] ((:on-action b) nil))
     (is (= #{:installed :owned} (set @hits)))))
+
+(deftest the-tab-switch-does-not-stretch-to-the-height-of-the-title-bar
+  (testing "HBox fillHeight defaults to TRUE, so a child with an unbounded
+            maxHeight is resized to the parent's content height regardless of
+            :alignment. The switch's bordered box grew to 50px in a 52px bar
+            with 26px pills floating in the middle of it -- a band of dead space
+            above and below every tab.
+
+            Measured on a real instance: the description map said 26 and the
+            layout said 50."
+    (let [h @(fx/on-fx-thread
+              (let [bar  (fx/instance (fx/create-component
+                                       (app/title-bar {:signed-in? true :tab :installed
+                                                       :status-line "x"
+                                                       :on-close (fn [_]) :on-sign-out (fn [_])
+                                                       :on-tab (fn [_]) :on-query-change (fn [_])})))
+                    root (javafx.scene.layout.StackPane.
+                          (into-array javafx.scene.Node [bar]))]
+                (javafx.scene.Scene. root 1100 120)
+                (.applyCss root)
+                (.layout root)
+                ;; the group is the HBox that holds the two tab buttons
+                (->> (tree-seq #(instance? javafx.scene.Parent %)
+                               #(seq (.getChildrenUnmodifiable ^javafx.scene.Parent %))
+                               bar)
+                     (filter #(and (instance? javafx.scene.layout.HBox %)
+                                   (= 2 (count (.getChildrenUnmodifiable ^javafx.scene.Parent %)))
+                                   (every? (fn [c] (instance? javafx.scene.control.Button c))
+                                           (.getChildrenUnmodifiable ^javafx.scene.Parent %))))
+                     first
+                     (#(.getHeight ^Region %)))))]
+      (is (<= h 32.0)
+          (str "the switch is " h "px tall; the design's is 26px of pill in 2px of padding")))))

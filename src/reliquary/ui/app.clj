@@ -261,6 +261,12 @@
        :alignment :center-left
        :spacing 2
        :padding 2
+       ;; PINNED. HBox fillHeight defaults to true, so a child with an unbounded
+       ;; maxHeight is stretched to the parent's content height whatever
+       ;; :alignment says -- this box grew to 50px in a 52px bar, with its 26px
+       ;; pills floating in the middle and a band of dead space above and below
+       ;; them. 26 of pill inside 2 of padding, as the design has it.
+       :min-height 30 :max-height 30
        :style (theme/style {:-fx-background-color (:bg c)
                              :-fx-border-color (:line c)
                              :-fx-border-radius 4
@@ -288,6 +294,9 @@
                          on-tab on-query-change on-sign-out on-close]}]
   {:fx/type :h-box
    :alignment :center-left
+   ;; and the same rule one level up: without this every child of the bar is
+   ;; stretched to its full height rather than centred at its own
+   :fill-height false
    :spacing 26
    :min-height 52 :max-height 52
    :padding {:left 22 :right 14}

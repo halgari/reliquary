@@ -387,7 +387,10 @@
      :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
                            :-fx-font-size 15 :-fx-text-fill (:text c)})}
     {:fx/type :label
-     :text "Switch to Owned to browse everything Reliquary can download."
+     ;; "Switch to" is the switch ACTION's verb, on the button three inches
+     ;; away. Using it here for a tab change overloads the one word this screen
+     ;; most needs to mean one thing.
+     :text "Use the Owned tab to browse everything Reliquary can download."
      :style (theme/style {:-fx-font-family (theme/mono-font)
                            :-fx-font-size 12 :-fx-text-fill (:text-muted c)})}]})
 
@@ -604,12 +607,16 @@
 (declare panel-download-footer)
 
 (defn- panel-footer
-  "Which footer the side panel gets. An install Reliquary can see turns this into
-   switch mode; otherwise it is the ordinary pick-a-folder-and-download path."
-  [{:keys [folder selected-version owned? install installed-version hashing
-           on-change-folder on-download on-analyze]
-    :as   state}]
-  (if install
+  "Which footer the side panel gets.
+
+   The design is explicit -- `switchMode = installedTab && !!inst` -- and the
+   TAB is half of it. Keying on the install alone meant that selecting a game
+   you already have, while browsing the catalogue on Owned, replaced the folder
+   picker with the switch panel: no folder, no Download, no way to install a
+   second copy anywhere else. Changing a build is a thing you do on Installed;
+   Owned is the catalogue, and the action there is always install-to-a-location."
+  [{:keys [tab install] :as state}]
+  (if (and (= :installed tab) install)
     (switch-footer state)
     (panel-download-footer state)))
 
@@ -782,6 +789,7 @@
                             :on-select-game on-select-game})]
        selected-game
        (conj (side-panel {:game selected-game
+                           :tab tab
                            :selected-version-id selected-version-id
                            :folder folder
                            :owned? (owned?* owned (:appid selected-game))

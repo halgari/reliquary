@@ -362,8 +362,15 @@
   {:appid 100 :name "Stardew Valley" :build "16826371" :bytes 16095731388
    :path "/home/me/.local/share/Steam/steamapps/common/Stardew Valley"})
 
-(defn- panel [extra]
-  (library/view (merge {:games games :selected-appid 100 :folder "/tmp/x"} extra)))
+(defn- panel
+  "The side panel. Defaults to the INSTALLED tab, because everything below is
+   about the switch footer -- and per the design that footer only exists there
+   (`switchMode = installedTab && !!inst`). Tests that want the download footer
+   pass no :install, or :tab :owned."
+  [extra]
+  (library/view (merge {:games games :selected-appid 100 :folder "/tmp/x"
+                        :tab :installed}
+                       extra)))
 
 (deftest with-no-detected-install-the-panel-is-unchanged
   (testing "the download path is the common case and must not shift under it"
@@ -411,6 +418,7 @@
                     [{:id "public" :label "Latest" :branch "public" :bytes 10 :depots [{}]}
                      {:id "1_5_97" :label "1.5.97" :branch "public" :bytes 10 :depots [{}]}])
         s (pr-str (library/view {:games [g] :selected-appid (:appid g)
+                                 :tab :installed
                                  :install install
                                  :installed-version {:id "public" :label "Latest"}
                                  :selected-version-id "1_5_97"}))]
@@ -424,7 +432,7 @@
       (is (str/includes? s "Hashing local files"))
       (is (str/includes? s "60%") "a percentage, tabular so it does not jitter")
       (is (str/includes? s "8.4 GB of 14.0 GB") "and the absolute figures beneath")
-      (is (not (str/includes? s "Switch to"))
+      (is (not (str/includes? s "Switch to 1.5.97"))
           "the action button is gone while it runs, not merely disabled"))))
 
 (deftest hashing-at-zero-does-not-divide-by-zero
@@ -438,6 +446,7 @@
                     [{:id "public" :label "Latest" :branch "public" :bytes 10 :depots [{}]}
                      {:id "1_5_97" :label "1.5.97" :branch "public" :bytes 10 :depots [{}]}])
         v (library/view {:games [g] :selected-appid (:appid g)
+                         :tab :installed
                          :install install
                          :installed-version {:id "public" :label "Latest"}
                          :selected-version-id "1_5_97"
@@ -453,7 +462,7 @@
             would otherwise meet a blank window and no way to know the Owned tab
             is where everything is."
     (let [s (pr-str (library/view {:games games :tab :installed :installs {}}))]
-      (is (str/includes? s "Owned")))))
+      (is (str/includes? s "Owned tab")))))
 
 (deftest a-non-empty-installed-tab-says-nothing-of-the-kind
   (let [installs {100 {:path "/steam/common/Stardew" :bytes 1}}
@@ -466,3 +475,52 @@
           s (pr-str (library/view {:games games :tab :installed :installs installs
                                    :query "zzzzzz"}))]
       (is (not (str/includes? s "None of these games"))))))
+
+;; ---------------------------------------------------------------------------
+;; which footer the panel gets
+;;
+;; The design is explicit: `switchMode = installedTab && !!inst`. Switching a
+;; build is a thing you do on the Installed tab. On Owned you are looking at the
+;; catalogue, and the action there is install-to-a-location -- including for a
+;; game you already have, which is exactly how you put a second copy somewhere
+;; else.
+
+(defn- untracked
+  "Letter-spaced captions are joined with U+2009 THIN SPACE, indistinguishable
+   from a normal space on screen and never equal to one in a test."
+  [s]
+  (str/replace s "\u2009" ""))
+
+(deftest the-owned-tab-always-offers-install-to-a-location
+  (testing "even for a game that IS installed. Keying the footer on the install
+            alone replaced the folder picker with the switch panel, so an owned
+            game already on disk could not be installed anywhere"
+    (let [s (untracked (pr-str (library/view {:games games :tab :owned
+                                   :selected-appid 100
+                                   :selected-version-id "v1"
+                                   :install {:path "/steam/common/Stardew" :bytes 1}
+                                   :installed-version {:id "v1" :label "Latest"}
+                                   :folder "/home/me/games"})))]
+      (is (str/includes? s "INSTALL TO"))
+      (is (str/includes? s "/home/me/games") "the folder it would install into")
+      (is (not (str/includes? s "FROM STEAM"))
+          "the switch panel's install block does not belong on this tab"))))
+
+(deftest the-installed-tab-still-offers-the-switch
+  (let [s (untracked (pr-str (library/view {:games games :tab :installed
+                                 :installs {100 {:path "/steam/common/Stardew" :bytes 1}}
+                                 :selected-appid 100
+                                 :selected-version-id "v1"
+                                 :install {:path "/steam/common/Stardew" :bytes 1}
+                                 :installed-version {:id "v1" :label "Latest"}})))]
+    (is (str/includes? s "FROM STEAM"))
+    (is (not (str/includes? s "INSTALL TO")))))
+
+(deftest a-game-that-is-not-installed-offers-the-folder-on-either-tab
+  (doseq [tab [:installed :owned]]
+    (let [s (untracked (pr-str (library/view {:games games :tab tab
+                                   :installs {100 {:path "/x" :bytes 1}}
+                                   :selected-appid 100
+                                   :selected-version-id "v1"
+                                   :folder "/home/me/games"})))]
+      (is (str/includes? s "INSTALL TO") (str "on " tab)))))
