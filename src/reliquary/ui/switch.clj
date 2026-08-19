@@ -25,39 +25,12 @@
      :failed    the reason, and an offer to carry on
      :done      finished, with the folder"
   (:require [clojure.string :as str]
+            [reliquary.ui.progress :as progress]
             [reliquary.ui.theme :as theme]))
 
 (def ^:private c theme/color)
 
 (def ^:private block-width 620)
-;; the box is `block-width` wide with 14px of padding on each side, so the track
-;; inside it is this. Track and fill are sized from the SAME number: the fill was
-;; previously scaled by 620 while sitting in a 592px track, which left it about
-;; 5% long at every intermediate fraction and only looked right at 0 and 100.
-(def ^:private track-width (- block-width 28))
-
-
-(defn- gb [bytes]
-  (if (and bytes (pos? (long (or bytes 0))))
-    (format "%.1f GB" (/ (double bytes) (* 1024.0 1024 1024)))
-    "size unknown"))
-
-(defn- mb-per-sec [bps]
-  (if (and bps (pos? (double bps)))
-    (format "%.1f MB/s" (/ (double bps) (* 1024.0 1024)))
-    "--"))
-
-(defn- clock
-  "mm:ss remaining at `bps`, or nil when there is no meaningful answer.
-
-   Divides by the SESSION average rather than the live rate, the same rule
-   ui/download follows: an instantaneous rate gives a clock that swings between
-   four minutes and forty twice a second."
-  [done total bps]
-  (when (and total bps (pos? (double bps)) (pos? (long total)))
-    (let [s (long (Math/ceil (/ (max 0.0 (- (double total) (double (or done 0))))
-                                (double bps))))]
-      (format "%02d:%02d" (quot s 60) (mod s 60)))))
 
 (defn- tracked [s] (str/join " " (seq (str/upper-case s))))
 
@@ -105,7 +78,7 @@
                            :-fx-text-fill (:text c)})}
     {:fx/type :label
      :text (str (if installed-version (:label installed-version) "Unrecognised build")
-                " · " (gb (:bytes install)))
+                " · " (progress/gb (:bytes install)))
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                            :-fx-text-fill (:text-muted c)})}]})
 
@@ -117,48 +90,15 @@
     "Working"))
 
 (defn- progress-block
-  "The design's hashing box, doing duty for every working phase.
-
-   Bytes, not files: depot files are wildly uneven, and a per-file bar sits at 2%
-   and then jumps to 98% on one .bsa. The rate and clock are here because a
-   fifteen gigabyte read that shows neither reads as hung."
+  "The design's hashing box -- the library panel's, literally: see
+   reliquary.ui.progress. Doing duty for every working phase, which is why the
+   label is passed in."
   [{:keys [stage bytes-done bytes-total bytes-per-sec session-bytes-per-sec]}]
-  (let [done  (long (or bytes-done 0))
-        total (long (or bytes-total 0))
-        frac  (if (pos? total) (/ (double done) total) 0.0)
-        eta   (clock done total session-bytes-per-sec)]
-    {:fx/type :v-box :spacing 9 :padding 14 :max-width block-width
-     :style (theme/style {:-fx-background-color (:bg c)
-                           :-fx-border-color (:line c)
-                           :-fx-border-radius 3 :-fx-background-radius 3})
-     :children
-     [{:fx/type :h-box :spacing 10
-       :children [{:fx/type :label :text (phase-label stage)
-                   :style (theme/style {:-fx-font-family (theme/mono-font)
-                                         :-fx-font-size 11 :-fx-text-fill (:text c)})}
-                  {:fx/type :region :h-box/hgrow :always}
-                  {:fx/type :label :text (format "%d%%" (long (* 100 frac)))
-                   :style (theme/style {:-fx-font-family (theme/mono-font)
-                                         :-fx-font-size 11 :-fx-text-fill (:gold c)})}]}
-      ;; the fill is bound to the track's live width rather than a pixel
-      ;; constant: a bar sized from a guess never reaches the end
-      {:fx/type :h-box
-       :min-width track-width :max-width track-width
-       :min-height 3 :max-height 3
-       :style (theme/style {:-fx-background-color (:line c) :-fx-background-radius 2})
-       :children [{:fx/type :region
-                   :min-width (* (double track-width) frac)
-                   :max-width (* (double track-width) frac)
-                   :min-height 3 :max-height 3
-                   :style (theme/style {:-fx-background-color (:gold c)
-                                         :-fx-background-radius 2})}
-                  {:fx/type :region :h-box/hgrow :always}]}
-      {:fx/type :label
-       :text (str (gb done) " of " (gb total)
-                  "  ·  " (mb-per-sec bytes-per-sec)
-                  (when eta (str "  ·  " eta " remaining")))
-       :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 10
-                             :-fx-text-fill (:text-dim c)})}]}))
+  (assoc (progress/hashing-box {:label (phase-label stage)
+                                :done bytes-done :total bytes-total
+                                :bytes-per-sec bytes-per-sec
+                                :session-bytes-per-sec session-bytes-per-sec})
+         :max-width block-width))
 
 (defn- button
   [text primary? on-action]
@@ -195,7 +135,7 @@
     ;; on purpose and may re-fetch a file it had half written.
     {:fx/type :label
      :text (str (str/upper-case (name (or (:category error) :unknown))) " · "
-                (gb bytes-done) " already written · re-running will re-check the "
+                (progress/gb bytes-done) " already written · re-running will re-check the "
                 "install and carry on")
      :wrap-text true :max-width block-width
      :alignment :center

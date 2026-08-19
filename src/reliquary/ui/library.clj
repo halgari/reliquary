@@ -25,8 +25,8 @@
             [clojure.string :as str]
             [reliquary.catalog :as catalog]
             [reliquary.ui.anim :as anim]
-            [reliquary.ui.theme :as theme])
-  (:import (javafx.scene.layout Region StackPane)))
+            [reliquary.ui.progress :as progress]
+            [reliquary.ui.theme :as theme]))
 
 (def ^:private c theme/color)
 
@@ -475,62 +475,14 @@
     :else (str "Switch to " (:label selected-version))))
 
 (defn- hashing-panel
-  "The design's `analyzing` state: a bar over the install being read.
-
-   Progress is in BYTES, not files -- depot files are wildly uneven, and a
-   per-file bar sits at 2% and then jumps to 98% on one .bsa. Measured on a real
-   15 GB install this takes about sixteen seconds, so this is a bar that
-   genuinely moves rather than a spinner standing in for one."
-  [{:keys [done total]}]
-  (let [done (or done 0)
-        total (or total 0)
-        ;; the first callback can arrive before a total is known
-        frac (if (pos? total) (/ (double done) total) 0.0)]
-    {:fx/type :v-box :spacing 9
-     :padding 14
-     :style (theme/style {:-fx-background-color (:bg c)
-                           :-fx-border-color (:line c)
-                           :-fx-border-radius 3
-                           :-fx-background-radius 3})
-     :children
-     [{:fx/type :h-box :spacing 10
-       :children [{:fx/type :label :text "Hashing local files"
-                   :style (theme/style {:-fx-font-family (theme/mono-font)
-                                         :-fx-font-size 11
-                                         :-fx-text-fill (:text c)})}
-                  {:fx/type :region :h-box/hgrow :always}
-                  {:fx/type :label :text (format "%d%%" (long (* 100 frac)))
-                   :style (theme/style {:-fx-font-family (theme/mono-font)
-                                         :-fx-font-size 11
-                                         :-fx-text-fill (:gold c)})}]}
-      ;; A 3px track with a gold fill sized by fraction. A :progress-bar would
-      ;; drag JavaFX's Modena skin in and need overriding in four places.
-      ;;
-      ;; The fill's width is BOUND to the track's live width rather than computed
-      ;; from a pixel constant. The first version used a hardcoded 236 inside a
-      ;; track that is about 324 wide, so a completed pass rendered
-      ;; three-quarters full -- a number that looked entirely reasonable in the
-      ;; description map and was wrong on screen. Binding also survives the panel
-      ;; being re-laid out, which a constant does not.
-      {:fx/type fx/ext-on-instance-lifecycle
-       :on-created
-       (fn [^StackPane track]
-         (when-let [fill (first (.getChildren track))]
-           (.bind (.maxWidthProperty ^Region fill)
-                  (.multiply (.widthProperty track) (double frac)))))
-       :desc
-       {:fx/type :stack-pane
-        :alignment :center-left
-        :min-height 3 :max-height 3
-        :style (theme/style {:-fx-background-color (:line c) :-fx-background-radius 2})
-        :children [{:fx/type :region
-                    :min-height 3 :max-height 3
-                    :style (theme/style {:-fx-background-color (:gold c)
-                                          :-fx-background-radius 2})}]}}
-      {:fx/type :label :text (str (gb done) " of " (gb total))
-       :style (theme/style {:-fx-font-family (theme/mono-font)
-                             :-fx-font-size 10
-                             :-fx-text-fill (:text-dim c)})}]}))
+  "The design's `analyzing` state, now shared with the switch screen -- see
+   reliquary.ui.progress. It was written twice, and each copy knew something the
+   other did not."
+  [{:keys [done total bytes-per-sec session-bytes-per-sec]}]
+  (progress/hashing-box {:label "Hashing local files"
+                         :done done :total total
+                         :bytes-per-sec bytes-per-sec
+                         :session-bytes-per-sec session-bytes-per-sec}))
 
 (defn- switch-footer
   "The panel when the game is ALREADY installed: where Steam put it, what
