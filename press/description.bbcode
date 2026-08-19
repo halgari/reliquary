@@ -4,8 +4,6 @@ Steam gives you one build of a game: the current one. Reliquary lets you pick a 
 
 You sign in with your own Steam account, choose a game and a version, and it downloads that build from Steam's own content servers into a folder you choose. It can also change a game you already have installed from one build to another, in place.
 
-[img]IMAGE_URL_1[/img]
-
 [size=4][b]Why[/b][/size]
 
 Mods are built against a particular build of a game. When the game updates, the mod breaks, and the usual advice is to find a downgrade patcher, a depot downloader with a manifest ID pasted out of a forum post, or a copy of the old files from somewhere you would rather not download files from.
@@ -15,29 +13,21 @@ The builds are still on Steam's servers. If you own the game, you can already do
 [size=4][b]What it does[/b][/size]
 
 [list]
-[*][b]Downloads a chosen version.[/b] Pick from the versions in the catalog and install it into any folder. Your existing install is left alone.
-[*][b]Changes an existing install.[/b] Point it at a game Steam already has on disk and switch that install to another build, without downloading the whole game again.
-[*][b]Transfers only what differs.[/b] Changing Skyrim Special Edition from the current build to 1.6.1130 leaves 13.81 GB untouched, moves 0.97 GB that is already on disk into new positions, and downloads 0.21 GB. That is measured on a real install, not an estimate.
-[*][b]Knows which build you have[/b] by hashing the game executable and looking the hash up, rather than trusting Steam's own record of what it installed. That record goes stale as soon as files are swapped by hand.
+[*][b]Downloads a chosen version[/b] into any folder. Your existing install is left alone.
+[*][b]Changes an existing install[/b] to another build, without downloading the whole game again.
+[*][b]Transfers only what differs.[/b] Changing Skyrim Special Edition from the current build to 1.6.1130 leaves 13.81 GB untouched, moves 0.97 GB that is already on disk, and downloads 0.21 GB. Measured on a real install, not an estimate.
+[*][b]Knows which build you have[/b] by hashing the game executable, rather than trusting Steam's record of what it installed. That record goes stale as soon as files are swapped by hand.
 [/list]
-
-[img]IMAGE_URL_2[/img]
 
 [size=4][b]Requirements[/b][/size]
 
-[list]
-[*]Windows 64-bit.
-[*]A Steam account that owns the game. Reliquary asks Steam for the files under your licence; it cannot get you anything you have not bought.
-[*]Disk space for the version you are installing.
-[/list]
+Windows 64-bit, and a Steam account that owns the game. Reliquary asks Steam for the files under your licence; it cannot get you anything you have not bought.
 
-Nothing else. The download is a folder with an .exe and a bundled Java runtime in it, so there is no installer to run and no separate runtime to fetch. It keeps a sign-in token and a couple of preferences in [b].config\reliquary[/b] and [b].local\share\reliquary[/b] under your user folder. Games go wherever you tell it.
+The download is a folder with an .exe and a bundled Java runtime in it, so there is no installer to run and no separate runtime to fetch. It keeps a sign-in token and a couple of preferences under your user folder. Games go wherever you tell it.
 
 [size=4][b]Signing in[/b][/size]
 
-Two ways: scan a QR code with the Steam mobile app, or type your username and password and approve the Steam Guard prompt. The session token is stored locally so you do not sign in every launch. Your password is not stored, and it is sent to Steam encrypted with Steam's own RSA key, the same way the official client does it.
-
-[img]IMAGE_URL_3[/img]
+Scan a QR code with the Steam mobile app, or type your username and password and approve the Steam Guard prompt. The session token is stored locally so you do not sign in every launch. Your password is not stored, and it is sent to Steam encrypted with Steam's own RSA key, the same way the official client does it.
 
 [size=4][b]Changing an install[/b][/size]
 
@@ -51,8 +41,6 @@ Two things to know before you use it:
 [/list]
 
 If the build you have is not one the catalog recognises, which is what you get after a manual downgrade or after Steam ships a build newer than the catalog, the button offers a forced switch instead. It checks every file against the target and fetches what does not already match. That downloads more than an ordinary switch and much less than a fresh install.
-
-[img]IMAGE_URL_4[/img]
 
 [size=4][b]Games in the catalog[/b][/size]
 
@@ -72,13 +60,13 @@ If the build you have is not one the catalog recognises, which is what you get a
 [*]Stardew Valley (5 builds)
 [/list]
 
-The catalog is fetched from the project's repository at startup, so games and builds can be added without shipping a new release. If a lookup fails it falls back to the copy in the download.
+[b]Want a game that is not on this list? Ask.[/b] Post in the comments or open an issue on GitHub with the game, and the build or the date you are after. Adding one is a catalog change rather than a code change, and the catalog is fetched at startup, so a new game turns up without anyone downloading a new version of Reliquary.
 
 [size=4][b]Status[/b][/size]
 
 This is an early release and worth treating as one.
 
-Downloading a chosen version into a fresh folder is the part that has had the most use. Changing an existing install has been verified end to end on single files and on a copy of a real install, both directions hashing exactly to their target manifests, but it has not yet had a lot of mileage across many machines. Point it at something you can afford to reinstall first.
+Downloading a chosen version into a fresh folder is the part that has had the most use. Changing an existing install has been verified end to end on single files and on a copy of a real install, both directions hashing exactly to their target manifests, but it has not yet had much mileage across many machines. Point it at something you can afford to reinstall first.
 
 Linux builds are planned. The Windows binary is signed.
 

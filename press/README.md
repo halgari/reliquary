@@ -13,20 +13,10 @@ Material for the Nexus Mods page. Nothing here is used by the app.
 
 ## Uploading
 
-`description.bbcode` has four `IMAGE_URL_n` placeholders. Upload the screenshots
-to the mod page first, then replace each placeholder with the URL Nexus gives
-back. Suggested order, matching where they sit in the text:
-
-1. `01-library-installed.png` — the library, and a game already on disk
-2. `03-change-install.png` — the change-install screen, before it runs
-3. `07-sign-in.png` — the QR sign-in
-4. `04-change-install-progress.png` — a switch in progress
-
-`02-library-owned.png`, `05-downloading.png` and `06-done.png` are not
-referenced inline; they are worth having in the gallery.
-
-If you would rather not embed images in the text at all, delete the four
-`[img]` lines and let the gallery do the work.
+`description.bbcode` embeds no images: it is a text overview, and the
+screenshots go in the mod page's gallery rather than inline. Upload whichever of
+`screenshots/` you want shown; nothing in the text refers to them by name, so
+the order is free.
 
 ## Regenerating
 
