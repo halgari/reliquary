@@ -6,7 +6,10 @@
             [clojure.string :as str]
             [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme])
-  (:import (javafx.scene.image Image)))
+  (:import (javafx.scene Node)
+           (javafx.scene.image Image)
+           (javafx.scene.input MouseEvent)
+           (javafx.stage Window)))
 
 (def ^:private c theme/color)
 
@@ -128,12 +131,100 @@
                  :style (theme/style {:-fx-effect (theme/glow (:amethyst c) {:blur 9 :dy 3 :alpha 0.5})})}
                 (logo-fallback))]})
 
-(defn title-bar [{:keys [status-line signed-in? on-sign-out]}]
+(defn icon-resource
+  "The classpath URL for the window icon (resources/reliquary-icon.png), or nil.
+
+   Separate artwork from the header logo for a reason: the logo is a 330x78
+   wordmark, and an icon has to be square and legible at 16px, where the word
+   is not. bin/make-icons.py crops the emblem out of that same logo, so the two
+   cannot drift apart, and writes this PNG plus the .ico jpackage stamps on the
+   .exe. Pulled out as its own var so a test can stub the lookup."
+  []
+  (io/resource "reliquary-icon.png"))
+
+(defn icon-image
+  "The window icon as an `Image`, or nil if it is missing or undecodable.
+
+   Same two distinct failures `logo-image` documents, handled the same way: a
+   nil resource is a packaging slip, and `javafx.scene.image.Image` reports a
+   bad payload through `.isError` rather than by throwing. A missing icon costs
+   the window its taskbar artwork; it must never cost the user their app."
+  ^Image []
+  (try
+    (when-let [url (icon-resource)]
+      (let [img (Image. (str url))]
+        (when-not (.isError img) img)))
+    (catch Exception _ nil)))
+
+;; ---------------------------------------------------------------------------
+;; moving an undecorated window
+;;
+;; Removing the OS chrome removes the only thing the user could grab to move the
+;; window, so the title bar becomes that handle.
+
+(def ^:private drag-offset
+  "Where inside the window the pointer grabbed, so dragging moves the window by
+   the pointer's delta instead of snapping the window's corner to the cursor.
+
+   Interaction state, not application state: it lives for the duration of one
+   drag and has no business in the state atom, which is rendered and printed."
+  (atom nil))
+
+(defn- event-window
+  "The Window an event was delivered into, or nil. Reached through the node
+   rather than captured in a closure, because `app/view` is a pure function that
+   never sees the Stage it describes."
+  ^Window [^MouseEvent e]
+  (when-let [^Node node (.getSource e)]
+    (some-> node .getScene .getWindow)))
+
+(defn- begin-drag!
+  [^MouseEvent e]
+  (when-let [w (event-window e)]
+    (reset! drag-offset [(- (.getScreenX e) (.getX w))
+                         (- (.getScreenY e) (.getY w))])))
+
+(defn- continue-drag!
+  [^MouseEvent e]
+  (when-let [[dx dy] @drag-offset]
+    (when-let [w (event-window e)]
+      (.setX w (- (.getScreenX e) (double dx)))
+      (.setY w (- (.getScreenY e) (double dy))))))
+
+(defn- close-button
+  "The window's close control.
+
+   Placed FIRST in the title bar, so it sits top-left as asked. Note that
+   Windows itself puts window controls top-right; moving it is a matter of
+   moving this one entry to the end of `:children`.
+
+   `:accessible-help` because the glyph is a multiplication sign: a screen reader
+   reads a button by its text, and \"times\" is not a useful name for the only
+   control that shuts the app. cljfx exposes :accessible-help, :accessible-role
+   and :accessible-role-description but not :accessible-text, so this is the
+   available lever."
+  [on-close]
+  {:fx/type :button
+   :text "\u00d7"
+   :accessible-help "Close Reliquary"
+   :on-action (or on-close (fn [_]))
+   :focus-traversable false
+   :min-width 28 :min-height 28 :max-width 28 :max-height 28
+   :style-class ["button" "window-close"]
+   :style (theme/style {:-fx-background-color "transparent"
+                         :-fx-text-fill (:text-muted c)
+                         :-fx-font-size 16
+                         :-fx-padding 0})})
+
+(defn title-bar [{:keys [status-line signed-in? on-sign-out on-close]}]
   {:fx/type :h-box
    :alignment :center-left
    :spacing 10
    :min-height 52 :max-height 52
-   :padding {:left 22 :right 22}
+   :padding {:left 14 :right 22}
+   ;; the window's grab handle, now that the OS provides none
+   :on-mouse-pressed begin-drag!
+   :on-mouse-dragged continue-drag!
    :style (theme/style {:-fx-background-color (:title-bar theme/gradients)
                          ;; JavaFX has no inset box-shadow, so the design
                          ;; delta's `inset 0 1px 0 rgba(242,240,238,.04)`
@@ -145,7 +236,8 @@
                                                  " transparent " (:line c) " transparent")
                          :-fx-border-width "1 0 1 0"
                          :-fx-effect (theme/glow "#000000" {:blur 30 :spread -24 :dy 12})})
-   :children (cond-> [(logo)
+   :children (cond-> [(close-button on-close)
+                       (logo)
                        {:fx/type :region :h-box/hgrow :always}
                        {:fx/type :label :text (or status-line "")
                         :style (theme/style {:-fx-font-family (theme/mono-font)
@@ -189,6 +281,15 @@
   {:fx/type :stage
    :showing true
    :title "Reliquary"
+   ;; UNDECORATED because the app draws its own title bar. With the OS bar as
+   ;; well, Windows showed two stacked bars. The cost is that the OS no longer
+   ;; supplies a close button, a grab handle or resize edges: `close-button` and
+   ;; the title bar's drag handlers replace the first two, and the window is no
+   ;; longer user-resizable.
+   :style :undecorated
+   ;; An undecorated window still appears in the taskbar and alt-tab, and
+   ;; without this it appears there as a generic Java mug.
+   :icons (if-let [img (icon-image)] [img] [])
    :width 1100 :height 720
    :scene {:fx/type :scene
            :stylesheets [(theme/stylesheet)]

@@ -50,6 +50,28 @@ Running the *tests* on Windows is a separate matter, and does not work yet:
 `deps.edn` pins the `$linux` JavaFX classifiers, so the UI tests would load Linux
 natives. CI runs them on Linux.
 
+### Icons
+
+The application icon is derived from the header logo, not drawn separately, so
+the two cannot drift apart:
+
+    python3 bin/make-icons.py     # needs Pillow
+
+`resources/reliquary-logo.png` is a 330x78 wordmark; the script measures the
+emblem's bounds out of its alpha channel and writes two committed artifacts —
+`reliquary-icon.png` (what the running window shows in the taskbar and alt-tab)
+and `reliquary.ico` (what `jpackage --icon` stamps on the `.exe`). Both are
+committed so neither CI nor a packaging run needs Pillow. Re-run it after any
+change to the logo.
+
+### Window chrome
+
+The window is `StageStyle/UNDECORATED`, because the app draws its own title bar —
+with the OS bar as well, Windows showed two stacked bars. That means the OS
+supplies no close button, no grab handle and **no resize edges**: the title bar's
+own close button and drag handlers replace the first two, and the window is
+currently a fixed 1100x720 with no minimise.
+
 ## Releases
 
 Tagging is the whole trigger:

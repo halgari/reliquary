@@ -147,6 +147,16 @@ if ($LASTEXITCODE -ne 0) { throw "jlink failed ($LASTEXITCODE)" }
 # --enable-native-access silences the four restricted-method warnings JavaFX
 # draws on every launch. Cosmetic today, but the warning is a promise: a future
 # JDK blocks the restricted System::load and the app stops starting.
+# --icon stamps the .exe itself, which is what Explorer, the taskbar and any
+# shortcut show. It is separate from the icon the RUNNING window carries (the
+# stage's :icons in reliquary.ui.app), and both are needed: without this the
+# packaged binary gets jpackage's generic Java icon. Windows requires .ico here,
+# which is why bin/make-icons.py writes one alongside the PNG.
+$icon = 'resources/reliquary.ico'
+if (-not (Test-Path $icon)) {
+    throw "no $icon -- run: python3 bin/make-icons.py"
+}
+
 $jpackageArgs = @(
     '--type', 'app-image',
     '--name', 'Reliquary',
@@ -154,6 +164,7 @@ $jpackageArgs = @(
     '--main-jar', 'reliquary.jar',
     '--runtime-image', 'target/runtime',
     '--dest', 'target/app',
+    '--icon', $icon,
     '--java-options=--enable-native-access=javafx.graphics'
 )
 # jpackage rejects anything that is not dotted numerics here, and a tag like

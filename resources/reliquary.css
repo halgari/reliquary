@@ -108,3 +108,13 @@
 .button:disabled {
     -fx-opacity: 1.0;
 }
+
+/* ---- window controls -------------------------------------------------- */
+
+/* The close control in the title bar. Hover lives here rather than in the view
+   because JavaFX pseudo-classes (:hover) are only reachable from a stylesheet;
+   an inline -fx- style has no way to express them. Gold on hover, muted at
+   rest: it is the only interactive thing in that corner, so it can hold the
+   region's gold without competing with the logo. */
+.window-close:hover  { -fx-text-fill: #C2A35F; }
+.window-close:pressed { -fx-text-fill: #F2F0EE; }

@@ -154,8 +154,9 @@
             used. Only initial-state can catch that, and only by asserting
             every key it must carry."
     (let [s (main/initial-state (atom {}) nil)]
-      (doseq [k [:on-sign-out :on-query-change :on-select-game :on-select-version
-                 :on-change-folder :on-download :on-cancel :on-retry :on-back :on-open]]
+      (doseq [k [:on-close :on-sign-out :on-query-change :on-select-game
+                 :on-select-version :on-change-folder :on-download :on-cancel
+                 :on-retry :on-back :on-open]]
         (is (fn? (get s k)) (str k " must be a real function")))
       (is (fn? (:capsule-fn s)))
       (is (fn? (:screenshot-fn s))))))
@@ -857,3 +858,18 @@
             (is (not= :submitting (:credential-state @state))
                 "the button must not be stranded by a non-ExceptionInfo throw")
             (is (seq (:error @state)) "and the screen must say something")))))))
+
+(deftest the-initial-state-wires-the-window-close-handler
+  (testing "the window is undecorated now, so app/title-bar's close button is the
+            ONLY way to shut the app. app/view defaults a missing :on-close to a
+            no-op, which renders a button that looks fine and traps the user."
+    (is (fn? (:on-close (main/initial-state (atom {}) nil))))
+    (is (fn? (:on-close (main/initial-state (atom {}) {:refresh-token "x" :account "a"}))))))
+
+(deftest closing-the-window-shuts-the-app-down
+  (testing "and does it through main/exit-app!, so the test does not have to
+            actually kill the JVM to prove the wiring"
+    (let [exited? (atom false)]
+      (with-redefs [main/exit-app! (fn [] (reset! exited? true))]
+        ((:on-close (main/initial-state (atom {}) nil)) nil))
+      (is @exited?))))

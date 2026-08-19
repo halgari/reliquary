@@ -682,6 +682,25 @@
          :snapshot nil)
   (start-login! state))
 
+(defn exit-app!
+  "Shut the app down. A var so a test can prove the wiring without killing the
+   JVM the test is running in.
+
+   `Platform/exit` rather than anything more elaborate: with `setImplicitExit`
+   true, this is exactly what closing the OS window used to do, and every thread
+   this namespace starts is a daemon precisely so that one call is enough. A
+   download in flight dies with them, which is the same outcome the native close
+   button always had."
+  []
+  (Platform/exit))
+
+(defn close-window!
+  "The title bar's close button. The window is undecorated now, so this is the
+   only way out of the app -- app/view defaults a missing handler to a no-op,
+   which would render a close button that looks right and traps the user."
+  [_]
+  (exit-app!))
+
 (defn usable-token
   "config/token's value, but only when it is not expired as of `now-secs` --
    presence on disk is not the same thing as usability. An expired token used
@@ -725,6 +744,7 @@
    :folder (config/folder)
    :capsule-fn capsule-image
    :screenshot-fn screenshot-image
+   :on-close          (fn [_]  (close-window! nil))
    :on-sign-out       (fn [_]  (sign-out! state))
    :on-account        (fn [v]  (swap! state assoc :account v))
    :on-password       (fn [v]  (swap! state assoc :password v))
