@@ -165,6 +165,12 @@ jobs:
           override: 'true'
           malware_block: 'false'
 
+      # NOTE: the step above repoints JAVA_HOME at a Corretto 11 that
+      # CodeSignTool needs, and every later step in this job inherits it. Nothing
+      # after this point runs Java, so it is harmless today -- but a step added
+      # below that expects JDK 26 would silently get 11. Put such a step BEFORE
+      # signing, or re-export JAVA_HOME from JAVA_HOME_26_X64 first.
+
       # Trusting the signing step's exit code is not the same as knowing the
       # binary is signed. Ask Windows.
       - name: Verify the signature
