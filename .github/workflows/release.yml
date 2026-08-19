@@ -223,7 +223,9 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          sha256sum ./*.zip > SHA256SUMS
+          # bare filenames, not ./-prefixed: this is the line users paste into
+          # `sha256sum -c`, and it should name the file they downloaded
+          sha256sum -- *.zip > SHA256SUMS
           cat SHA256SUMS
 
       # Draft, not published: a release is outward-facing and irreversible in
