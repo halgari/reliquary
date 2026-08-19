@@ -168,27 +168,32 @@
        is missing, the icon assertions above are vacuous")
   (is (some? (app/icon-image))))
 
-(deftest the-close-button-is-the-first-thing-in-the-title-bar
-  (testing "asked for top-left, so it must precede the logo rather than merely
-            exist somewhere in the bar"
-    (let [children (:children (app/title-bar {:signed-in? true}))
-          first-child (first children)]
-      (is (= :button (:fx/type first-child))
-          "the leftmost item in the title bar must be the close button")
-      (is (str/includes? (pr-str first-child) "Close")
-          "and it must say so for screen readers, whatever glyph it draws"))))
+(deftest the-close-button-is-the-last-thing-in-the-title-bar
+  (testing "far right, where every other Windows app puts it. It has to come
+            after Sign out too, not merely somewhere on the right-hand side --
+            Sign out is conditional, so 'last' is the only position that holds
+            whether or not it is present."
+    (doseq [signed-in? [true false]]
+      (let [children (:children (app/title-bar {:signed-in? signed-in?}))
+            last-child (last children)]
+        (is (= :button (:fx/type last-child))
+            (str "signed-in? " signed-in? ": the rightmost item must be the close button"))
+        (is (str/includes? (pr-str last-child) "Close")
+            "and it must say so for screen readers, whatever glyph it draws")))
+    (testing "and the logo stays leftmost"
+      (is (not= :button (:fx/type (first (:children (app/title-bar {})))))))))
 
 (deftest the-close-button-is-wired-not-decorative
   (testing "with no OS chrome this is the only way to shut the app"
     (let [closed? (atom false)
           bar (app/title-bar {:on-close (fn [_] (reset! closed? true))})
-          btn (first (:children bar))]
+          btn (last (:children bar))]
       (is (fn? (:on-action btn)))
       ((:on-action btn) nil)
       (is @closed? "pressing it must reach the handler the caller supplied")))
   (testing "and it renders even when nobody wired it, rather than crashing the
             renderer the way a nil :on-action does"
-    (is (fn? (:on-action (first (:children (app/title-bar {}))))))))
+    (is (fn? (:on-action (last (:children (app/title-bar {}))))))))
 
 (deftest the-title-bar-can-be-dragged
   (testing "an undecorated window has no OS grab handle, so without this the

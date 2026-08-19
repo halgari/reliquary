@@ -194,9 +194,8 @@
 (defn- close-button
   "The window's close control.
 
-   Placed FIRST in the title bar, so it sits top-left as asked. Note that
-   Windows itself puts window controls top-right; moving it is a matter of
-   moving this one entry to the end of `:children`.
+   Placed LAST in the title bar, so it sits at the far right where Windows and
+   every app on it put window controls.
 
    `:accessible-help` because the glyph is a multiplication sign: a screen reader
    reads a button by its text, and \"times\" is not a useful name for the only
@@ -221,7 +220,7 @@
    :alignment :center-left
    :spacing 10
    :min-height 52 :max-height 52
-   :padding {:left 14 :right 22}
+   :padding {:left 22 :right 14}
    ;; the window's grab handle, now that the OS provides none
    :on-mouse-pressed begin-drag!
    :on-mouse-dragged continue-drag!
@@ -236,21 +235,25 @@
                                                  " transparent " (:line c) " transparent")
                          :-fx-border-width "1 0 1 0"
                          :-fx-effect (theme/glow "#000000" {:blur 30 :spread -24 :dy 12})})
-   :children (cond-> [(close-button on-close)
-                       (logo)
-                       {:fx/type :region :h-box/hgrow :always}
-                       {:fx/type :label :text (or status-line "")
-                        :style (theme/style {:-fx-font-family (theme/mono-font)
-                                              :-fx-font-size 11
-                                              :-fx-text-fill (:text-muted c)})}]
-               signed-in? (conj {:fx/type :button :text "Sign out"
-                                 :on-action on-sign-out
-                                 :style (theme/style {:-fx-background-color "transparent"
-                                                       :-fx-border-color (:line c)
-                                                       :-fx-border-radius 3
-                                                       :-fx-background-radius 3
-                                                       :-fx-text-fill (:text-muted c)
-                                                       :-fx-font-size 12})}))})
+   ;; The close button is appended LAST, after the conditional Sign out, because
+   ;; "far right" has to hold whether or not Sign out is there -- a cond-> that
+   ;; conj'd Sign out after it would put Sign out to its right when signed in.
+   :children (-> [(logo)
+                  {:fx/type :region :h-box/hgrow :always}
+                  {:fx/type :label :text (or status-line "")
+                   :style (theme/style {:-fx-font-family (theme/mono-font)
+                                         :-fx-font-size 11
+                                         :-fx-text-fill (:text-muted c)})}]
+                 (cond-> signed-in?
+                   (conj {:fx/type :button :text "Sign out"
+                          :on-action on-sign-out
+                          :style (theme/style {:-fx-background-color "transparent"
+                                                :-fx-border-color (:line c)
+                                                :-fx-border-radius 3
+                                                :-fx-background-radius 3
+                                                :-fx-text-fill (:text-muted c)
+                                                :-fx-font-size 12})}))
+                 (conj (close-button on-close)))})
 
 (def legal
   "Verbatim, on every screen. A legal requirement, not copy to be improved."
