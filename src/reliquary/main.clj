@@ -437,6 +437,37 @@
     (nudge-art! state)
     games))
 
+(defn refresh-catalog!
+  "Ask the repo for a newer catalog and, if one arrives, put it on screen.
+
+   `catalog/refresh!` does the work and returns immediately: it fetches on its
+   own daemon thread, caps the response, parses it, keeps it only if it is newer
+   than what we already have, caches it to disk for next launch, and swallows
+   every failure. So the only thing left to decide here is what to do with a
+   catalog that IS newer.
+
+   Silent on failure, by design and by request. There is no `:error` set and no
+   status line changed: a catalog that could not be fetched leaves the app
+   exactly as it was, running on the bundled copy or the last good cache. An app
+   that cannot show its library because GitHub was slow is a worse app.
+
+   Returns whatever `catalog/refresh!` returns, so a caller can await the thread;
+   `-main` does not.
+
+   Art matters here and is easy to miss: `enter-library!` prefetches art for the
+   catalog it read at the time, so a game that only arrives in this fresher
+   document has nothing on disk and would render the hatch placeholder for the
+   rest of the session."
+  [state]
+  (catalog/refresh!
+   catalog/catalog-url
+   (fn [fresh]
+     (let [games (catalog/games fresh)]
+       ;; on-done runs on refresh!'s daemon thread, so this is exactly the case
+       ;; the namespace docstring's rule 1 exists for
+       (fx-run! #(swap! state assoc :games games))
+       (daemon! "reliquary-catalog-art" (fn [] (run! art/prefetch! games)))))))
+
 (defn selected-game
   "The game `:selected-appid` names, or nil."
   [{:keys [games selected-appid]}]
@@ -785,4 +816,10 @@
       (if signed-in
         (enter-library! state)
         (start-login! state))
+      ;; After the screens are up, never before: this is best-effort and must
+      ;; never be something the window waits on. enter-library! has already read
+      ;; the bundled catalog and any cached one, so a refresh that lands late
+      ;; simply replaces what is on screen, and one that never lands changes
+      ;; nothing at all.
+      (refresh-catalog! state)
       state)))

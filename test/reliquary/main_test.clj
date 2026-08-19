@@ -11,9 +11,12 @@
             [reliquary.main :as main]
             [reliquary.session :as session]
             [reliquary.steam.auth :as auth]
+            [reliquary.catalog :as catalog]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done])
-  (:import (java.nio.file Files)
+  (:import (com.sun.net.httpserver HttpExchange HttpHandler HttpServer)
+           (java.net InetSocketAddress)
+           (java.nio.file Files)
            (java.util Base64)))
 
 (defn- jwt
@@ -873,3 +876,124 @@
       (with-redefs [main/exit-app! (fn [] (reset! exited? true))]
         ((:on-close (main/initial-state (atom {}) nil)) nil))
       (is @exited?))))
+
+;; ---------------------------------------------------------------------------
+;; catalog refresh
+;;
+;; catalog/refresh! was written, tested and never called: the app only ever read
+;; the bundled copy and whatever a previous run had cached. Now that the repo is
+;; public, the raw endpoint on main is the distribution channel, so startup asks
+;; it for a newer catalog.
+
+(def ^:private newer-catalog
+  {:schema-version 1
+   :generated "2099-01-01T00:00:00Z"
+   :games [(assoc game :appid 999 :title "A Game That Only Exists Upstream")]})
+
+(deftest a-refresh-fetches-the-repos-catalog-url
+  (let [asked (atom nil)]
+    (with-redefs [catalog/refresh! (fn [url _] (reset! asked url) nil)]
+      (main/refresh-catalog! (atom {})))
+    (is (= catalog/catalog-url @asked)
+        "it must ask the repo, not some other URL assembled locally")))
+
+(deftest a-newer-catalog-replaces-the-games-on-screen
+  (testing "the point of the exercise: a catalog pushed to the repo takes effect
+            without the user reinstalling anything"
+    (let [state (atom {:screen :library :games [game]})]
+      (with-redefs [main/fx-run! (fn [f] (f))
+                    art/prefetch! (fn [_] nil)
+                    ;; stand in for the network: hand on-done a fresher catalog
+                    catalog/refresh! (fn [_ on-done] (on-done newer-catalog) nil)]
+        (main/refresh-catalog! state))
+      (is (= ["A Game That Only Exists Upstream"] (mapv :title (:games @state)))
+          "the fresh catalog's games must replace what was listed"))))
+
+(deftest a-refreshed-catalog-lands-on-the-fx-thread
+  (testing "on-done runs on catalog/refresh!'s own daemon thread, so touching
+            the state atom from there without marshalling is the one rule this
+            namespace's docstring says must never be broken"
+    (let [state (atom {:games [game]})
+          in-fx? (atom false)
+          violations (atom 0)]
+      (add-watch state ::probe (fn [_ _ _ _] (when-not @in-fx? (swap! violations inc))))
+      (with-redefs [art/prefetch! (fn [_] nil)
+                    catalog/refresh! (fn [_ on-done] (on-done newer-catalog) nil)
+                    main/fx-run! (fn [f] (reset! in-fx? true)
+                                   (try (f) (finally (reset! in-fx? false))))]
+        (main/refresh-catalog! state))
+      (remove-watch state ::probe)
+      (is (zero? @violations)))))
+
+(deftest a-failed-refresh-changes-nothing-and-says-nothing
+  (testing "silent by request, and catalog/refresh! already swallows every
+            failure -- so on-done simply never fires and the screen keeps
+            whatever it had. No :error, no empty grid."
+    (let [state (atom {:screen :library :games [game] :error nil})]
+      (with-redefs [main/fx-run! (fn [f] (f))
+                    catalog/refresh! (fn [_ _] nil)]   ; the fetch failed
+        (main/refresh-catalog! state))
+      (is (= [game] (:games @state)) "the games on screen must be untouched")
+      (is (nil? (:error @state)) "and a failed refresh is not an error the user sees"))))
+
+(deftest a-refresh-prefetches-art-for-games-it-has-just-learned-about
+  (testing "enter-library! prefetches art for the catalog it read at the time.
+            A game that arrives later has none on disk, so without this it
+            renders the hatch placeholder for the rest of the session."
+    ;; The wait sits INSIDE with-redefs on purpose. The prefetch runs on its own
+    ;; daemon thread, and with-redefs restores the real var when its body exits
+    ;; -- so asserting outside raced the thread and called the REAL art/prefetch!,
+    ;; which is both a failed test and a namespace reaching for the network.
+    (let [prefetched (promise)]
+      (with-redefs [main/fx-run! (fn [f] (f))
+                    art/prefetch! (fn [g] (deliver prefetched (:appid g)))
+                    catalog/refresh! (fn [_ on-done] (on-done newer-catalog) nil)]
+        (main/refresh-catalog! (atom {:games [game]}))
+        (is (= 999 (deref prefetched 3000 :timed-out)))))))
+
+(deftest a-newer-catalog-on-the-wire-reaches-the-library
+  (testing "The whole chain with nothing stubbed but the URL: a real HTTP server,
+            the real catalog/refresh! (its own daemon thread, size cap, parser and
+            freshness guard), and the real main/refresh-catalog! on-done. The
+            tests above each stub one seam; this is the one that would notice if
+            the seams did not meet.
+
+            The URL has to be stubbable for this to be possible at all -- see
+            catalog/catalog-url's docstring on why it is not ^:const.
+
+            refresh! writes its cache through config/data-dir, which reads a JVM
+            property rather than any binding, so the write lands in the shared
+            target/test-state/data and is cleaned up here -- a future-dated
+            catalog left there shadows the bundled one for every later test."
+    (let [body   (-> (slurp (io/resource "catalog.edn"))
+                     (.replace "2026-08-17T18:37:21Z" "2099-12-31T00:00:00Z")
+                     (.replace "Stardew Valley" "Stardew Valley (FROM THE WIRE)"))
+          bytes  (.getBytes ^String body "UTF-8")
+          server (doto (HttpServer/create (InetSocketAddress. "127.0.0.1" 0) 0)
+                   (.createContext "/catalog.edn"
+                     (reify HttpHandler
+                       (handle [_ ex]
+                         (.sendResponseHeaders ^HttpExchange ex 200 (alength bytes))
+                         (with-open [os (.getResponseBody ^HttpExchange ex)]
+                           (.write os bytes)))))
+                   (.start))
+          url    (str "http://127.0.0.1:" (.getPort (.getAddress server)) "/catalog.edn")
+          cache  (io/file (config/data-dir) "catalog.edn")
+          state  (atom {:screen :library :games []})
+          landed (promise)]
+      (io/delete-file cache true)
+      (try
+        (with-redefs [catalog/catalog-url url
+                      art/prefetch! (fn [_] nil)
+                      main/fx-run! (fn [f] (f))]
+          (add-watch state ::probe
+                     (fn [_ _ _ new-state]
+                       (when (seq (:games new-state)) (deliver landed true))))
+          (main/refresh-catalog! state)
+          (is (true? (deref landed 8000 nil)) "the fetched catalog must reach state")
+          (is (some #{"Stardew Valley (FROM THE WIRE)"} (map :title (:games @state)))
+              "and it must be the document the server served, not the bundled one"))
+        (finally
+          (remove-watch state ::probe)
+          (.stop server 0)
+          (io/delete-file cache true))))))

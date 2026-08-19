@@ -72,6 +72,24 @@ supplies no close button, no grab handle and **no resize edges**: the title bar'
 own close button and drag handlers replace the first two, and the window is
 currently a fixed 1100x720 with no minimise.
 
+## The catalog
+
+Steam's PICS only ever names the *current* manifest on a branch, so the historical
+versions this app exists to offer come from a document, not from live metadata:
+`resources/catalog.edn`, bundled with the binary.
+
+That document is also fetched at startup from the repo's own raw endpoint, so the
+repo is the distribution channel — regenerate the catalog, push it, and every
+installed copy picks it up on next launch with no release and no reinstall:
+
+    https://raw.githubusercontent.com/halgari/reliquary/main/resources/catalog.edn
+
+Newest `generated` wins across three sources: the bundled copy, the last good
+fetch cached on disk, and today's fetch. Every failure is silent by design — a
+slow or unreachable GitHub leaves the app running on the copy it already had,
+because an app that will not show its library because of a network hiccup is a
+worse app. A fetch identical to what is already loaded is not re-applied.
+
 ## Releases
 
 Tagging is the whole trigger:

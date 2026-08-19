@@ -5,6 +5,7 @@
             [reliquary.catalog :as catalog]
             [reliquary.config :as config])
   (:import (com.sun.net.httpserver HttpExchange HttpHandler HttpServer)
+           (java.io File)
            (java.net InetSocketAddress)
            (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
@@ -113,6 +114,34 @@
         (is (= (:generated (catalog/bundled)) (:generated (catalog/load!)))))
       (finally (run! io/delete-file (reverse (file-seq d)))))))
 
+(defn- with-clean-sysprop-cache
+  "Run `f` with the sysprop-path cache file removed before and after.
+
+   refresh! writes through `config/data-dir`, which reads the reliquary.data-dir
+   JVM property and NOT any dynamic binding -- so `with-tmp-data-dir` cannot
+   redirect it, and every refresh test writes to the same shared
+   target/test-state/data. A fabricated, future-dated catalog left there
+   silently shadows the bundled one for every test that runs afterwards in the
+   same JVM; cli-test's `list` assertions are the ones that notice, by listing
+   a two-line fixture instead of the real catalog.
+
+   Deleting BEFORE as well as after matters: it stops a file left by an earlier
+   run from defeating the freshness comparison inside refresh! itself."
+  [f]
+  (let [cache (io/file (config/data-dir) "catalog.edn")]
+    (io/delete-file cache true)
+    (try (f) (finally (io/delete-file cache true)))))
+
+(defn- real-cache-state
+  "Whether the real user-level catalog cache exists and when it last changed.
+
+   Compared before and after rather than asserted absent: the app's own startup
+   refresh writes this file in normal use, so its mere existence says nothing
+   about whether a test misbehaved. Its mtime changing does."
+  [^File dir]
+  (let [f (io/file dir "catalog.edn")]
+    {:exists (.exists f) :modified (.lastModified f)}))
+
 (defn- with-tmp-data-dir
   "Binds *data-dir* to a throwaway temp directory for `f`'s dynamic extent.
 
@@ -171,6 +200,7 @@
   ;; reliquary.data-dir JVM property the :test alias sets, consulted
   ;; directly by config/data-dir with no thread-locality involved at all.
   (let [real-data-dir (io/file (System/getProperty "user.home") ".local" "share" "reliquary")
+        real-before   (real-cache-state real-data-dir)
         fresh-json    (str/replace minimal "2026-01-01T00:00:00Z" "2099-06-01T00:00:00Z")
         cache-file    (io/file (config/data-dir) "catalog.edn")]
     (try
@@ -194,8 +224,16 @@
             (str "with no dynamic binding in scope, refresh!'s write must still land under "
                  "target/test-state via the JVM property, not wherever XDG_DATA_HOME/$HOME "
                  "would otherwise point -- got: " cache-path)))
-      (is (not (.exists (io/file real-data-dir "catalog.edn")))
-          "the real ~/.local/share/reliquary/catalog.edn must remain untouched")
+      ;; Asserting this file does not EXIST was wrong, and only looked right
+      ;; while nothing in the app ever called refresh!. Startup refreshes the
+      ;; catalog now, so a developer who has simply run the app has a perfectly
+      ;; legitimate copy here -- and the assertion failed for that alone, which
+      ;; is a test reporting on the machine rather than on the code. What it
+      ;; actually needs to prove is that THIS TEST did not touch it: same
+      ;; existence, same mtime, before and after.
+      (is (= real-before (real-cache-state real-data-dir))
+          "the real ~/.local/share/reliquary/catalog.edn must be exactly as this
+           test found it -- refresh!'s write must have gone to the sysprop path")
       ;; this test's whole point is proving the sysprop path is reachable and
       ;; writable -- but that makes target/test-state/data a shared,
       ;; process-wide location any other test using the DEFAULT (unbound)
@@ -224,3 +262,68 @@
   (testing "a missing date sorts last instead of throwing"
     (let [g {:appid 3 :versions [{:id "undated"} {:id "dated" :date "2020-01-01"}]}]
       (is (= ["dated" "undated"] (mapv :id (catalog/versions g)))))))
+
+;; ---------------------------------------------------------------------------
+;; where the refresh points
+;;
+;; refresh! has been able to fetch a catalog since it was written; nothing ever
+;; told it where from. The repo is public now, so the raw endpoint on the default
+;; branch IS the distribution channel -- regenerating resources/catalog.edn and
+;; pushing it updates every installed copy, with no release required.
+
+(deftest the-catalog-url-points-at-the-repos-raw-endpoint
+  (let [url catalog/catalog-url]
+    (is (str/starts-with? url "https://")
+        "plain http would let anyone on the path swap the catalog")
+    (is (str/includes? url "raw.githubusercontent.com")
+        "the raw endpoint serves the file itself; the repo page serves HTML")
+    (is (str/includes? url "/halgari/reliquary/"))
+    (is (str/ends-with? url "/resources/catalog.edn")
+        "and it must name the catalog, not a directory listing")))
+
+(deftest the-catalog-url-tracks-a-branch-not-a-tag
+  (testing "a tag would freeze the catalog at whatever shipped with that
+            release, which defeats the point: the catalog is meant to move
+            without anyone cutting a build"
+    (is (str/includes? catalog/catalog-url "/main/"))))
+
+(deftest a-catalog-identical-to-what-we-have-is-not-re-applied
+  (testing "The freshness guard asked `is this the newest?`, and a fetch equal to
+            what we already have passes that: `newest` returns its first argument
+            on a tie, and the fetched value is EQUAL to it, so the comparison held
+            and the catalog was re-cached and re-applied.
+
+            That was invisible while nothing called refresh!. Now that startup
+            does, it meant a 42KB disk write and a full library re-render on every
+            single launch, for a document that had not changed. The guard has to
+            ask the question it meant: is this DIFFERENT, and newer?"
+    (with-clean-sysprop-cache
+     (fn []
+      (with-tmp-data-dir
+       (fn []
+        ;; serve exactly the catalog that is already bundled, which is the real
+        ;; situation the moment the repo's copy and the shipped copy agree
+        (let [body (slurp (io/resource "catalog.edn"))
+              server (local-http-server "/same" 200 (.getBytes body "UTF-8"))
+              fired (promise)]
+          (try
+            (catalog/refresh! (server-url server "/same") (fn [c] (deliver fired c)))
+            (is (= :not-fired (deref fired 4000 :not-fired))
+                "on-done must not fire for a catalog we already have")
+            (finally (.stop server 0))))))))))
+
+(deftest a-genuinely-newer-catalog-is-still-applied
+  (testing "the tightened guard must not break the case it exists for"
+    (with-clean-sysprop-cache
+     (fn []
+      (with-tmp-data-dir
+       (fn []
+        (let [newer (str/replace minimal "2026-01-01T00:00:00Z" "2099-06-01T00:00:00Z")
+              server (local-http-server "/newer" 200 (.getBytes newer "UTF-8"))
+              fired (promise)]
+          (try
+            (catalog/refresh! (server-url server "/newer") (fn [c] (deliver fired c)))
+            (let [c (deref fired 6000 :timeout)]
+              (is (not= :timeout c) "a newer catalog must still reach on-done")
+              (is (= "2099-06-01T00:00:00Z" (:generated c))))
+            (finally (.stop server 0))))))))))

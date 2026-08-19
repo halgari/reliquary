@@ -114,6 +114,31 @@
   []
   (newest (bundled) (cached)))
 
+(def catalog-url
+  "Where `refresh!` looks for a newer catalog.
+
+   Deliberately NOT ^:const, unlike the numeric constants around it. A const's
+   value is inlined into every call site compiled after it, so `with-redefs`
+   cannot reach those call sites -- which makes the one thing worth exercising
+   end to end (startup asks THIS url, and a newer document there replaces the
+   library) impossible to drive from a test. Saving one var deref per launch is
+   not worth that.
+
+   The raw endpoint on the default branch, which makes the repo itself the
+   distribution channel: regenerate resources/catalog.edn, push it, and every
+   installed copy picks it up on next launch. No release, no reinstall. That is
+   the whole reason the catalog is a data file fetched at runtime rather than a
+   constant compiled into the binary -- Steam's PICS only ever names the CURRENT
+   manifest on a branch, so the historical versions this app exists to offer can
+   only come from a document someone maintains.
+
+   A BRANCH, not a tag, and deliberately: a tag would pin the catalog to whatever
+   shipped with that release, which is exactly what this is meant to avoid.
+
+   https, because the fetched document decides which manifests the app will ask
+   Steam for; over plain http anyone on the path could rewrite it."
+  "https://raw.githubusercontent.com/halgari/reliquary/main/resources/catalog.edn")
+
 (def ^:const max-catalog-bytes
   "A hard ceiling on the refresh response body. The catalog URL is the only
    host this application contacts that is neither Steam nor a Steam CDN, so an
@@ -160,10 +185,21 @@
                          (when (<= 200 (.statusCode resp) 299)
                            (when-let [body (read-capped (.body resp))]
                              (when-let [fresh (parse body)]
-                               (when (= fresh (newest (load!) fresh))
-                                 (io/make-parents (cache-file))
-                                 (spit (cache-file) body)
-                                 (on-done fresh))))))
+                               ;; DIFFERENT as well as newest. `newest` returns
+                               ;; its first argument on a tie, so a fetch equal to
+                               ;; what we already have satisfied the freshness
+                               ;; test on its own -- which was invisible while
+                               ;; nothing called refresh!, and became a redundant
+                               ;; cache write plus a full library re-render on
+                               ;; every launch once startup did. The common case
+                               ;; is precisely this: the shipped catalog and the
+                               ;; repo's copy agree until someone regenerates it.
+                               (let [current (load!)]
+                                 (when (and (not= fresh current)
+                                            (= fresh (newest current fresh)))
+                                   (io/make-parents (cache-file))
+                                   (spit (cache-file) body)
+                                   (on-done fresh)))))))
                        (catch Exception _ nil)))
                    "reliquary-catalog-refresh")]
     ;; a catalog refresh is strictly best-effort: nothing is lost by the JVM
