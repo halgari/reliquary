@@ -483,75 +483,10 @@
   [state]
   (catalog/version (selected-game state) (:selected-version-id state)))
 
-(defn- identify-installed
-  "Which version this install IS, decided by hashing its executable.
-
-   NOT from Steam's appmanifest. That is bookkeeping: it goes stale the moment
-   files are swapped by hand, it says nothing after a half-applied switch, and it
-   is exactly what this app makes untrue. The bytes are the authority.
-
-   Free, and offline. The catalog carries each version's executable hashes -- a
-   manifest is immutable, so they are resolved once by the catalog tool and never
-   fetched again -- so this reads two files (about 40 ms on a real Skyrim
-   install) and looks them up. No session, no manifest, no network.
-
-   Falls back to the appmanifest's manifest ids when the catalog has no
-   executable hashes for this game, which is true of every catalog generated
-   before the field existed, including the one currently shipped. The hash wins
-   wherever the catalog can answer."
-  [game install]
-  (let [candidates (local/catalog-candidates (catalog/versions game))]
-    (if (seq candidates)
-      (let [paths  (distinct (mapcat #(local/exe-paths (:files %)) candidates))
-            hashes (local/hash-paths (:path install) paths {})]
-        (:version (local/identify hashes candidates)))
-      (installs/installed-version game install))))
-
-(defn detect-install!
-  "Look for an existing Steam install of `appid` and, if it is still the selected
-   game when the answer arrives, put it on the panel. Returns a promise.
-
-   Off the calling thread, and not as a precaution: `installs/find-install` walks
-   every Steam library and reads every appmanifest in each, and `select-game!` is
-   a click handler. On a machine with several libraries on a spinning disk that
-   is long enough to drop a frame.
-
-   The selection is re-checked after the lookup. Clicking Skyrim and then Stardew
-   before the first answer returns would otherwise paint Skyrim's install path
-   underneath Stardew's version list -- someone else's folder with a Switch
-   button under it, which is the one thing a destructive action must never
-   show."
-  [state appid]
-  (let [p (promise)]
-    (daemon!
-     "reliquary-install-detect"
-     (fn []
-       (try
-         (let [install (installs/find-install appid)
-               game    (first (filter #(= appid (:appid %)) (:games @state)))
-               version (when (and install game) (identify-installed game install))]
-           (fx-run! #(swap! state (fn [s]
-                                    (if (= appid (:selected-appid s))
-                                      (assoc s :install install :installed-version version)
-                                      s)))))
-         ;; a Steam directory we cannot read is not an error the user needs: the
-         ;; panel simply stays in its ordinary download shape
-         (catch Throwable _ nil)
-         (finally (deliver p :done)))))
-    p))
-
-(def ^:private switch-cancelled*
-  "Set by the Cancel button while a switch runs.
-
-   A download is cancelled through its own context; a switch has none, so before
-   this the Cancel button rendered on every switch stage and did nothing at all
-   -- inert on the one operation that most needs stopping, because it rewrites a
-   game in place and reads fifteen gigabytes to decide how."
-  (atom false))
-
 (def ^:private rate-interval-ms
-  "How often a switch's progress reaches the screen. The engine samples at 250 ms
-   and the sparkline is a ring of those, so a switch matches it."
+  "How often progress reaches the screen -- a switch's, and identification's.
+   The engine samples at 250 ms and the sparkline is a ring of those, so both
+   match it."
   250)
 
 (defn advance-rate
@@ -564,6 +499,9 @@
    about 16,000 of them in the 16 seconds a 15 GB install takes -- and
    marshalling every one onto the FX thread would flood it with work nobody can
    see. One reading every 250 ms is what the screen can actually draw.
+
+   Used by the switch screen and by the library panel's identification pass,
+   which is why it lives above both.
 
    Two rates, because they answer different questions. `:bytes-per-sec` is the
    live rate over the last interval, which is what the speedometer and the
@@ -599,6 +537,127 @@
                :bytes-per-sec (max 0.0 (double bps))
                :session-bytes-per-sec (max 0.0 (double sbps))
                :emit? true)))))
+
+(def hashing-visible-after-ms
+  "How long identification must have been running before its bar is shown.
+
+   Measured on a real Skyrim SE install, identification reads two executables --
+   46 MB -- in about 22 ms warm. Emitting the first reading the moment it arrives
+   put a progress box on screen for a single frame on every click in the library,
+   which reads as a glitch rather than as progress. Below this the panel simply
+   goes from empty to answered, as it did before it could report at all.
+
+   It is not always fast: the same pass on a cold spinning disk, or on a game
+   whose executables are several hundred megabytes, is seconds rather than
+   milliseconds, and that is the case the bar exists for.
+
+   Public so a test can move it rather than sleep."
+  200)
+
+(defn- identify-installed
+  "Which version this install IS, decided by hashing its executable.
+
+   NOT from Steam's appmanifest. That is bookkeeping: it goes stale the moment
+   files are swapped by hand, it says nothing after a half-applied switch, and it
+   is exactly what this app makes untrue. The bytes are the authority.
+
+   Free, and offline. The catalog carries each version's executable hashes -- a
+   manifest is immutable, so they are resolved once by the catalog tool and never
+   fetched again -- so this reads two files (about 40 ms on a real Skyrim
+   install) and looks them up. No session, no manifest, no network.
+
+   Falls back to the appmanifest's manifest ids when the catalog has no
+   executable hashes for this game, which is true of every catalog generated
+   before the field existed, including the one currently shipped. The hash wins
+   wherever the catalog can answer."
+  [game install opts]
+  (let [candidates (local/catalog-candidates (catalog/versions game))]
+    (if (seq candidates)
+      (let [paths  (distinct (mapcat #(local/exe-paths (:files %)) candidates))
+            hashes (local/hash-paths (:path install) paths opts)]
+        (:version (local/identify hashes candidates)))
+      ;; nothing was read, so nothing to report -- the fallback is one small
+      ;; file of Steam's bookkeeping, not a pass over the install
+      (installs/installed-version game install))))
+
+(defn detect-install!
+  "Look for an existing Steam install of `appid` and, if it is still the selected
+   game when the answer arrives, put it on the panel. Returns a promise.
+
+   Off the calling thread, and not as a precaution: `installs/find-install` walks
+   every Steam library and reads every appmanifest in each, and `select-game!` is
+   a click handler. On a machine with several libraries on a spinning disk that
+   is long enough to drop a frame.
+
+   The selection is re-checked after the lookup. Clicking Skyrim and then Stardew
+   before the first answer returns would otherwise paint Skyrim's install path
+   underneath Stardew's version list -- someone else's folder with a Switch
+   button under it, which is the one thing a destructive action must never
+   show."
+  [state appid]
+  (let [p (promise)]
+    (daemon!
+     "reliquary-install-detect"
+     (fn []
+       (try
+         (let [install (installs/find-install appid)
+               game    (first (filter #(= appid (:appid %)) (:games @state)))
+               ;; the selection moving on is the abort signal. select-game! has
+               ;; already cleared the panel and started another detect by then,
+               ;; and a user clicking down a library must not leave one thread
+               ;; per game reading executables off a spinning disk.
+               stale?  (fn [] (not= appid (:selected-appid @state)))
+               t0      (System/currentTimeMillis)
+               rate*   (atom {})
+               version (when (and install game)
+                         (identify-installed
+                          game install
+                          {:abort? stale?
+                           :on-progress
+                           (fn [{:keys [done total]}]
+                             ;; throttled and rate-tracked exactly like the
+                             ;; switch screen's, so the box gets the rate and
+                             ;; the clock it now renders
+                             (let [now (System/currentTimeMillis)
+                                   r   (swap! rate* advance-rate done now)]
+                               (when (and (:emit? r)
+                                          (>= (- now t0) hashing-visible-after-ms))
+                                 (fx-run!
+                                  #(swap! state
+                                          (fn [st]
+                                            (if (= appid (:selected-appid st))
+                                              (assoc st :hashing
+                                                     {:done done :total total
+                                                      :bytes-per-sec (:bytes-per-sec r)
+                                                      :session-bytes-per-sec
+                                                      (:session-bytes-per-sec r)})
+                                              st)))))))}))]
+           (fx-run! #(swap! state (fn [s]
+                                    (if (= appid (:selected-appid s))
+                                      (assoc s :install install :installed-version version)
+                                      s)))))
+         ;; a Steam directory we cannot read is not an error the user needs: the
+         ;; panel simply stays in its ordinary download shape
+         (catch Throwable _ nil)
+         (finally
+           ;; ALWAYS, including the throw above: a bar left under an answered
+           ;; panel reads as still working. Guarded on the selection so a slow
+           ;; thread finishing cannot wipe the bar of the game now on screen.
+           (fx-run! #(swap! state (fn [s]
+                                    (if (= appid (:selected-appid s))
+                                      (assoc s :hashing nil)
+                                      s))))
+           (deliver p :done)))))
+    p))
+
+(def ^:private switch-cancelled*
+  "Set by the Cancel button while a switch runs.
+
+   A download is cancelled through its own context; a switch has none, so before
+   this the Cancel button rendered on every switch stage and did nothing at all
+   -- inert on the one operation that most needs stopping, because it rewrites a
+   game in place and reads fifteen gigabytes to decide how."
+  (atom false))
 
 (defn- switch-snapshot
   "A `download/snapshot`-shaped map for a switch phase, so the download screen

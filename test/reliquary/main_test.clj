@@ -1278,6 +1278,108 @@
             @(main/select-game! state 413150)
             (is (= "old" (:id (:installed-version @state))))))))))
 
+(deftest identifying-an-install-drives-the-panels-hashing-bar
+  (testing "the design's `analyzing` state. The box existed and could never
+            render: nothing ever set :hashing to anything but nil, so the panel
+            went straight from empty to answered."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes]})
+              seen  (atom [])]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths
+                        (fn [_ paths {:keys [on-progress]}]
+                          (when on-progress
+                            (on-progress {:done 20000000 :total 40000000 :path "Game.exe"})
+                            (on-progress {:done 40000000 :total 40000000 :path "Game.exe"}))
+                          {"Game.exe" "bbbb"})]
+            (add-watch state ::probe
+                       (fn [_ _ _ st] (when-let [h (:hashing st)] (swap! seen conj h))))
+            ;; 0 rather than the shipped 200 ms: this stub returns instantly, and
+            ;; the threshold is what `a-fast-identification-never-flashes-a-bar`
+            ;; is about. Here the question is whether the box is fed at all.
+            (with-redefs [main/hashing-visible-after-ms 0]
+              @(main/select-game! state 413150))
+            (remove-watch state ::probe)
+            (is (seq @seen) "the panel was told it was hashing")
+            (is (every? #(and (:done %) (:total %)) @seen)
+                "in bytes, which is what the box renders")
+            (is (some :session-bytes-per-sec @seen)
+                "with the rate the box now renders")))))))
+
+(deftest a-fast-identification-never-flashes-a-bar
+  (testing "reading two executables off a warm disk takes about 22 ms. Showing a
+            progress box for one frame on every click in the library reads as a
+            glitch, not as progress -- so below the threshold the panel goes
+            straight from empty to answered, as it always did."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes]})
+              seen  (atom [])]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths
+                        (fn [_ _ {:keys [on-progress]}]
+                          (when on-progress
+                            (on-progress {:done 5000 :total 10000 :path "Game.exe"})
+                            (on-progress {:done 10000 :total 10000 :path "Game.exe"}))
+                          {"Game.exe" "bbbb"})]
+            (add-watch state ::probe
+                       (fn [_ _ _ st] (when (:hashing st) (swap! seen conj (:hashing st)))))
+            @(main/select-game! state 413150)
+            (remove-watch state ::probe)
+            (is (empty? @seen) "no bar for a pass that is over before it is seen")
+            (is (= "old" (:id (:installed-version @state)))
+                "and the answer still arrives")))))))
+
+(deftest the-hashing-bar-goes-away-once-the-version-is-known
+  (testing "a bar left at 100% under an answered panel reads as still working"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes]})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths
+                        (fn [_ _ {:keys [on-progress]}]
+                          (when on-progress (on-progress {:done 1 :total 1 :path "Game.exe"}))
+                          {"Game.exe" "bbbb"})]
+            @(main/select-game! state 413150)
+            (is (nil? (:hashing @state)))
+            (is (= "old" (:id (:installed-version @state))))))))))
+
+(deftest the-hashing-bar-goes-away-when-identification-fails
+  (testing "an unreadable Steam directory is not an error the user needs, but a
+            bar that never stops is"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes]})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths (fn [_ _ _] (throw (RuntimeException. "disk went away")))]
+            @(main/select-game! state 413150)
+            (is (nil? (:hashing @state)))))))))
+
+(deftest picking-another-game-stops-the-hash-in-flight
+  (testing "hash-paths takes an :abort? for exactly this reason -- a user
+            clicking through a library must not leave a thread per game reading
+            executables off a spinning disk"
+    (with-tmp
+      (fn []
+        (let [state   (wired {:games [game-with-exes]})
+              aborted (atom nil)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        installs/find-install (constantly an-install)
+                        local/hash-paths
+                        (fn [_ _ {:keys [abort?]}]
+                          ;; the selection moves on while this one is still reading
+                          (swap! state assoc :selected-appid 999)
+                          (reset! aborted (boolean (and abort? (abort?))))
+                          {})]
+            @(main/select-game! state 413150)
+            (is (true? @aborted)
+                "the predicate reports the selection has moved on")))))))
+
 (deftest an-executable-matching-no-version-is-unidentified
   (with-tmp
     (fn []

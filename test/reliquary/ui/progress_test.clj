@@ -52,6 +52,23 @@
       (is (not (str/includes? s "Infinity")))
       (is (not (str/includes? s "NaN"))))))
 
+(deftest small-reads-are-shown-in-megabytes
+  (testing "the box was written for a 15 GB switch and formatted only in GB.
+            Identification reads two executables -- 41 MB on Skyrim SE -- and
+            rendered them as `0.0 GB of 0.0 GB`, a bar with no numbers on it."
+    (let [s (box {:done 4713472 :total 41870616})]
+      (is (str/includes? s "4.5 MB of 39.9 MB"))
+      (is (not (str/includes? s "0.0 GB"))))))
+
+(deftest gigabyte-reads-are-still-shown-in-gigabytes
+  (is (str/includes? (box {}) "8.4 GB of 14.0 GB")))
+
+(deftest the-two-sides-do-not-disagree-about-units
+  (testing "a bar reading `900.0 MB of 14.0 GB` is harder to read at a glance
+            than one whose halves share a unit; the total decides for both"
+    (let [s (box {:done 900000000 :total 15000000000})]
+      (is (str/includes? s "0.8 GB of 14.0 GB")))))
+
 (deftest the-label-is-the-callers
   (testing "the same box does duty for staging and switching on the switch
             screen; it is not always hashing"

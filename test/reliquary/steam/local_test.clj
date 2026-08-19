@@ -150,8 +150,11 @@
                                 {:on-progress (fn [p] (swap! seen conj p))})]
         (is (= 3 (count r)) "every path hashed")
         (is (= 3 (count @seen)) "and every one reported")
-        (is (= [1 2 3] (map :done @seen)))
-        (is (every? #(= 3 (:total %)) @seen)))
+        ;; in BYTES: each file here holds its own name, so 5 + 5 + 5. Counting
+        ;; files would put the bar at 50% with 95% of a real read still to come,
+        ;; a launcher being 2 MB against a 40 MB main binary.
+        (is (= [5 10 15] (map :done @seen)))
+        (is (every? #(= 15 (:total %)) @seen)))
       (testing "and an abort predicate stops it part way, so a user closing the
                 panel does not leave a thread hashing a 16GB install"
         (let [n (atom 0)

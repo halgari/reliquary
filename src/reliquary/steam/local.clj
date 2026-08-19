@@ -160,12 +160,21 @@
    'hashed to nil' are different facts, and only one of them belongs in a map
    that gets compared against a manifest."
   [root paths {:keys [on-progress abort?]}]
-  (let [total (count paths)]
-    (loop [[p & more] (seq paths) done 0 acc {}]
+  ;; BYTES, not files. The bar this feeds is a byte bar, and it has to be: these
+  ;; paths are executables, and a game's launcher next to its main binary is 2 MB
+  ;; against 40. Counting files puts the bar at 50% while 95% of the reading is
+  ;; still to come. The sizes are one stat() each, taken before the first read so
+  ;; the total never grows under the bar.
+  (let [sized (mapv (fn [p]
+                      (let [f (->file root p)]
+                        [p (if (.isFile f) (.length f) 0)]))
+                    paths)
+        total (reduce + 0 (map second sized))]
+    (loop [[[p n] & more] (seq sized) done 0 acc {}]
       (if (or (nil? p) (and abort? (abort?)))
         acc
-        (let [sha (sha1-file (->file root p))
-              done (inc done)]
+        (let [sha  (sha1-file (->file root p))
+              done (+ done (long n))]
           (when on-progress (on-progress {:done done :total total :path p}))
           (recur more done (cond-> acc sha (assoc p sha))))))))
 

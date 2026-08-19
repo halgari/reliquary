@@ -26,6 +26,28 @@
     (format "%.1f GB" (/ (double bytes) (* 1024.0 1024 1024)))
     "size unknown"))
 
+(defn span
+  "`done of total`, in a unit chosen by the TOTAL.
+
+   The box was written for a switch, where both sides are gigabytes, and
+   formatted only in gigabytes. The library panel's identification pass reads
+   two executables -- 41 MB on Skyrim SE -- which came out as `0.0 GB of 0.0 GB`:
+   a bar with no numbers on it.
+
+   The total picks the unit for both halves rather than each choosing its own,
+   so the line does not read `900.0 MB of 14.0 GB` and make the reader convert
+   before they can compare."
+  [done total]
+  (let [done (double (or done 0))
+        total (double (or total 0))
+        gib (* 1024.0 1024 1024)
+        mib (* 1024.0 1024)]
+    (cond
+      (>= total gib) (format "%.1f GB of %.1f GB" (/ done gib) (/ total gib))
+      (>= total mib) (format "%.1f MB of %.1f MB" (/ done mib) (/ total mib))
+      (pos? total)   (format "%.0f KB of %.0f KB" (/ done 1024.0) (/ total 1024.0))
+      :else          "size unknown")))
+
 (defn mb-per-sec [bps]
   (if (and bps (pos? (double bps)))
     (format "%.1f MB/s" (/ (double bps) (* 1024.0 1024)))
@@ -102,7 +124,7 @@
       ;; place it renders, the library's ~324px panel
       {:fx/type :label
        :wrap-text true
-       :text (str (gb done) " of " (gb total)
+       :text (str (span done total)
                   "  ·  " (mb-per-sec bytes-per-sec)
                   (when eta (str "  ·  " eta " remaining")))
        :style (theme/style {:-fx-font-family (theme/mono-font)
