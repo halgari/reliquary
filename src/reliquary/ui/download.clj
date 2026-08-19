@@ -119,18 +119,26 @@
 ;; ---------------------------------------------------------------------------
 ;; stage
 
+(def ^:private moving-stages
+  "Stages that are actively moving bytes. :switching is one of them: changing an
+   existing install transfers over the network exactly as a download does, it
+   simply transfers far less of it."
+  #{:downloading :switching})
+
 (defn- paused?
   "'Paused', for this screen, means anything other than actively pulling
    bytes: preparing, copying, cancelled, failed, done or idle all read as
    paused in the header kicker, the sparkline colour and the clock colour."
   [stage]
-  (not= :downloading stage))
+  (not (contains? moving-stages stage)))
 
 (defn- running-stage?
   "Whether the Cancel button belongs on screen at all -- not before the run
    starts and not once it has stopped, one way or another."
   [stage]
-  (contains? #{:preparing :downloading :copying} stage))
+  ;; :hashing and :staging are a switch's preparation, and both take real time on
+  ;; a 15 GB install -- a user must be able to stop them, not only the transfer
+  (contains? #{:preparing :downloading :copying :hashing :staging :switching} stage))
 
 (defn- track
   "Manual letter-spacing, the same technique ui/app.clj's wordmark uses:
@@ -157,7 +165,14 @@
 (defn- header
   [game version snapshot]
   (let [stage  (or (:stage snapshot) :idle)
-        kicker (track (if (paused? stage) "Paused" "Downloading"))]
+        ;; A switch must not call itself a download: the user is changing a game
+        ;; they already have, and "Downloading" over a 0.21 GB transfer into an
+        ;; existing folder reads as a fresh 15 GB install.
+        kicker (track (cond (= :switching stage) "Switching"
+                            (= :hashing stage)   "Reading install"
+                            (= :staging stage)   "Preparing"
+                            (paused? stage)      "Paused"
+                            :else                "Downloading"))]
     {:fx/type :v-box
      :spacing 4
      :max-width header-text-width

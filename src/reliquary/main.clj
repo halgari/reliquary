@@ -53,6 +53,7 @@
             [reliquary.steam.auth :as auth]
             [reliquary.steam.installs :as installs]
             [reliquary.steam.local :as local]
+            [reliquary.switch :as switch]
             [reliquary.ui.app :as app]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done]
@@ -514,40 +515,93 @@
          (finally (deliver p :done)))))
     p))
 
-(defn analyze-install!
-  "The Switch button: read the install and work out what changing it would move.
+(defn- switch-snapshot
+  "A `download/snapshot`-shaped map for a switch phase, so the download screen
+   renders a switch without knowing one from a download.
 
-   Only the hashing pass is wired today -- the plan it produces is not yet
-   applied, because writing into a Steam library is the destructive half and gets
-   its own pass. What this does prove end to end is the expensive part: on a real
-   15 GB install the whole tree hashes in about sixteen seconds.
+   The phases map onto stages that screen already understands: hashing and
+   staging are preparation, applying is the transfer. `:switching` rather than
+   `:downloading` because the user is changing a game they already have, and
+   \"Downloading\" over a 0.21 GB transfer into an existing folder reads as a
+   fresh fifteen gigabyte install."
+  [phase {:keys [done total]} plan]
+  {:stage       (case phase :hashing :hashing :staging :staging :switching)
+   :bytes-done  (or done 0)
+   :bytes-total (or total 0)
+   :chunks-done 0
+   :chunks-total (count (:fetch plan))
+   :wire-bytes  0
+   :bytes-per-sec 0.0
+   :wire-bytes-per-sec 0.0
+   :samples     []
+   :error       nil})
 
-   On a daemon thread with progress marshalled through `fx-run!`, and abandoned
-   the moment the selection changes -- a user who clicks another game must not
-   leave a thread reading sixteen gigabytes on their behalf."
+(defn switch-install!
+  "Change the selected install to the selected version. Returns a promise.
+
+   Refuses without an identified installed version, and that refusal is the
+   design rather than caution: the chunk index is built with the INSTALLED
+   version's manifest as its boundary map, because Steam's chunk boundaries come
+   from a manifest and cannot be recomputed from local bytes. With no known
+   version there are no boundaries, and guessing one would index garbage and
+   then write it.
+
+   Everything runs on a daemon thread; the screen moves to the transfer view and
+   is driven by `switch-snapshot`. A failure lands in the snapshot's `:error`
+   rather than being swallowed -- this rewrites a game in place, and a failure
+   that left the screen looking finished would be the worst outcome available."
   [state]
-  (let [{:keys [install selected-appid]} @state]
-    (when install
-      (swap! state assoc :hashing {:done 0 :total 0})
+  (let [p (promise)
+        {:keys [install installed-version games selected-appid selected-version-id]} @state
+        game    (first (filter #(= selected-appid (:appid %)) games))
+        version (first (filter #(= selected-version-id (:id %)) (catalog/versions game)))]
+    (cond
+      (not (and install game version))
+      (do (swap! state assoc :error "Nothing to switch: pick an installed game and a version.")
+          (deliver p :done))
+
+      (nil? installed-version)
+      (do (swap! state assoc
+                 :error (str "Reliquary cannot tell which version is installed, so it "
+                             "cannot work out what to change. Reinstall from Steam, or "
+                             "download this version to a new folder instead."))
+          (deliver p :done))
+
+      :else
       (daemon!
-       "reliquary-install-hash"
+       "reliquary-switch"
        (fn []
          (try
-           (let [stale? #(not= selected-appid (:selected-appid @state))]
-             ;; TODO: the installed version's manifest supplies the chunk
-             ;; boundaries; fetching it needs a session, which lands with the
-             ;; apply step. Until then this reports the tree it can see.
-             (local/hash-paths
-              (:path install)
-              (keys (:manifests install))
-              {:abort? stale?
-               :on-progress (fn [{:keys [done total path]}]
-                              (when-not (stale?)
-                                (fx-run! #(swap! state assoc
-                                                 :hashing {:done done :total total
-                                                           :path path}))))}))
-           (catch Throwable _ nil)
-           (finally (fx-run! #(swap! state assoc :hashing nil)))))))))
+           ;; the screen moves FIRST, before anything that can fail. Opening the
+           ;; session raises when the token has expired, and a failure raised
+           ;; before the move would land in a snapshot on a screen the user is
+           ;; not looking at -- they would press Switch and watch nothing happen.
+           (let [_ (fx-run! #(swap! state assoc
+                                    :screen :download
+                                    :game game :version version
+                                    :hashing nil
+                                    :snapshot (switch-snapshot :hashing {} nil)))
+                 session (open-session!)
+                 plan*   (atom nil)]
+             (switch/run!
+              {:session session :game game :install install
+               :from installed-version :to version
+               :on-plan (fn [pl] (reset! plan* pl))
+               :on-progress (fn [{:keys [phase] :as ev}]
+                              (fx-run! #(swap! state assoc
+                                               :snapshot (switch-snapshot phase ev @plan*))))})
+             (fx-run! #(swap! state assoc
+                              :screen :done
+                              :snapshot (assoc (switch-snapshot :applying {} @plan*)
+                                               :stage :done))))
+           (catch Throwable t
+             (fx-run! #(swap! state assoc
+                              :snapshot (assoc (or (:snapshot @state) {})
+                                               :stage :failed
+                                               :error (or (not-empty (ex-message t))
+                                                          "the switch failed unexpectedly")))))
+           (finally (deliver p :done))))))
+    p))
 
 (defn select-game!
   "Selecting a DIFFERENT game clears the version selection: version ids are
@@ -867,7 +921,7 @@
    ;; the Switch button. Hashing and the switch itself land next; wiring the
    ;; handler now keeps library/view from silently defaulting it to a no-op,
    ;; which renders a working-looking button that does nothing.
-   :on-analyze        (fn [_]  (analyze-install! state))
+   :on-analyze        (fn [_]  (switch-install! state))
    :on-cancel         (fn [_]  (cancel-download! state))
    :on-retry          (fn [_]  (run-download! state))
    :on-back           (fn [_]  (back-to-library! state))

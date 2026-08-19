@@ -67,6 +67,35 @@
 
 ;; ---- resolution -------------------------------------------------------------
 
+(defn version-manifests
+  "The parsed manifests for one catalog `version` of `game`, plus the CDN hosts
+   to fetch its chunks from: `{:hosts [...] :manifests [...]}`.
+
+   Each manifest carries the requested `:depot-id` and its `:key-hex`, because
+   those -- not anything inside the manifest -- are what chunk URLs and the key
+   lookup are keyed by.
+
+   Split out of `resolve-version` so `reliquary.switch` can have the manifests
+   without a download plan: changing an existing install needs the file and
+   chunk lists of TWO versions, and builds its own plan by diffing them against
+   what is on disk."
+  [session game version]
+  (let [c      (:conn session)
+        appid  (:appid game)
+        branch (:branch version)
+        hosts  (content/cdn-servers c)]
+    {:hosts hosts
+     :manifests
+     (mapv (fn [{:keys [depot-id manifest-gid]}]
+             (let [key-hex (content/depot-key c appid depot-id)
+                   code    (content/manifest-request-code c appid depot-id
+                                                          manifest-gid branch)
+                   blob    (manifest/fetch hosts depot-id manifest-gid code)]
+               (assoc (manifest/parse blob key-hex)
+                      :depot-id depot-id
+                      :key-hex  key-hex)))
+           (:depots version))}))
+
 (defn resolve-version
   "One catalog `version` of `game` -> {:plan :keys :hosts :manifests}.
 
@@ -80,22 +109,7 @@
    have, the catalog names exactly the depots this build needs: a partial
    install that runs is worse than an error that does not."
   [session game version]
-  (let [c      (:conn session)
-        appid  (:appid game)
-        branch (:branch version)
-        hosts  (content/cdn-servers c)
-        manifests
-        (mapv (fn [{:keys [depot-id manifest-gid]}]
-                (let [key-hex (content/depot-key c appid depot-id)
-                      code    (content/manifest-request-code c appid depot-id
-                                                             manifest-gid branch)
-                      blob    (manifest/fetch hosts depot-id manifest-gid code)]
-                  ;; the requested depot id, not the manifest's: it is what the
-                  ;; chunk URLs and the key lookup are keyed by.
-                  (assoc (manifest/parse blob key-hex)
-                         :depot-id depot-id
-                         :key-hex  key-hex)))
-              (:depots version))]
+  (let [{:keys [hosts manifests]} (version-manifests session game version)]
     {:plan      (plan/build manifests)
      :keys      (plan/keys-by-depot manifests)
      :hosts     hosts

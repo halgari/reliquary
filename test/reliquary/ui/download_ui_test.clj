@@ -461,3 +461,42 @@
                           :bytes-per-sec 5000.0 :session-bytes-per-sec 0.0})
           s (pr-str (download/view {:snapshot snapshot :game game :version version}))]
       (is (str/includes? s "--:--")))))
+
+;; ---------------------------------------------------------------------------
+;; switching an existing install
+;;
+;; A switch is a transfer like any other, so it reuses this screen rather than
+;; growing a second one. What it must not do is call itself a download: the user
+;; is changing a game they already have, and "Downloading" over a 0.21 GB
+;; transfer into an existing folder reads as a fresh 15 GB install.
+
+(deftest a-switch-says-switching-not-downloading
+  (let [s (pr-str (download/view {:game {:title "G"} :version {:label "1.5.97" :bytes 1}
+                                  :snapshot {:stage :switching :bytes-done 1 :bytes-total 2}}))]
+    ;; the kicker is tracked with a THIN SPACE (U+2009), not a plain one -- see
+    ;; download/track. Joining with " " here passed nothing and looked identical
+    ;; in the failure output.
+    (is (str/includes? s (str/join "\u2009" (seq "SWITCHING")))
+        "the header kicker is tracked, like every other kicker on this screen")
+    (is (not (str/includes? s (str/join "\u2009" (seq "DOWNLOADING")))))))
+
+(deftest a-switch-reads-as-running-not-paused
+  (testing "paused? drives the sparkline colour, the clock colour and the kicker;
+            a switch actively moving bytes must not render as stalled"
+    (let [s (pr-str (download/view {:game {:title "G"} :version {:label "v" :bytes 1}
+                                    :snapshot {:stage :switching :bytes-done 1 :bytes-total 2}}))]
+      (is (not (str/includes? s (str/join "\u2009" (seq "PAUSED"))))))))
+
+(deftest a-switch-can-be-cancelled
+  (testing "it rewrites an install in place and takes minutes; a user must be
+            able to stop it, and Cancel only renders for running stages"
+    (is (str/includes? (pr-str (download/view {:game {:title "G"} :version {:label "v" :bytes 1}
+                                               :snapshot {:stage :switching}}))
+                       "Cancel"))))
+
+(deftest staging-and-hashing-read-as-preparation
+  (testing "before any bytes move, the screen should not claim throughput"
+    (doseq [stage [:hashing :staging]]
+      (let [s (pr-str (download/view {:game {:title "G"} :version {:label "v" :bytes 1}
+                                      :snapshot {:stage stage}}))]
+        (is (str/includes? s "Cancel") (str stage " must stay cancellable"))))))
