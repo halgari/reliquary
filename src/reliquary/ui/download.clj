@@ -120,10 +120,17 @@
 ;; stage
 
 (def ^:private moving-stages
-  "Stages that are actively moving bytes. :switching is one of them: changing an
-   existing install transfers over the network exactly as a download does, it
-   simply transfers far less of it."
-  #{:downloading :switching})
+  "Stages that are actively moving bytes.
+
+   :switching is one: changing an existing install transfers over the network
+   exactly as a download does, it simply transfers far less of it.
+
+   :hashing and :staging are too, and that matters more than it looks. They move
+   bytes off a disk rather than over a wire -- 15 GB of it, at about a gigabyte a
+   second -- and leaving them out gated the ETA off entirely, so the screen sat
+   at 0.0 MB/s and --:-- for sixteen seconds while working flat out. On the one
+   operation that rewrites a game in place, that reads as hung."
+  #{:downloading :switching :hashing :staging})
 
 (defn- paused?
   "'Paused', for this screen, means anything other than actively pulling

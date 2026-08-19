@@ -1268,3 +1268,102 @@
                         installs/installed-version (constantly {:id "public" :label "Latest"})]
             @(main/select-game! state 413150)
             (is (= "public" (:id (:installed-version @state))))))))))
+
+;; ---------------------------------------------------------------------------
+;; rate and ETA during a switch
+;;
+;; Two problems, and the second is not cosmetic. chunk-index reports progress per
+;; CHUNK -- about 16,000 events in the 16 seconds a 15 GB install takes -- so
+;; marshalling every one onto the FX thread would flood it. And with no rate at
+;; all the screen showed 0.0 MB/s and --:-- while working at roughly 1 GB/s,
+;; which reads as hung on the one operation that rewrites a game in place.
+
+(deftest the-first-reading-starts-the-clock-and-emits
+  (let [st (main/advance-rate {} 0 1000)]
+    (is (:emit? st) "the first reading must reach the screen")
+    (is (= 1000 (:t0 st)))))
+
+(deftest readings-are-throttled-to-the-engines-sampling-interval
+  (testing "16000 events in 16 seconds is a thousand fx-run! calls a second"
+    (let [a (main/advance-rate {} 0 1000)
+          b (main/advance-rate a 1000000 1100)      ; 100 ms later
+          c (main/advance-rate b 2000000 1400)]     ; 400 ms after the first
+      (is (not (:emit? b)) "too soon: swallowed")
+      (is (:emit? c) "past the interval: emitted"))))
+
+(deftest the-live-rate-is-measured-over-the-interval
+  (let [a (main/advance-rate {} 0 0)
+        b (main/advance-rate a 500000000 1000)]     ; 500 MB in one second
+    (is (:emit? b))
+    (is (< 4.9E8 (:bytes-per-sec b) 5.1E8))))
+
+(deftest the-eta-rate-is-the-average-over-the-whole-run
+  (testing "download/eta-seconds takes :session-bytes-per-sec deliberately --
+            dividing by an instantaneous rate makes a clock that swings wildly"
+    (let [a (main/advance-rate {} 0 0)
+          b (main/advance-rate a 1000000000 1000)   ; 1 GB in the first second
+          c (main/advance-rate b 1100000000 2000)]  ; only 100 MB in the second
+      (is (< 4.9E8 (:session-bytes-per-sec c) 5.6E8)
+          "averaged over both seconds, not the last one")
+      (is (< 0.9E8 (:bytes-per-sec c) 1.1E8)
+          "while the live rate follows the slow second"))))
+
+(deftest samples-accumulate-for-the-sparkline-and-are-bounded
+  (let [st (reduce (fn [st i] (main/advance-rate st (* i 1000000) (* i 300)))
+                   {} (range 1 80))]
+    (is (seq (:samples st)))
+    (is (<= (count (:samples st)) 48) "the sparkline's ring, same as the engine's")))
+
+(deftest a-reading-that-goes-backwards-does-not-produce-a-negative-rate
+  (testing "each phase restarts at zero -- hashing ends at 15 GB and applying
+            begins at 0 -- and a negative rate would render as a backwards
+            sparkline and a nonsense clock"
+    (let [a (main/advance-rate {} 15000000000 0)
+          b (main/advance-rate a 0 1000)]
+      (is (not (neg? (:bytes-per-sec b))))
+      (is (not (neg? (:session-bytes-per-sec b)))))))
+
+(deftest a-switch-feeds-real-rates-to-the-screen
+  (testing "and throttles: 16000 chunk events must not become 16000 renders"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "public" :label "Latest"}
+                            :selected-version-id "public"})
+              renders (atom 0)]
+          (with-redefs [main/fx-run! (fn [f] (swap! renders inc) (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [{:keys [on-progress]}]
+                                      ;; a thousand events, as a real hash pass
+                                      ;; delivers them
+                                      (dotimes [i 1000]
+                                        (on-progress {:phase :hashing
+                                                      :done (* i 1000000)
+                                                      :total 1000000000}))
+                                      {:fetch-bytes 0})]
+            @(main/switch-install! state)
+            (is (< @renders 100)
+                (str "1000 progress events became " @renders
+                     " renders -- the throttle is what keeps the FX thread usable"))))))))
+
+(deftest a-switch-snapshot-carries-what-the-screen-needs-for-an-eta
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                          :installed-version {:id "public" :label "Latest"}
+                          :selected-version-id "public"})
+            seen (atom nil)]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/open-session! (constantly {:conn :fake})
+                      main/close-session! (fn [] nil)
+                      switch/run! (fn [{:keys [on-progress]}]
+                                    (on-progress {:phase :hashing :done 0 :total 1000})
+                                    (Thread/sleep 300)
+                                    (on-progress {:phase :hashing :done 500 :total 1000})
+                                    (reset! seen (:snapshot @state))
+                                    {:fetch-bytes 0})]
+          @(main/switch-install! state)
+          (is (pos? (:session-bytes-per-sec @seen)) "the ETA divides by this")
+          (is (pos? (:wire-bytes-per-sec @seen)) "and the speedometer shows this")
+          (is (seq (:samples @seen)) "and the sparkline draws these"))))))

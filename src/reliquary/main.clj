@@ -539,6 +539,57 @@
          (finally (deliver p :done)))))
     p))
 
+(def ^:private rate-interval-ms
+  "How often a switch's progress reaches the screen. The engine samples at 250 ms
+   and the sparkline is a ring of those, so a switch matches it."
+  250)
+
+(defn advance-rate
+  "Fold one progress reading into a rate tracker.
+
+   Returns the tracker, carrying `:emit?` when a screen update is due. Public
+   because it is the one piece of this worth testing directly.
+
+   Throttled, and NOT for tidiness: `chunk-index` reports progress per chunk --
+   about 16,000 of them in the 16 seconds a 15 GB install takes -- and
+   marshalling every one onto the FX thread would flood it with work nobody can
+   see. One reading every 250 ms is what the screen can actually draw.
+
+   Two rates, because they answer different questions. `:bytes-per-sec` is the
+   live rate over the last interval, which is what the speedometer and the
+   sparkline want. `:session-bytes-per-sec` is the average across the whole run,
+   which is what the ETA wants: `download/eta-seconds` takes it deliberately,
+   because dividing the remaining bytes by an instantaneous rate gives a clock
+   that swings between four minutes and forty twice a second.
+
+   A reading that goes BACKWARDS is treated as a restart rather than a negative
+   rate. Each phase begins again at zero -- hashing ends at 15 GB and applying
+   starts at 0 -- and a negative rate renders as a backwards sparkline and a
+   nonsense clock."
+  [{:keys [t0 base last-emit last-done samples] :as st} done now]
+  (let [done (long (or done 0))]
+    (cond
+      ;; first reading, or a phase that restarted below where we were
+      (or (nil? t0) (< done (long (or last-done 0))))
+      {:t0 now :base done :last-emit now :last-done done
+       :samples [] :bytes-per-sec 0.0 :session-bytes-per-sec 0.0 :emit? true}
+
+      (< (- now (long last-emit)) rate-interval-ms)
+      (assoc st :emit? false)
+
+      :else
+      (let [dt   (/ (- now (long last-emit)) 1000.0)
+            bps  (if (pos? dt) (/ (- done (long last-done)) dt) 0.0)
+            sdt  (/ (- now (long t0)) 1000.0)
+            sbps (if (pos? sdt) (/ (- done (long base)) sdt) 0.0)]
+        (assoc st
+               :last-emit now
+               :last-done done
+               :samples (vec (take-last download/sample-count (conj (or samples []) bps)))
+               :bytes-per-sec (max 0.0 (double bps))
+               :session-bytes-per-sec (max 0.0 (double sbps))
+               :emit? true)))))
+
 (defn- switch-snapshot
   "A `download/snapshot`-shaped map for a switch phase, so the download screen
    renders a switch without knowing one from a download.
@@ -548,7 +599,7 @@
    `:downloading` because the user is changing a game they already have, and
    \"Downloading\" over a 0.21 GB transfer into an existing folder reads as a
    fresh fifteen gigabyte install."
-  [phase {:keys [done total]} plan]
+  [phase {:keys [done total]} plan rate]
   {;; marks this as a switch for the screen's copy: without it the panel calls a
    ;; failed switch an interrupted DOWNLOAD and offers to resume one, and the
    ;; header advertises the finished install size next to a transfer a fraction
@@ -560,9 +611,13 @@
    :chunks-done 0
    :chunks-total (count (:fetch plan))
    :wire-bytes  0
-   :bytes-per-sec 0.0
-   :wire-bytes-per-sec 0.0
-   :samples     []
+   ;; the live rate drives the speedometer and the sparkline; the session
+   ;; average drives the clock. See `advance-rate` for why they are not the same
+   ;; number.
+   :bytes-per-sec (:bytes-per-sec rate 0.0)
+   :wire-bytes-per-sec (:bytes-per-sec rate 0.0)
+   :session-bytes-per-sec (:session-bytes-per-sec rate 0.0)
+   :samples     (:samples rate [])
    :error       nil})
 
 (defn switch-install!
@@ -609,16 +664,25 @@
                                     :screen :download
                                     :game game :version version
                                     :hashing nil
-                                    :snapshot (switch-snapshot :hashing {} nil)))
+                                    :snapshot (switch-snapshot :hashing {} nil nil)))
                  session (open-session!)
-                 plan*   (atom nil)]
+                 plan*   (atom nil)
+                 rate*   (atom {})
+                 phase*  (atom nil)]
              (switch/run!
               {:session session :game game :install install
                :from installed-version :to version
                :on-plan (fn [pl] (reset! plan* pl))
-               :on-progress (fn [{:keys [phase] :as ev}]
-                              (fx-run! #(swap! state assoc
-                                               :snapshot (switch-snapshot phase ev @plan*))))})
+               :on-progress
+               (fn [{:keys [phase done] :as ev}]
+                 ;; each phase measures its own bytes and restarts at zero, so a
+                 ;; phase change resets the tracker rather than reporting a
+                 ;; 15 GB drop as a rate
+                 (when (not= phase @phase*) (reset! phase* phase) (reset! rate* {}))
+                 (let [r (swap! rate* advance-rate done (System/currentTimeMillis))]
+                   (when (:emit? r)
+                     (fx-run! #(swap! state assoc
+                                      :snapshot (switch-snapshot phase ev @plan* r))))))})
              (fx-run! #(swap! state assoc
                               :screen :done
                               ;; ui/done reads :path, and open-install-folder!
@@ -627,7 +691,7 @@
                               ;; nothing -- the install is Steam's folder, not a
                               ;; :folder the user picked here.
                               :path (:path install)
-                              :snapshot (assoc (switch-snapshot :applying {} @plan*)
+                              :snapshot (assoc (switch-snapshot :applying {} @plan* nil)
                                                :stage :done))))
            (catch Throwable t
              ;; the same {:category :message} shape `interrupt!` uses, because

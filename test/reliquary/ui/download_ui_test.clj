@@ -574,3 +574,33 @@
                       :snapshot {:stage :failed :bytes-done 1
                                  :error {:category :io :message "x"}}}))]
       (is (str/includes? s "nothing needs to be re-fetched")))))
+
+(deftest reading-an-install-shows-a-real-rate-and-clock
+  (testing "a 15 GB read at about 1 GB/s showed 0.0 MB/s and --:-- remaining,
+            which on the one operation that rewrites a game in place reads as
+            hung. Hashing IS moving bytes -- off a disk rather than a wire."
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "v" :bytes 1}
+                      :snapshot {:stage :hashing :switch? true
+                                 :bytes-done 9000000000 :bytes-total 15000000000
+                                 :wire-bytes-per-sec 1.0E9
+                                 :session-bytes-per-sec 1.0E9
+                                 :samples [8.0E8 9.0E8 1.0E9]}}))]
+      (is (not (str/includes? s "0.0 MB/s")) "the rate must not read as stalled")
+      (is (not (str/includes? s "--:-- remaining"))
+          "and six seconds of reading left is a number worth showing"))))
+
+(deftest staging-shows-a-rate-too
+  (let [s (pr-str (download/view
+                   {:game {:title "G"} :version {:label "v" :bytes 1}
+                    :snapshot {:stage :staging :switch? true
+                               :bytes-done 500000000 :bytes-total 1000000000
+                               :wire-bytes-per-sec 5.0E8 :session-bytes-per-sec 5.0E8
+                               :samples [5.0E8]}}))]
+    (is (not (str/includes? s "--:-- remaining")))))
+
+(deftest an-idle-screen-still-shows-no-clock
+  (testing "the rule that a stalled or not-yet-started run shows --:-- is intact"
+    (is (str/includes? (pr-str (download/view {:game {:title "G"} :version {:label "v" :bytes 1}
+                                               :snapshot {:stage :idle}}))
+                       "--:-- remaining"))))
