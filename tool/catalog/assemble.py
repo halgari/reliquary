@@ -207,9 +207,31 @@ def build_game(domain):
     current = {int(d["depot-id"]): str(d["manifest-gid"])
                for ver in versions if ver["id"] == "public"
                for d in ver["depots"]}
+    public_number = None
     for v in (load(f"{TOOL}/versions-historical/{domain}.json") or {}).get("versions", []):
         dep = {int(d["depot-id"]): str(d["manifest-gid"]) for d in v["depots"]}
+        # The version row in the UI is one line beside a size and a build id --
+        # keep the label to the version itself and drop the agents' explanatory
+        # tails, which belong in a report rather than a 400px side panel.
+        short = re.split(r"\s+(?:--|—)\s+", v["label"], maxsplit=1)[0].strip()
+        label = clean_label(v["id"], short)
         if dep and all(current.get(k) == gid for k, gid in dep.items()):
+            # This entry IS the public build, so take its NUMBER instead of
+            # dropping it on the floor.
+            #
+            # "Latest" is a tag this script invents; Steam has no version number
+            # for a public branch at all -- `description` is null on the public
+            # branch of every game in this catalog, leaving buildid as the only
+            # machine-readable identifier, and 13189953 is not what anyone calls
+            # their Skyrim. A curated entry that matches the live build depot for
+            # depot is the one place the real number exists.
+            #
+            # Self-correcting, which a hand-set label would not be: when Steam
+            # ships a new build the match breaks and this falls back to "Latest",
+            # which is then the honest answer, because at that point we genuinely
+            # do not know the number.
+            if public_number is None:
+                public_number = label
             continue
         # Do NOT silently drop weakly-sourced versions. The catalog has no
         # confidence field, and the label is the only channel that reaches the
@@ -217,16 +239,11 @@ def build_game(domain):
         # Cross-check that justifies keeping them: this source's 1.6.1170 entry
         # matches Steam's own PICS data byte-for-byte on all three depots.
         conf = v.get("confidence")
-        # The version row in the UI is one line beside a size and a build id --
-        # keep the label to the version itself and drop the agents' explanatory
-        # tails, which belong in a report rather than a 400px side panel.
-        short = re.split(r"\s+(?:--|—)\s+", v["label"], maxsplit=1)[0].strip()
         # No confidence suffix. It was well-intentioned -- those manifest IDs
         # really do come from one source -- but "(single source)" in a version
         # picker reads as a warning about the GAME, and the user cannot act on
         # it either way. Provenance stays in versions-historical/, where the
         # catalog's maintainer can see it and the player is not asked to.
-        label = clean_label(v["id"], short)
         versions.append({"id": v["id"], "label": label,
                          # a historical manifest still lives on the public branch --
                          # that is the branch its request code must be asked for
@@ -235,6 +252,11 @@ def build_game(domain):
                          "bytes": int(v.get("bytes") or 0),
                          "executables": v.get("executables") or {},
                          "depots": norm_depots(drop_excluded(v["depots"], excluded))})
+    # Name the live build with the number, now that we know it.
+    if public_number:
+        for ver in versions:
+            if ver["id"] == "public":
+                ver["label"] = public_number
     if not versions:
         return None, "no versions from any source"
     return {"appid": appid, "title": clean_title(g["title"]), "studio": g.get("studio"),

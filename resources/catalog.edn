@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-19T20:53:50Z"
+ :generated "2026-08-19T23:38:11Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -27,7 +27,7 @@
                  {:text "You will carry forty unenchanted iron daggers to sell later. You never sell them."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.6.1170"
                     :branch "public"
                     :build "13189953"
                     :date "2024-01-17"
