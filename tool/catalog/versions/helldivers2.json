@@ -1,29 +1,35 @@
 {
- "appid": 553850,
- "name": "HELLDIVERS\u2122 2",
- "foreign-language-depots": [],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "24720993",
-   "date": "2026-08-17",
-   "bytes": 23886986354,
-   "depots": [
+  "appid": 553850,
+  "name": "HELLDIVERS\u2122 2",
+  "foreign-language-depots": [],
+  "versions": [
     {
-     "depot-id": 553851,
-     "manifest-gid": "7334976887293886999"
-    },
-    {
-     "depot-id": 553853,
-     "manifest-gid": "4415764739386073154"
-    },
-    {
-     "depot-id": 553854,
-     "manifest-gid": "6929803021334100650"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "24720993",
+      "date": "2026-08-17",
+      "bytes": 23886986354,
+      "depots": [
+        {
+          "depot-id": 553851,
+          "manifest-gid": "7334976887293886999"
+        },
+        {
+          "depot-id": 553853,
+          "manifest-gid": "4415764739386073154"
+        },
+        {
+          "depot-id": 553854,
+          "manifest-gid": "6929803021334100650"
+        }
+      ],
+      "executables": {
+        "tools\/gguninst.exe": "bf91b256aa32852836936a42dd8002eb93c870bc",
+        "tools\/GGSetup.exe": "ac461dbdf12783d59eb18baebe435f1630998b94",
+        "bin\/crs-handler.exe": "0c2f2ea4d72eff47fddab9affe7adc71f92a7684",
+        "bin\/helldivers2.exe": "fc9a312c0a968682b4f1ca58758c2301601b4c13"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

@@ -1,41 +1,44 @@
 {
- "appid": 1716740,
- "name": "Starfield",
- "foreign-language-depots": [
-  1716743,
-  1716744,
-  1716745,
-  1716746,
-  1716747,
-  2721671,
-  2721672,
-  2721673,
-  2721674,
-  2721675,
-  3763701,
-  3763702,
-  3763703,
-  3763704,
-  3763705
- ],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "23518663",
-   "date": "2026-06-11",
-   "bytes": 137931370869,
-   "depots": [
+  "appid": 1716740,
+  "name": "Starfield",
+  "foreign-language-depots": [
+    1716743,
+    1716744,
+    1716745,
+    1716746,
+    1716747,
+    2721671,
+    2721672,
+    2721673,
+    2721674,
+    2721675,
+    3763701,
+    3763702,
+    3763703,
+    3763704,
+    3763705
+  ],
+  "versions": [
     {
-     "depot-id": 1716741,
-     "manifest-gid": "6026043903923231328"
-    },
-    {
-     "depot-id": 1716742,
-     "manifest-gid": "3130703038371677921"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "23518663",
+      "date": "2026-06-11",
+      "bytes": 137931370869,
+      "depots": [
+        {
+          "depot-id": 1716741,
+          "manifest-gid": "6026043903923231328"
+        },
+        {
+          "depot-id": 1716742,
+          "manifest-gid": "3130703038371677921"
+        }
+      ],
+      "executables": {
+        "Starfield.exe": "56b36086062f6561cbec3bca44bd46cb6b7f9ced"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

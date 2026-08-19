@@ -55,13 +55,31 @@ def license_denied(appid):
         return set()
     return set(json.load(open(p)).get(str(appid)) or [])
 
-def windows_depots(depots, branch, denied=frozenset()):
+#: Depots marked `optional` that are nonetheless required to have a game that
+#: runs. `optional` on its own is not a DLC marker -- real DLC carries
+#: `dlcappid` too -- and Valve uses a bare `optional` depot for the CEG-wrapped
+#: executable of some older titles. Skyrim's 72852 holds exactly one file,
+#: TESV.exe, 18 MB; dropping it built a 6 GB install of Skyrim with no
+#: executable in it at all.
+#:
+#: Curated by hand and deliberately narrow, because the same flag genuinely
+#: does mean optional elsewhere in this catalog: New Vegas 72731 is Dead
+#: Money's audio, and New Vegas 22387 and Fallout 3 22376 are refused by Steam
+#: outright. Keeping every `optional` depot would pull all of those into a base
+#: install. Only depots verified to hold required content belong here.
+REQUIRED_OPTIONAL_DEPOTS = {
+    72850: {72852},   # Skyrim -- TESV.exe
+}
+
+def windows_depots(depots, branch, denied=frozenset(), required=frozenset()):
     """Depots this app installs on Windows that carry a manifest for `branch`."""
     out = []
     for k, v in depots.items():
         if not (k.isdigit() and isinstance(v, dict)):
             continue
-        if v.get("dlcappid") or v.get("optional"):
+        if v.get("dlcappid"):
+            continue
+        if v.get("optional") and int(k) not in required:
             continue
         # A shared redistributable belongs to ANOTHER app, so its key has to be
         # requested under that app's id. Selected here, it would be requested
@@ -95,7 +113,8 @@ def versions_for(appid):
     for name, b in sorted(branches.items(), key=lambda kv: -int(kv[1].get("timeupdated") or 0)):
         if b.get("pwdrequired"):
             continue
-        sel = windows_depots(depots, name, denied)
+        sel = windows_depots(depots, name, denied,
+                             REQUIRED_OPTIONAL_DEPOTS.get(appid, frozenset()))
         if not sel:
             continue
         ts = b.get("timeupdated")

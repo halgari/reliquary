@@ -1,40 +1,40 @@
 {
- "appid": 1237950,
- "name": "STAR WARS\u2122 Battlefront\u2122 II",
- "foreign-language-depots": [
-  1237953,
-  1237954,
-  1237955,
-  1237956,
-  1237957,
-  1237958,
-  1237959,
-  1237961,
-  1237962,
-  1237963
- ],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "10351139",
-   "date": "2023-01-31",
-   "bytes": 97172958348,
-   "depots": [
+  "appid": 1237950,
+  "name": "STAR WARS\u2122 Battlefront\u2122 II",
+  "foreign-language-depots": [
+    1237953,
+    1237954,
+    1237955,
+    1237956,
+    1237957,
+    1237958,
+    1237959,
+    1237961,
+    1237962,
+    1237963
+  ],
+  "versions": [
     {
-     "depot-id": 1237951,
-     "manifest-gid": "1092172661111760910"
-    },
-    {
-     "depot-id": 1237952,
-     "manifest-gid": "6816938749349294005"
-    },
-    {
-     "depot-id": 3340991,
-     "manifest-gid": "2111133955805833191"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "10351139",
+      "date": "2023-01-31",
+      "bytes": 97172958348,
+      "depots": [
+        {
+          "depot-id": 1237951,
+          "manifest-gid": "1092172661111760910"
+        },
+        {
+          "depot-id": 1237952,
+          "manifest-gid": "6816938749349294005"
+        },
+        {
+          "depot-id": 3340991,
+          "manifest-gid": "2111133955805833191"
+        }
+      ]
     }
-   ]
-  }
- ]
+  ]
 }

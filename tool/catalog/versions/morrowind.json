@@ -1,24 +1,29 @@
 {
- "appid": 22320,
- "name": "The Elder Scrolls III: Morrowind",
- "foreign-language-depots": [
-  22322,
-  22323
- ],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "1510067",
-   "date": "2018-05-08",
-   "bytes": 1142479546,
-   "depots": [
+  "appid": 22320,
+  "name": "The Elder Scrolls III: Morrowind",
+  "foreign-language-depots": [
+    22322,
+    22323
+  ],
+  "versions": [
     {
-     "depot-id": 22321,
-     "manifest-gid": "1293785437610275498"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "1510067",
+      "date": "2018-05-08",
+      "bytes": 1142479546,
+      "depots": [
+        {
+          "depot-id": 22321,
+          "manifest-gid": "1293785437610275498"
+        }
+      ],
+      "executables": {
+        "Morrowind.exe": "adc1c26cc9ca583144e862e7068bd3a7f33956f4",
+        "MWUninstall\/Setup.exe": "4f494142e3fb00c6d6845525cd4540ba3f7be9ef",
+        "Morrowind Launcher.exe": "3cdc4c103e3fe8961c1ef40facf5bd49c9328321"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

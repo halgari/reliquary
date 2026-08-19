@@ -1,77 +1,96 @@
 {
- "appid": 413150,
- "name": "Stardew Valley",
- "foreign-language-depots": [],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "16826371",
-   "date": "2024-12-22",
-   "bytes": 691846347,
-   "depots": [
+  "appid": 413150,
+  "name": "Stardew Valley",
+  "foreign-language-depots": [],
+  "versions": [
     {
-     "depot-id": 413151,
-     "manifest-gid": "4278718763097142923"
-    }
-   ]
-  },
-  {
-   "id": "compatibility",
-   "label": "For 32-bit systems. The legacy XNA version of Stardew Valley.",
-   "branch": "compatibility",
-   "build": "16826373",
-   "date": "2024-12-22",
-   "bytes": 580712810,
-   "depots": [
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "16826371",
+      "date": "2024-12-22",
+      "bytes": 691846347,
+      "depots": [
+        {
+          "depot-id": 413151,
+          "manifest-gid": "4278718763097142923"
+        }
+      ],
+      "executables": {
+        "Stardew Valley.exe": "9340b07d73357452e30ec5685c66727e676f968c",
+        "createdump.exe": "e2846481c76e4720ce86f57bf7864533a7ec753d"
+      }
+    },
     {
-     "depot-id": 413151,
-     "manifest-gid": "4848991934266309406"
-    }
-   ]
-  },
-  {
-   "id": "previous_version",
-   "label": "The previous version of Stardew Valley (currently 1.6.14)",
-   "branch": "previous_version",
-   "build": "16375315",
-   "date": "2024-12-20",
-   "bytes": 690853004,
-   "depots": [
+      "id": "compatibility",
+      "label": "For 32-bit systems. The legacy XNA version of Stardew Valley.",
+      "branch": "compatibility",
+      "build": "16826373",
+      "date": "2024-12-22",
+      "bytes": 580712810,
+      "depots": [
+        {
+          "depot-id": 413151,
+          "manifest-gid": "4848991934266309406"
+        }
+      ],
+      "executables": {
+        "Stardew Valley.exe": "35d4d8476dc1e8c1f2dde1cab23bf612e31ebecc"
+      }
+    },
     {
-     "depot-id": 413151,
-     "manifest-gid": "1364246008775303529"
-    }
-   ]
-  },
-  {
-   "id": "legacy_1.6.8",
-   "label": "The legacy 1.6.8 version of Stardew Valley",
-   "branch": "legacy_1.6.8",
-   "build": "14198583",
-   "date": "2024-11-04",
-   "bytes": 675607362,
-   "depots": [
+      "id": "previous_version",
+      "label": "The previous version of Stardew Valley (currently 1.6.14)",
+      "branch": "previous_version",
+      "build": "16375315",
+      "date": "2024-12-20",
+      "bytes": 690853004,
+      "depots": [
+        {
+          "depot-id": 413151,
+          "manifest-gid": "1364246008775303529"
+        }
+      ],
+      "executables": {
+        "Stardew Valley.exe": "597944844ffe02aee2c440757614082a648c7713",
+        "createdump.exe": "e2846481c76e4720ce86f57bf7864533a7ec753d"
+      }
+    },
     {
-     "depot-id": 413151,
-     "manifest-gid": "1777024427851858279"
-    }
-   ]
-  },
-  {
-   "id": "legacy_1.5.6",
-   "label": "The legacy 1.5.6 version of Stardew Valley.",
-   "branch": "legacy_1.5.6",
-   "build": "8043676",
-   "date": "2024-03-18",
-   "bytes": 650810621,
-   "depots": [
+      "id": "legacy_1.6.8",
+      "label": "The legacy 1.6.8 version of Stardew Valley",
+      "branch": "legacy_1.6.8",
+      "build": "14198583",
+      "date": "2024-11-04",
+      "bytes": 675607362,
+      "depots": [
+        {
+          "depot-id": 413151,
+          "manifest-gid": "1777024427851858279"
+        }
+      ],
+      "executables": {
+        "createdump.exe": "560638244dfbe69c4bbc6a5404e1687ec79e8a63",
+        "Stardew Valley.exe": "d02ef364126c104c38810dc3941ac16bde266aeb"
+      }
+    },
     {
-     "depot-id": 413151,
-     "manifest-gid": "5609262347030774375"
+      "id": "legacy_1.5.6",
+      "label": "The legacy 1.5.6 version of Stardew Valley.",
+      "branch": "legacy_1.5.6",
+      "build": "8043676",
+      "date": "2024-03-18",
+      "bytes": 650810621,
+      "depots": [
+        {
+          "depot-id": 413151,
+          "manifest-gid": "5609262347030774375"
+        }
+      ],
+      "executables": {
+        "Stardew Valley.exe": "26d354d1edbcbd9c2a4ff77b5798b7000a389319",
+        "createdump.exe": "258e9e4f359a332aaad67f882a040c9fbed31f33"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

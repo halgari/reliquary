@@ -1,26 +1,33 @@
 {
- "appid": 22370,
- "name": "Fallout 3 - Game of the Year Edition",
- "foreign-language-depots": [
-  22372,
-  22373,
-  22374,
-  22375
- ],
- "versions": [
-  {
-   "id": "public",
-   "label": "Latest \u2014 public",
-   "branch": "public",
-   "build": "14365463",
-   "date": "2024-06-04",
-   "bytes": 9347718020,
-   "depots": [
+  "appid": 22370,
+  "name": "Fallout 3 - Game of the Year Edition",
+  "foreign-language-depots": [
+    22372,
+    22373,
+    22374,
+    22375
+  ],
+  "versions": [
     {
-     "depot-id": 22371,
-     "manifest-gid": "2416786561786063548"
+      "id": "public",
+      "label": "Latest \u2014 public",
+      "branch": "public",
+      "build": "14365463",
+      "date": "2024-06-04",
+      "bytes": 9347718020,
+      "depots": [
+        {
+          "depot-id": 22371,
+          "manifest-gid": "2416786561786063548"
+        }
+      ],
+      "executables": {
+        "DotNetFX\/dotnetfx3_x64.exe": "2e3fb244038b73cd2d57d324370be174fab923c8",
+        "DotNetFX\/dotnetfx3.exe": "f3d2c3c7e4c0c35450cf6dab1f9f2e9e7ff50039",
+        "Fallout3 - Garden of Eden Creation Kit.exe": "7a8d5bbe6c5664282d085fca9ef5ea35ebeb8eb3",
+        "Fallout3Launcher.exe": "f5352bb32a587f484211b43d0c023edb435d294f",
+        "Fallout3.exe": "6d09781426a5c61aed59addec130a8009849e3c7"
+      }
     }
-   ]
-  }
- ]
+  ]
 }

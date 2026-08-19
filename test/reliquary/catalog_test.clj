@@ -87,6 +87,49 @@
     (is (every? (fn [g] (and (:appid g) (:title g) (seq (:versions g))))
                 (catalog/games c)))))
 
+(deftest every-shipped-version-carries-a-game-executable
+  (testing "not a redistributable installer and not a launcher: the binary the
+            game actually runs.
+
+            This is a depot-selection guard, not a nice-to-have. Steam marks
+            Skyrim's 72852 `optional` -- Valve packages CEG-wrapped executables
+            in their own depot -- and the catalog tool dropped everything marked
+            optional, so the shipped entry described a 6 GB install of Skyrim
+            with no TESV.exe anywhere in it. Every version listed its depots,
+            every size looked right, and the download would have produced a game
+            that could not start.
+
+            The executables map is resolved from the very depots a version will
+            download, so `no game executable` means exactly `these depots do not
+            add up to a runnable game`."
+    (let [redist?  (fn [path]
+                     (some #(str/includes? (str/lower-case path) %)
+                           ["dxsetup" "vcredist" "dotnetfx" "directx" "redist"
+                            "setup.exe" "uninst" "crashreporter" "7za"]))
+          launcher? (fn [path] (str/includes? (str/lower-case path) "launcher"))
+          game-exes (fn [v] (remove #(or (redist? %) (launcher? %))
+                                    (keys (:executables v))))]
+      (doseq [g (catalog/games (catalog/bundled))
+              v (:versions g)
+              ;; Baldur's Gate 3 ships with none at all: Steam refuses this
+              ;; account a key for depot 1086941, so the tool could not read the
+              ;; manifest to resolve any. That is a coverage gap, not a broken
+              ;; depot list, and it is visible as an empty map rather than a
+              ;; wrong one.
+              :when (seq (:executables v))]
+        (is (seq (game-exes v))
+            (str (:title g) " " (:id v) " lists only support binaries: "
+                 (pr-str (keys (:executables v)))))))))
+
+(deftest skyrims-executable-depot-is-not-dropped-as-optional
+  (testing "the specific depot the `optional` rule got wrong, pinned by id so a
+            future change to the filter cannot quietly lose it again"
+    (let [sk (first (filter #(= 72850 (:appid %)) (catalog/games (catalog/bundled))))
+          v  (first (:versions sk))]
+      (is (some? sk) "Skyrim is in the shipped catalog")
+      (is (contains? (set (map :depot-id (:depots v))) 72852))
+      (is (contains? (:executables v) "TESV.exe")))))
+
 (deftest lookups-work
   (let [c (catalog/parse minimal)
         g (catalog/game c 220)]
