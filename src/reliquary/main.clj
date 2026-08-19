@@ -549,7 +549,12 @@
    \"Downloading\" over a 0.21 GB transfer into an existing folder reads as a
    fresh fifteen gigabyte install."
   [phase {:keys [done total]} plan]
-  {:stage       (case phase :hashing :hashing :staging :staging :switching)
+  {;; marks this as a switch for the screen's copy: without it the panel calls a
+   ;; failed switch an interrupted DOWNLOAD and offers to resume one, and the
+   ;; header advertises the finished install size next to a transfer a fraction
+   ;; of it. Both were visible only by rendering the real window.
+   :switch?     true
+   :stage       (case phase :hashing :hashing :staging :staging :switching)
    :bytes-done  (or done 0)
    :bytes-total (or total 0)
    :chunks-done 0
@@ -616,14 +621,26 @@
                                                :snapshot (switch-snapshot phase ev @plan*))))})
              (fx-run! #(swap! state assoc
                               :screen :done
+                              ;; ui/done reads :path, and open-install-folder!
+                              ;; opens it. Without this the done screen after a
+                              ;; switch showed an empty box and the button did
+                              ;; nothing -- the install is Steam's folder, not a
+                              ;; :folder the user picked here.
+                              :path (:path install)
                               :snapshot (assoc (switch-snapshot :applying {} @plan*)
                                                :stage :done))))
            (catch Throwable t
+             ;; the same {:category :message} shape `interrupt!` uses, because
+             ;; ui/download's interrupted panel destructures it. A bare string
+             ;; rendered as "UNKNOWN" with no message -- the failure was
+             ;; reported and unreadable, which is barely better than silence.
              (fx-run! #(swap! state assoc
                               :snapshot (assoc (or (:snapshot @state) {})
+                                               :switch? true
                                                :stage :failed
-                                               :error (or (not-empty (ex-message t))
-                                                          "the switch failed unexpectedly")))))
+                                               :error {:category (or (:reliquary/error (ex-data t)) :io)
+                                                       :message (or (not-empty (ex-message t))
+                                                                    "the switch failed unexpectedly")}))))
            (finally (deliver p :done))))))
     p))
 

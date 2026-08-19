@@ -185,8 +185,15 @@
        :style (theme/style {:-fx-font-family (theme/ui-bold-font) :-fx-font-size 25
                              :-fx-text-fill (:text c)})}
       {:fx/type :label
+       ;; A switch names what it will MOVE, not the size of the finished
+       ;; install. Rendering the real window showed `1.6.1130 · 15.0 GB`
+       ;; directly above `153 MB / 215 MB`: the install size is true, and next
+       ;; to a 215 MB transfer it reads as a 15 GB download -- contradicting the
+       ;; one number that makes switching worth doing.
        :text (str (:label version) " · "
-                  (fmt-size (:bytes version)))
+                  (if (:switch? snapshot)
+                    (fmt-size (:bytes-total snapshot))
+                    (fmt-size (:bytes version))))
        :max-width header-text-width
        :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
                              :-fx-text-fill (:text-muted c)})}]}))
@@ -711,6 +718,10 @@
 ;; the stage panel entirely (same slot) whenever `:error` is set.
 
 (defn- interrupted-panel
+  "The failure panel. Its copy follows the KIND of run that failed: a switch that
+   calls itself an interrupted download, and offers to `Resume download`, is
+   promising the wrong thing -- re-running a switch re-hashes the install and
+   converges from whatever is on disk now, rather than continuing a transfer."
   [{:keys [category message]} snapshot on-retry on-back]
   {:fx/type :v-box
    :v-box/vgrow :always
@@ -722,7 +733,8 @@
                          :-fx-border-radius 6
                          :-fx-border-width 1})
    :children
-   [{:fx/type :label :text (str/upper-case "Download interrupted")
+   [{:fx/type :label :text (str/upper-case
+                           (if (:switch? snapshot) "Switch interrupted" "Download interrupted"))
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 11
                            :-fx-text-fill (:gold c)})}
     ;; BOTH alignments, and they are not the same thing: -fx-text-alignment
@@ -736,9 +748,15 @@
      :style (theme/style {:-fx-font-family (theme/ui-font) :-fx-font-size 18
                            :-fx-text-fill (:text c) :-fx-text-alignment "center"})}
     {:fx/type :label
+     ;; "nothing needs to be re-fetched" is true of a DOWNLOAD, whose progress
+     ;; file records exactly what landed. A switch keeps no such record on
+     ;; purpose: re-running re-hashes the install and works out what is still
+     ;; needed, which may include re-fetching a file it had half written.
      :text (str (str/upper-case (name (or category :unknown))) " · "
-                (fmt-bytes (:bytes-done snapshot)) " kept on disk · "
-                "nothing needs to be re-fetched")
+                (fmt-bytes (:bytes-done snapshot))
+                (if (:switch? snapshot)
+                  " already written · re-running will re-check the install and carry on"
+                  " kept on disk · nothing needs to be re-fetched"))
      :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 12
                            :-fx-text-fill (:text-muted c)})}
     {:fx/type :region :min-height 8 :max-height 8}
@@ -746,7 +764,7 @@
      :alignment :center
      :spacing 12
      :children
-     [{:fx/type :button :text "Resume download"
+     [{:fx/type :button :text (if (:switch? snapshot) "Resume switch" "Resume download")
        :on-action (or on-retry (fn [_]))
        :min-height 40 :min-width 160
        :style (theme/style {:-fx-background-color (:button theme/gradients) :-fx-text-fill (:bg c)

@@ -500,3 +500,77 @@
       (let [s (pr-str (download/view {:game {:title "G"} :version {:label "v" :bytes 1}
                                       :snapshot {:stage stage}}))]
         (is (str/includes? s "Cancel") (str stage " must stay cancellable"))))))
+
+;; ---------------------------------------------------------------------------
+;; a switch is not a download, and the copy has to know it
+;;
+;; Found by rendering the real 1100x720 window and looking at it. Each of these
+;; is a sentence the screen was saying that was not true of a switch.
+
+(deftest a-switch-header-shows-what-it-will-move-not-the-install-size
+  (testing "the header read `1.6.1130 · 15.0 GB` directly above `153 MB / 215
+            MB`. The version's install size is true and, next to a 215 MB
+            transfer, reads as a 15 GB download -- contradicting the one number
+            that makes switching worth doing."
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "1.6.1130" :bytes 16000000000}
+                      :snapshot {:stage :switching :switch? true
+                                 :bytes-done 160000000 :bytes-total 225000000}}))]
+      (is (str/includes? s "215 MB") "the header names the transfer")
+      (is (not (str/includes? s "14.9 GB"))
+          "and not the finished install size, which is not what is moving"))))
+
+(deftest an-ordinary-download-header-is-unchanged
+  (testing "a fresh download really does move the whole thing"
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "Latest" :bytes 16000000000}
+                      :snapshot {:stage :downloading :bytes-done 1 :bytes-total 16000000000}}))]
+      (is (str/includes? s "14.9 GB")))))
+
+(deftest a-failed-switch-does-not-call-itself-an-interrupted-download
+  (let [s (pr-str (download/view
+                   {:game {:title "G"} :version {:label "v" :bytes 1}
+                    :snapshot {:stage :failed :switch? true :bytes-done 1 :bytes-total 2
+                               :error {:category :unavailable :message "cdn said no"}}}))]
+    (is (str/includes? s "SWITCH INTERRUPTED"))
+    (is (not (str/includes? s "DOWNLOAD INTERRUPTED")))
+    (is (str/includes? s "cdn said no") "and the reason is actually shown")))
+
+(deftest a-failed-switch-offers-to-resume-the-switch
+  (testing "`Resume download` is the wrong promise: re-running re-hashes and
+            converges from whatever is on disk now"
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "v" :bytes 1}
+                      :snapshot {:stage :failed :switch? true
+                                 :error {:category :io :message "x"}}}))]
+      (is (str/includes? s "Resume switch"))
+      (is (not (str/includes? s "Resume download"))))))
+
+(deftest a-failed-download-keeps-its-own-wording
+  (let [s (pr-str (download/view
+                   {:game {:title "G"} :version {:label "v" :bytes 1}
+                    :snapshot {:stage :failed :error {:category :io :message "x"}}}))]
+    (is (str/includes? s "DOWNLOAD INTERRUPTED"))
+    (is (str/includes? s "Resume download"))))
+
+(deftest a-failed-switch-does-not-promise-nothing-needs-re-fetching
+  (testing "true of a download, whose progress file records exactly what landed.
+            A switch keeps no such record -- re-running re-hashes the install and
+            works out what is still needed, which may well include re-fetching a
+            file it had half written. Promising otherwise about a destructive
+            operation is the wrong thing to be confidently wrong about."
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "v" :bytes 1}
+                      :snapshot {:stage :failed :switch? true :bytes-done 160000000
+                                 :error {:category :io :message "x"}}}))]
+      (is (not (str/includes? s "nothing needs to be re-fetched")))
+      (is (str/includes? s "re-check") "it says what re-running actually does"))))
+
+(deftest a-failed-download-still-promises-it
+  (testing "there it is true, and it is the reassurance that makes a resume
+            feel safe"
+    (let [s (pr-str (download/view
+                     {:game {:title "G"} :version {:label "v" :bytes 1}
+                      :snapshot {:stage :failed :bytes-done 1
+                                 :error {:category :io :message "x"}}}))]
+      (is (str/includes? s "nothing needs to be re-fetched")))))

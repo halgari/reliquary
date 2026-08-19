@@ -1169,7 +1169,13 @@
                       main/close-session! (fn [] nil)
                       switch/run! (fn [_] {:fetch-bytes 0})]
           @(main/switch-install! state)
-          (is (= :done (:screen @state))))))))
+          (is (= :done (:screen @state)))
+          ;; ui/done reads :path -- not :folder -- and main only ever set it on
+          ;; the download path. Rendering the done screen after a switch showed
+          ;; an empty box where the location goes, and Open folder had nothing
+          ;; to open.
+          (is (= (:path an-install) (:path @state))
+              "the done screen shows where the switched install lives"))))))
 
 (deftest a-failed-switch-is-reported-not-swallowed
   (testing "it rewrites a game in place; a failure that left the screen looking
@@ -1185,7 +1191,16 @@
                         switch/run! (fn [_] (error/raise :unavailable "cdn went away"))]
             @(main/switch-install! state)
             (is (not= :done (:screen @state)))
-            (is (str/includes? (str (:error (:snapshot @state))) "cdn went away"))))))))
+            ;; the SHAPE matters, not just the text: ui/download's interrupted
+            ;; panel destructures {:category :message}, so a bare string renders
+            ;; as "UNKNOWN" with no message at all -- which is what the real
+            ;; window showed
+            (let [err (:error (:snapshot @state))]
+              (is (map? err) "the panel destructures this")
+              (is (= :unavailable (:category err)))
+              (is (str/includes? (str (:message err)) "cdn went away")))
+            (is (true? (:switch? (:snapshot @state)))
+                "so the panel says `switch interrupted`, not `download`")))))))
 
 (deftest a-switch-without-an-identified-version-refuses
   (testing "the chunk index is built with the INSTALLED version's manifest as its
