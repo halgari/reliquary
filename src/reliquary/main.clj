@@ -1016,6 +1016,20 @@
   [state]
   (swap! state assoc :screen :library :snapshot nil :opened? false :error nil))
 
+(defn open-credit!
+  "The footer's `halgari` link. Off the FX thread for the reason
+   `open-install-folder!` is: `app/browse!` may fall through to `xdg-open`, and
+   waiting on a subprocess is not something the FX thread may do. Returns the
+   thread so a test can join it.
+
+   A failure is a gold error line, never a crash -- a machine with no browser is
+   a machine that can still download games."
+  [state url]
+  (daemon! "reliquary-open-credit"
+           (fn []
+             (when-let [err (app/browse! url)]
+               (fx-run! #(swap! state assoc :error err))))))
+
 (defn open-install-folder!
   "The done screen's `Open folder`. `done/open-folder!` shells out to
    `xdg-open` when java.awt.Desktop cannot do it, and waiting on a
@@ -1157,6 +1171,7 @@
    :capsule-fn capsule-image
    :screenshot-fn screenshot-image
    :on-close          (fn [_]  (close-window! nil))
+   :on-credit         (fn [url] (open-credit! state url))
    :on-sign-out       (fn [_]  (sign-out! state))
    :on-account        (fn [v]  (swap! state assoc :account v))
    :on-password       (fn [v]  (swap! state assoc :password v))

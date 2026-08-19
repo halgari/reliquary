@@ -15,6 +15,7 @@
             [reliquary.steam.installs :as installs]
             [reliquary.steam.local :as local]
             [reliquary.switch :as switch]
+            [reliquary.ui.app :as app]
             [reliquary.ui.art :as art]
             [reliquary.ui.done :as done])
   (:import (com.sun.net.httpserver HttpExchange HttpHandler HttpServer)
@@ -1701,3 +1702,32 @@
                         switch/run! (fn [_] {:fetch-bytes 0})]
             @(main/switch-install! state)
             (is (= "public" (:id (:installed-version @state))))))))))
+
+(deftest the-initial-state-always-wires-the-credit-link
+  (testing "it renders on EVERY screen, and cljfx cannot coerce a nil
+            :on-action -- an unwired one is not an inert link, it is a renderer
+            that dies on first paint"
+    (with-tmp
+      (fn []
+        (is (fn? (:on-credit (main/initial-state (atom nil) {:account "x"}))))))))
+
+(deftest opening-the-credit-does-not-block-the-fx-thread
+  (testing "browsing shells out to xdg-open when java.awt.Desktop cannot, and
+            waiting on a subprocess is not something the FX thread may do --
+            the same rule open-install-folder! follows"
+    (with-tmp
+      (fn []
+        (let [state  (wired {})
+              opened (atom nil)]
+          (with-redefs [app/browse! (fn [url] (reset! opened url) nil)]
+            (.join ^Thread (main/open-credit! state app/credit-url) 10000)
+            (is (= app/credit-url @opened))))))))
+
+(deftest a-credit-link-that-cannot-open-says-so-instead-of-crashing
+  (with-tmp
+    (fn []
+      (let [state (wired {})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      app/browse! (fn [_] "no browser here")]
+          (.join ^Thread (main/open-credit! state app/credit-url) 10000)
+          (is (= "no browser here" (:error @state))))))))

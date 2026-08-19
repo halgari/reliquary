@@ -290,3 +290,40 @@
                      (#(.getHeight ^Region %)))))]
       (is (<= h 32.0)
           (str "the switch is " h "px tall; the design's is 26px of pill in 2px of padding")))))
+
+;; ---------------------------------------------------------------------------
+;; the credit line
+
+(deftest the-credit-names-the-author-as-a-link
+  (testing "the design makes `halgari` an anchor to a Nexus Mods profile; it was
+            built as plain text, so the one piece of attribution in the app went
+            nowhere"
+    (let [f (pr-str (app/footer {}))]
+      (is (str/includes? f "Created by"))
+      (is (str/includes? f "halgari"))
+      (is (str/includes? f "hyperlink") "and it is a control, not a label"))))
+
+(deftest the-credit-link-opens-the-profile
+  (let [opened (atom nil)
+        f (app/footer {:on-credit (fn [url] (reset! opened url))})
+        link (first (filter #(= :hyperlink (:fx/type %))
+                            (tree-seq coll? #(if (map? %) (vals %) (seq %)) f)))]
+    (is (some? link))
+    ((:on-action link) nil)
+    (is (= "https://next.nexusmods.com/profile/halgari" @opened)
+        "the URL the design points at, passed to the caller's opener")))
+
+(deftest the-credit-link-is-inert-rather-than-fatal-without-a-handler
+  (testing "cljfx cannot coerce a nil :on-action -- a missing handler is a
+            renderer that dies on first paint, and this is on EVERY screen"
+    (let [link (first (filter #(= :hyperlink (:fx/type %))
+                              (tree-seq coll? #(if (map? %) (vals %) (seq %))
+                                        (app/footer {}))))]
+      (is (fn? (:on-action link))))))
+
+(deftest the-legal-line-is-not-a-link
+  (testing "it is a legal statement, not attribution, and must not look
+            clickable"
+    (let [f (app/footer {})]
+      (is (= 1 (count (filter #(= :hyperlink (:fx/type %))
+                              (tree-seq coll? #(if (map? %) (vals %) (seq %)) f))))))))

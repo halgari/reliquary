@@ -118,3 +118,21 @@
    region's gold without competing with the logo. */
 .window-close:hover  { -fx-text-fill: #C2A35F; }
 .window-close:pressed { -fx-text-fill: #F2F0EE; }
+
+/* ---- the credit link -------------------------------------------------- */
+
+/* The design draws `halgari` with a 1px rule beneath it that lights up gold on
+   hover. The rule itself is an inline style on the node; only the hover state
+   needs a stylesheet. Modena also insists on underlining a focused Hyperlink
+   and painting it blue once visited, so both are overridden here. */
+.credit-link,
+.credit-link:visited,
+.credit-link:focused,
+.credit-link:visited:hover {
+    -fx-underline: false;
+    -fx-text-fill: #C2A35F;
+}
+
+.credit-link:hover {
+    -fx-border-color: transparent transparent #C2A35F transparent;
+}

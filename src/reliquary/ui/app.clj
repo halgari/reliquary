@@ -6,7 +6,10 @@
             [clojure.string :as str]
             [reliquary.ui.anim :as anim]
             [reliquary.ui.theme :as theme])
-  (:import (javafx.scene Node)
+  (:import (java.awt Desktop Desktop$Action)
+           (java.net URI)
+           (java.util List)
+           (javafx.scene Node)
            (javafx.scene.image Image)
            (javafx.scene.input MouseEvent)
            (javafx.stage Window)))
@@ -343,7 +346,41 @@
   "Verbatim, on every screen. A legal requirement, not copy to be improved."
   "Not associated with or endorsed by Valve Corporation or Steam.")
 
-(defn footer []
+(defn browse!
+  "Opens `url` in the default browser: `java.awt.Desktop/BROWSE` when it is
+   available, `xdg-open` otherwise. Returns nil on success or an error message
+   string on failure, and NEVER throws -- the same contract, and the same two
+   routes, as `done/open-folder!`, because a headless box or a minimal container
+   may have neither.
+
+   Blocking: `xdg-open` is a subprocess whose exit code has to be waited on, so
+   callers run this off the FX thread."
+  [^String url]
+  (letfn [(desktop! []
+            (try
+              (boolean
+               (and (Desktop/isDesktopSupported)
+                    (let [d (Desktop/getDesktop)]
+                      (and (.isSupported d Desktop$Action/BROWSE)
+                           (do (.browse d (URI. url)) true)))))
+              (catch Exception _ false)))
+          (xdg! []
+            (try
+              (zero? (.waitFor (.start (ProcessBuilder. ^List (List/of "xdg-open" url)))))
+              (catch Exception _ false)))]
+    (if (or (desktop!) (xdg!))
+      nil
+      (str "Could not open " url))))
+
+(def credit-url
+  "halgari's Nexus Mods profile, as the design links it."
+  "https://next.nexusmods.com/profile/halgari")
+
+(defn footer
+  "`{:on-credit (fn [url] ...)}` -- the caller opens it, because opening a URL
+   means a subprocess whose exit code someone has to wait for, and the FX thread
+   may not be that someone. See `main/open-credit!`."
+  [{:keys [on-credit]}]
   {:fx/type :h-box
    :alignment :center
    :spacing 8
@@ -357,10 +394,32 @@
                                      :-fx-text-fill (:text-muted c)})}
               {:fx/type :label :text "·"
                :style (theme/style {:-fx-text-fill (:line-strong c)})}
-              {:fx/type :label :text "Created by halgari"
-               :style (theme/style {:-fx-font-family (theme/mono-font)
-                                     :-fx-font-size 10
-                                     :-fx-text-fill (:text-muted c)})}]})
+              ;; "Created by" and the name are one phrase, so they sit closer
+              ;; than the footer's 8px between its two clauses
+              {:fx/type :h-box :alignment :center :spacing 4
+               :children
+               [{:fx/type :label :text "Created by"
+                 :style (theme/style {:-fx-font-family (theme/mono-font)
+                                       :-fx-font-size 10
+                                       :-fx-text-fill (:text-muted c)})}
+                {:fx/type :hyperlink :text "halgari"
+                 :on-action (fn [_] (when on-credit (on-credit credit-url)))
+                 ;; the hover rule lives in reliquary.css: JavaFX pseudo-classes
+                 ;; are only reachable from a stylesheet, and an inline -fx-
+                 ;; style has no way to express one
+                 :style-class ["hyperlink" "credit-link"]
+                 :style (theme/style {:-fx-font-family (theme/mono-font)
+                                       :-fx-font-size 10
+                                       :-fx-text-fill (:gold c)
+                                       ;; Modena underlines a Hyperlink and
+                                       ;; gives it a focus ring; the design has
+                                       ;; a 1px rule under it instead
+                                       :-fx-underline false
+                                       :-fx-padding 0
+                                       :-fx-background-color "transparent"
+                                       :-fx-border-color (str "transparent transparent "
+                                                              (:line-strong c) " transparent")
+                                       :-fx-border-width "0 0 1 0"})}]}]})
 
 (defn view
   "`:content` is the screen's own description; this frames it."
@@ -385,4 +444,4 @@
                   :style (theme/style {:-fx-background-color (:bg c)})
                   :children [(title-bar state)
                              (assoc (or content {:fx/type :region}) :v-box/vgrow :always)
-                             (footer)]}}})
+                             (footer state)]}}})
