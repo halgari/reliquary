@@ -57,7 +57,8 @@
    a power cut and it converges on the target from wherever it actually is. There
    is nothing to roll back because nothing was recorded that could be wrong."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [reliquary.error :as error])
   (:import (java.io File InputStream)
            (java.security MessageDigest)))
 
@@ -121,6 +122,19 @@
                     (do (.update md buf 0 n) (recur (- remaining n)))
                     ;; short read where the length said otherwise
                     nil))))))
+        (catch Exception _ nil)))))
+
+(defn- read-range
+  "`len` bytes at `offset`, or nil if the file cannot supply them."
+  ^bytes [f ^long offset ^long len]
+  (let [^File file (io/as-file f)]
+    (when (and file (.isFile file) (>= (.length file) (+ offset len)))
+      (try
+        (with-open [raf (java.io.RandomAccessFile. file "r")]
+          (.seek raf offset)
+          (let [buf (byte-array len)]
+            (.readFully raf buf)
+            buf))
         (catch Exception _ nil)))))
 
 (defn- ->file
@@ -309,32 +323,178 @@
             (when on-progress (on-progress {:done done :total total :path path}))
             (recur more done
                    (if (and sha (= sha (:id ch)))
-                     (assoc acc (:id ch) {:path path :offset off :size len})
+                     ;; every position, not just the first. A chunk genuinely
+                     ;; can sit in several places, and keeping only one turns an
+                     ;; in-place chunk into a needless copy whenever the one we
+                     ;; kept was the other occurrence -- which on a real switch
+                     ;; is a gigabyte moved for nothing.
+                     (update acc (:id ch) (fnil conj []) {:path path :offset off :size len})
                      acc))))))))
 
-(defn plan-chunks
-  "What a switch to `target` must fetch, and what it can copy from disk, as
-   `{:have [...] :fetch [...] :bytes n}`.
+(defn plan-switch
+  "What changing this install to `target` requires, split by what each chunk
+   actually needs doing.
 
    `index` is `chunk-index`'s output; `target` is the target version's manifest
-   entries. Each wanted chunk is either already somewhere on disk -- in ANY file,
-   at any offset, because chunks are content-addressed -- or it has to come from
-   Steam.
+   entries. Every chunk the target wants falls into exactly one of three:
 
-   `:have` entries carry both ends, `{:id :to {:path :offset} :from {:path
-   :offset :size}}`, because a chunk is very often wanted at a different place
-   than it currently sits: that is exactly how a rebuilt .bsa reuses the bytes of
-   the old one.
+     :in-place  already that content at that offset in that file. Nothing to do
+                at all -- not a read, not a write.
+     :copy      that content is on disk, but somewhere else. It has to be
+                preserved BEFORE the writes start, because its source is very
+                often a region the writes are about to overwrite.
+     :fetch     not on disk. From Steam.
 
-   `:bytes` counts only what will actually be fetched, which is the number worth
-   showing a user. Measured on Skyrim SE public -> 1.6.1130, that is 0.21 GB
-   against the 14.99 GB a file-level plan would move."
+   Measured on the real public -> 1.6.1130 switch of Skyrim SE:
+
+     in-place  14910 chunks  13.81 GB
+     copy       1013 chunks   0.97 GB
+     fetch       221 chunks   0.21 GB
+
+   That split is what makes a staging area affordable. Staging the whole tree
+   would need fifteen gigabytes; staging only what moves needs about one.
+
+   `:sizes` is the length each target file must end up, because a file that
+   shrinks has to be truncated -- otherwise the tail of the old version survives
+   past the end of the new one and the file is quietly corrupt."
   [index target]
   (let [wanted (for [f target ch (:chunks f)]
-                 {:id (:id ch)
-                  :to {:path (:name f) :offset (->long (:offset ch))}
-                  :size (->long (:cb-original ch))})
-        {:keys [have fetch]} (group-by #(if (contains? index (:id %)) :have :fetch) wanted)]
-    {:have  (mapv #(assoc % :from (get index (:id %))) have)
-     :fetch (vec fetch)
-     :bytes (reduce + 0 (map :size fetch))}))
+                 (let [id  (:id ch)
+                       to  {:path (:name f) :offset (->long (:offset ch))}
+                       locs (get index id)]
+                   {:id id
+                    :to to
+                    :size (->long (:cb-original ch))
+                    :kind (cond (some #(and (= (:path %) (:path to))
+                                            (= (:offset %) (:offset to)))
+                                      locs)          :in-place
+                                (seq locs)           :copy
+                                :else                :fetch)
+                    :from (first (remove nil? locs))}))
+        by (group-by :kind wanted)]
+    {:in-place (vec (:in-place by))
+     :copy     (vec (:copy by))
+     :fetch    (vec (:fetch by))
+     :fetch-bytes (reduce + 0 (map :size (:fetch by)))
+     :copy-bytes  (reduce + 0 (map :size (:copy by)))
+     :sizes (into {} (for [f target]
+                       [(:name f)
+                        (reduce (fn [n ch] (max n (+ (->long (:offset ch))
+                                                     (->long (:cb-original ch)))))
+                                0 (:chunks f))]))}))
+
+;; ---------------------------------------------------------------------------
+;; applying a switch
+;;
+;; Two phases, and the order between them is the point of the whole design.
+
+(defn staging-dir
+  "Where moving chunks are parked while the install is rewritten.
+
+   Inside the install, not in a temp directory: it must be on the same filesystem
+   as the files it came from and is going into, and it must be somewhere the user
+   would find it if a crash left it behind. The leading dot keeps it out of the
+   way of a game that scans its own directory."
+  ^File [root]
+  (io/file root ".reliquary-staging"))
+
+(defn stage!
+  "Copy every MOVING chunk out to the staging area, and return {id file}.
+
+   This runs before a single byte of the install is written, and that ordering is
+   not a nicety: 89% of a switch's reuse comes from the install being rewritten,
+   so a moving chunk's source is very often a region the writes are about to
+   overwrite. Reading it afterwards would read whatever replaced it.
+
+   Only the chunks that MOVE are staged. Chunks already at the right offset are
+   never read or written, and chunks that are not on disk are fetched -- so this
+   costs about a gigabyte on a fifteen gigabyte switch rather than a second copy
+   of the game.
+
+   Verified content: each chunk is hashed against the id it is filed under. The
+   source was verified when the index was built, but the index may be minutes old
+   by now and a game the user launched in between could have rewritten it."
+  [root plan {:keys [on-progress abort?]}]
+  (let [dir (doto (staging-dir root) .mkdirs)
+        total (reduce + 0 (map :size (:copy plan)))]
+    (loop [[{:keys [id from size]} & more] (seq (:copy plan)) done 0 acc {}]
+      (if (or (nil? id) (and abort? (abort?)))
+        acc
+        (let [out (io/file dir id)
+              bytes (when from (read-range (->file root (:path from)) (:offset from) size))
+              ok?  (and bytes (= id (hex (.digest (doto (MessageDigest/getInstance "SHA-1")
+                                                    (.update ^bytes bytes))))))]
+          (when ok?
+            (with-open [os (io/output-stream out)] (.write os ^bytes bytes)))
+          (let [done (+ done size)]
+            (when on-progress (on-progress {:done done :total total :id id}))
+            (recur more done (cond-> acc ok? (assoc id out)))))))))
+
+(defn clear-staging!
+  "Remove the staging area. Derived data: leaving a gigabyte of it behind after
+   every switch is exactly the disk waste this design exists to avoid."
+  [root]
+  (let [dir (staging-dir root)]
+    (when (.isDirectory dir)
+      (run! #(.delete ^File %) (reverse (file-seq dir))))
+    nil))
+
+(defn apply!
+  "Write the target version into the install, in place.
+
+   `staged` is `stage!`'s output; `opts` takes:
+     :fetch        {:id :size :to ...} -> byte[], for chunks not on disk
+     :on-progress  {:done bytes-written :total :path}
+     :abort?       0-arg predicate
+
+   In-place chunks are never touched -- not read, not written -- which is what
+   keeps a 15 GB switch to about 1 GB of I/O. Everything else is written at its
+   declared offset, then each file is truncated to the length the target says, or
+   the tail of the old version survives past the end of the new one and the file
+   is quietly corrupt rather than obviously wrong.
+
+   Every chunk is verified against its id before it is written. A chunk id IS the
+   sha1 of its content, so a corrupt transfer is detectable, and writing it anyway
+   would put silent corruption into a game the user still has to launch.
+
+   Destructive and deliberately not transactional. An interrupted apply leaves a
+   half-switched install, which is simply another state to hash and diff from --
+   re-running converges from wherever it actually is. That is why there is no
+   backup and no rollback: nothing is recorded that could be wrong."
+  [root plan staged {:keys [fetch on-progress abort?]}]
+  (let [work  (concat (:copy plan) (:fetch plan))
+        total (reduce + 0 (map :size work))]
+    (loop [[{:keys [id to size] :as chunk} & more] (seq work) done 0]
+      (when-not (or (nil? id) (and abort? (abort?)))
+        (let [bytes (if-let [f (get staged id)]
+                      (read-range f 0 size)
+                      ;; the whole plan entry, not a bare id: a caller needs the
+                      ;; size to fetch a chunk (chunk/fetch-decoded verifies the
+                      ;; decoded length) and the path for any error it raises
+                      (when fetch (fetch chunk)))]
+          (when-not bytes
+            (error/raise :unavailable (str "no source for chunk " id)
+                         {:chunk-id id :path (:path to)}))
+          (let [actual (hex (.digest (doto (MessageDigest/getInstance "SHA-1")
+                                       (.update ^bytes bytes))))]
+            (when-not (= actual id)
+              (error/raise :incorrect
+                           (str "chunk " id " arrived as different content")
+                           {:chunk-id id :path (:path to)})))
+          (let [dest (->file root (:path to))]
+            (io/make-parents dest)
+            (with-open [raf (java.io.RandomAccessFile. dest "rw")]
+              (.seek raf (:offset to))
+              (.write raf ^bytes bytes)))
+          (let [done (+ done size)]
+            (when on-progress (on-progress {:done done :total total :path (:path to)}))
+            (recur more done)))))
+    ;; sizes last: a file only shrinks once everything that belongs in it is
+    ;; written, or truncation would cut off content still to come
+    (doseq [[path size] (:sizes plan)]
+      (let [f (->file root path)]
+        (when (.isFile f)
+          (with-open [raf (java.io.RandomAccessFile. f "rw")]
+            (when (> (.length raf) (long size))
+              (.setLength raf (long size)))))))
+    nil))

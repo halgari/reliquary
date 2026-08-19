@@ -258,6 +258,10 @@
 
 (def ^:private sha-abc "a9993e364706816aba3e25717850c26c9cd0d89d")
 (def ^:private sha-xyz "66b27417d37e024c46526c2f6d358a754fc552f3")
+;; Chunk ids ARE the sha1 of their content -- apply! verifies that before it
+;; writes, so a fixture with an invented id like "newchunk" is rejected, and
+;; rightly. These are real digests of the strings the tests write.
+(def ^:private sha-new "66aabd91fc41cc4635aad94dc77d93a0e2eac67b")   ; "NEW"
 
 ;; Chunk offsets are STRINGS in a real manifest -- a uint64 that survived
 ;; protobuf -- while cb-original is an Integer. The fixtures below carry those
@@ -273,7 +277,8 @@
                              {:id sha-xyz :offset "3" :cb-original 3}]}]
             idx (local/chunk-index d files {})]
         (is (= #{sha-abc sha-xyz} (set (keys idx))))
-        (is (= {:path "a.bin" :offset 0 :size 3} (get idx sha-abc))))
+        (is (= [{:path "a.bin" :offset 0 :size 3}] (get idx sha-abc))
+            "a chunk can sit in more than one place, so locations are a vector"))
       (finally (rm-rf d)))))
 
 (deftest a-chunk-whose-content-does-not-match-is-not-indexed
@@ -333,18 +338,225 @@
               target [{:name "Data/wanted.bsa"
                        :chunks [{:id sha-abc :offset "0" :cb-original 3}
                                 {:id "deadbeef" :offset "3" :cb-original 7}]}]
-              p (local/plan-chunks idx target)]
-          (is (= 1 (count (:have p))))
-          (is (= "somewhere-else.bin" (-> p :have first :from :path))
+              p (local/plan-switch idx target)]
+          (is (= 1 (count (:copy p))))
+          (is (= "somewhere-else.bin" (-> p :copy first :from :path))
               "and the plan says where to copy it from")
           (is (= ["deadbeef"] (map :id (:fetch p))))
-          (is (= 7 (:bytes p)) "only the chunks actually fetched are counted"))
+          (is (= 7 (:fetch-bytes p)) "only the chunks actually fetched are counted"))
         (finally (rm-rf d))))))
 
 (deftest a-switch-with-nothing-to-fetch-is-a-no-op
   (testing "re-running a completed switch, which is what makes an interrupted one
             safe to simply run again"
-    (let [idx {sha-abc {:path "a.bin" :offset 0 :size 3}}
-          p (local/plan-chunks idx [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}])]
+    (let [idx {sha-abc [{:path "a.bin" :offset 0 :size 3}]}
+          p (local/plan-switch idx [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}])]
       (is (empty? (:fetch p)))
-      (is (zero? (:bytes p))))))
+      (is (empty? (:copy p)))
+      (is (zero? (:fetch-bytes p))))))
+
+;; ---------------------------------------------------------------------------
+;; the switch plan, by position
+;;
+;; Measured on the real public -> 1.6.1130 switch:
+;;
+;;   in-place  14910 chunks  13.81 GB   already at that offset, nothing to do
+;;   moves      1013 chunks   0.97 GB   reused but relocating -- these need staging
+;;   fetch       221 chunks   0.21 GB   from Steam
+;;
+;; That split is the whole reason the staging area is affordable: only the
+;; moving chunks have to be preserved before the writes start, and that is about
+;; a gigabyte rather than the fifteen a whole-tree staging would need.
+
+(deftest a-chunk-already-at-the-right-offset-is-left-alone
+  (testing "13.81 of 15 GB is in this state -- treating it as a copy would move
+            the entire game across the disk to change one archive"
+    (let [idx {sha-abc [{:path "a.bin" :offset 0 :size 3}]}
+          p (local/plan-switch idx [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}])]
+      (is (= 1 (count (:in-place p))))
+      (is (empty? (:copy p)))
+      (is (empty? (:fetch p))))))
+
+(deftest the-same-chunk-at-a-different-offset-is-a-move
+  (let [idx {sha-abc [{:path "a.bin" :offset 0 :size 3}]}
+        p (local/plan-switch idx [{:name "a.bin" :chunks [{:id sha-abc :offset "9" :cb-original 3}]}])]
+    (is (empty? (:in-place p)))
+    (is (= 1 (count (:copy p))))
+    (is (= 9 (-> p :copy first :to :offset)) "the plan carries where it goes")
+    (is (= 0 (-> p :copy first :from :offset)) "and where it comes from")))
+
+(deftest a-chunk-in-two-places-counts-as-in-place-if-either-is-right
+  (testing "an index that kept only one location per id would call this a move
+            and copy a gigabyte for nothing"
+    (let [idx {sha-abc [{:path "other.bin" :offset 40 :size 3}
+                        {:path "a.bin" :offset 0 :size 3}]}
+          p (local/plan-switch idx [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}])]
+      (is (= 1 (count (:in-place p))))
+      (is (empty? (:copy p))))))
+
+(deftest the-plan-reports-what-it-will-cost
+  (let [idx {sha-abc [{:path "a.bin" :offset 0 :size 3}]}
+        p (local/plan-switch idx [{:name "a.bin"
+                                   :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                            {:id sha-xyz :offset "3" :cb-original 3}
+                                            {:id "zz" :offset "6" :cb-original 10}]}])]
+    ;; sha-xyz (3) and zz (10) are both absent; only sha-abc is in place
+    (is (= 13 (:fetch-bytes p)))
+    (is (= 1 (count (:in-place p))))
+    (is (= 10 (:fetch-bytes (local/plan-switch {} [{:name "f" :chunks [{:id "zz" :offset "0" :cb-original 10}]}])))
+        "nothing indexed means everything is fetched")))
+
+(deftest the-plan-knows-how-big-each-target-file-must-end-up
+  (testing "a file that shrinks has to be truncated, or the tail of the old
+            version survives past the end of the new one"
+    (let [p (local/plan-switch {} [{:name "a.bin"
+                                    :chunks [{:id "x" :offset "0" :cb-original 4}
+                                             {:id "y" :offset "4" :cb-original 6}]}])]
+      (is (= {"a.bin" 10} (:sizes p))))))
+
+;; ---------------------------------------------------------------------------
+;; applying a switch
+;;
+;; Two phases, and the order is the whole point. A moving chunk's SOURCE is
+;; usually a region the writes are about to overwrite -- 89% of reuse comes from
+;; the install being rewritten -- so every moving chunk is copied into staging
+;; BEFORE a single byte of the install is touched. Only then are the files
+;; written.
+
+(defn- read-file [f] (slurp (io/file f)))
+
+(deftest staging-captures-moving-chunks-before-anything-is-written
+  (let [d (tmp-dir)]
+    (try
+      (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+      (let [idx (local/chunk-index d [{:name "a.bin"
+                                       :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                                {:id sha-xyz :offset "3" :cb-original 3}]}]
+                                   {})
+            ;; the target swaps the two chunks around, so both move
+            plan (local/plan-switch idx [{:name "a.bin"
+                                          :chunks [{:id sha-xyz :offset "0" :cb-original 3}
+                                                   {:id sha-abc :offset "3" :cb-original 3}]}])
+            staged (local/stage! d plan {})]
+        (is (= 2 (count (:copy plan))) "both chunks move")
+        (is (= #{sha-abc sha-xyz} (set (keys staged))))
+        (is (= "abc" (read-file (get staged sha-abc)))
+            "staging holds the actual bytes, read before any write")
+        (is (= "abcxyz" (read-file (io/file d "a.bin")))
+            "and the install is untouched by staging"))
+      (finally (rm-rf d)))))
+
+(deftest applying-writes-the-target-content
+  (testing "the swap case: every byte comes from staging, none from the network"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+        (let [src [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                           {:id sha-xyz :offset "3" :cb-original 3}]}]
+              tgt [{:name "a.bin" :chunks [{:id sha-xyz :offset "0" :cb-original 3}
+                                           {:id sha-abc :offset "3" :cb-original 3}]}]
+              idx (local/chunk-index d src {})
+              plan (local/plan-switch idx tgt)
+              staged (local/stage! d plan {})]
+          (local/apply! d plan staged
+                        {:fetch (fn [_] (throw (AssertionError. "must not fetch")))})
+          (is (= "xyzabc" (read-file (io/file d "a.bin")))))
+        (finally (rm-rf d))))))
+
+(deftest applying-fetches-only-what-is-not-on-disk
+  (let [d (tmp-dir)]
+    (try
+      (write-bytes! (io/file d "a.bin") (bytes-of "abc"))
+      (let [idx (local/chunk-index d [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}] {})
+            tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                         {:id sha-new :offset "3" :cb-original 3}]}]
+            plan (local/plan-switch idx tgt)
+            asked (atom [])]
+        (local/apply! d plan {}
+                      ;; :fetch receives the whole plan entry, not a bare id: a
+                      ;; caller needs the chunk's size to fetch it (chunk/fetch-decoded
+                      ;; checks the decoded length), and the plan already knows it
+                      {:fetch (fn [ch] (swap! asked conj (:id ch)) (bytes-of "NEW"))})
+        (is (= [sha-new] @asked) "the in-place chunk must not be fetched")
+        (is (= "abcNEW" (read-file (io/file d "a.bin")))))
+      (finally (rm-rf d)))))
+
+(deftest a-file-that-shrinks-is-truncated
+  (testing "without this the tail of the old version survives past the end of the
+            new one, and the file is quietly corrupt rather than obviously wrong"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abcxyzLEFTOVER"))
+        (let [tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch {} tgt)]
+          (local/apply! d plan {} {:fetch (fn [_] (bytes-of "abc"))})
+          (is (= "abc" (read-file (io/file d "a.bin")))))
+        (finally (rm-rf d))))))
+
+(deftest a-new-file-and-its-directories-are-created
+  (let [d (tmp-dir)]
+    (try
+      (let [tgt [{:name "Data/new/deep.esp" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+            plan (local/plan-switch {} tgt)]
+        (local/apply! d plan {} {:fetch (fn [_] (bytes-of "abc"))})
+        (is (= "abc" (read-file (io/file d "Data" "new" "deep.esp")))))
+      (finally (rm-rf d)))))
+
+(deftest a-fetched-chunk-that-is-the-wrong-content-is-refused
+  (testing "the chunk id IS its sha1, so a corrupted transfer is detectable --
+            and writing it would put silent corruption into a game the user
+            still has to launch"
+    (let [d (tmp-dir)]
+      (try
+        (let [tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch {} tgt)]
+          (is (thrown? clojure.lang.ExceptionInfo
+                       (local/apply! d plan {} {:fetch (fn [_] (bytes-of "WRONG"))}))))
+        (finally (rm-rf d))))))
+
+(deftest applying-reports-progress-and-can-be-stopped
+  (let [d (tmp-dir)]
+    (try
+      (let [tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                         {:id sha-new :offset "3" :cb-original 3}]}]
+            plan (local/plan-switch {} tgt)
+            seen (atom [])]
+        (local/apply! d plan {} {:fetch (fn [ch] (bytes-of (if (= (:id ch) sha-abc) "abc" "NEW")))
+                                 :on-progress (fn [p] (swap! seen conj (:done p)))})
+        (is (= [3 6] @seen) "progress counts bytes written"))
+      (finally (rm-rf d)))))
+
+(deftest staging-is-cleaned-up-after-a-successful-apply
+  (testing "it is derived data -- leaving a gigabyte of it behind after every
+            switch is exactly the disk waste this design set out to avoid"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+        (let [src [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                           {:id sha-xyz :offset "3" :cb-original 3}]}]
+              tgt [{:name "a.bin" :chunks [{:id sha-xyz :offset "0" :cb-original 3}
+                                           {:id sha-abc :offset "3" :cb-original 3}]}]
+              idx (local/chunk-index d src {})
+              plan (local/plan-switch idx tgt)
+              staged (local/stage! d plan {})
+              dir (local/staging-dir d)]
+          (is (.isDirectory dir))
+          (local/apply! d plan staged {:fetch (fn [_] nil)})
+          (local/clear-staging! d)
+          (is (not (.exists dir))))
+        (finally (rm-rf d))))))
+
+(deftest the-fetch-callback-gets-the-whole-chunk-not-just-its-id
+  (testing "chunk/fetch-decoded verifies the decoded length, so a caller needs
+            :cb-original as well as the id -- and the plan already knows it.
+            Handing over a bare id made the caller look it up again."
+    (let [d (tmp-dir)]
+      (try
+        (let [tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch {} tgt)
+              got (atom nil)]
+          (local/apply! d plan {} {:fetch (fn [ch] (reset! got ch) (bytes-of "abc"))})
+          (is (= sha-abc (:id @got)))
+          (is (= 3 (:size @got)) "the size the chunk must decode to")
+          (is (= "a.bin" (-> @got :to :path)) "and where it is going, for an error message"))
+        (finally (rm-rf d))))))
