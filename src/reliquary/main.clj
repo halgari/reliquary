@@ -539,6 +539,15 @@
          (finally (deliver p :done)))))
     p))
 
+(def ^:private switch-cancelled*
+  "Set by the Cancel button while a switch runs.
+
+   A download is cancelled through its own context; a switch has none, so before
+   this the Cancel button rendered on every switch stage and did nothing at all
+   -- inert on the one operation that most needs stopping, because it rewrites a
+   game in place and reads fifteen gigabytes to decide how."
+  (atom false))
+
 (def ^:private rate-interval-ms
   "How often a switch's progress reaches the screen. The engine samples at 250 ms
    and the sparkline is a ring of those, so a switch matches it."
@@ -665,6 +674,7 @@
                                     :game game :version version
                                     :hashing nil
                                     :snapshot (switch-snapshot :hashing {} nil nil)))
+                 _ (reset! switch-cancelled* false)
                  session (open-session!)
                  plan*   (atom nil)
                  rate*   (atom {})
@@ -672,6 +682,7 @@
              (switch/run!
               {:session session :game game :install install
                :from installed-version :to version
+               :abort?  (fn [] @switch-cancelled*)
                :on-plan (fn [pl] (reset! plan* pl))
                :on-progress
                (fn [{:keys [phase done] :as ev}]
@@ -683,7 +694,12 @@
                    (when (:emit? r)
                      (fx-run! #(swap! state assoc
                                       :snapshot (switch-snapshot phase ev @plan* r))))))})
-             (fx-run! #(swap! state assoc
+             (if @switch-cancelled*
+               ;; a cancelled run returns having done part of the work; landing
+               ;; on "is ready" would tell the user a switch they stopped had
+               ;; finished. The install is simply in another state to hash from.
+               (fx-run! #(swap! state assoc :screen :library :snapshot nil))
+               (fx-run! #(swap! state assoc
                               :screen :done
                               ;; ui/done reads :path, and open-install-folder!
                               ;; opens it. Without this the done screen after a
@@ -692,7 +708,7 @@
                               ;; :folder the user picked here.
                               :path (:path install)
                               :snapshot (assoc (switch-snapshot :applying {} @plan* nil)
-                                               :stage :done))))
+                                               :stage :done)))))
            (catch Throwable t
              ;; the same {:category :message} shape `interrupt!` uses, because
              ;; ui/download's interrupted panel destructures it. A bare string
@@ -864,12 +880,16 @@
         (swap! state assoc :game game :version version :folder folder)
         (run-download! state)))))
 
-(defn cancel-download!
-  "The Cancel button. In-flight chunks finish rather than being torn out, so
-   the screen keeps updating for a moment after this returns; `execute!`
-   then hands back a `:cancelled` snapshot and `run-download!` goes back to
-   the library."
+(defn cancel-transfer!
+  "The Cancel button, for either kind of transfer.
+
+   The screen is shared, so this has to be too. A download is cancelled through
+   its context: in-flight chunks finish rather than being torn out, so the screen
+   keeps updating for a moment after this returns, and `execute!` then hands back
+   a `:cancelled` snapshot. A switch has no context and is stopped by a flag its
+   `:abort?` predicate reads, which every phase checks."
   [_state]
+  (reset! switch-cancelled* true)
   (when-let [ctx @ctx*] (download/cancel! ctx))
   nil)
 
@@ -1027,8 +1047,14 @@
    ;; handler now keeps library/view from silently defaulting it to a no-op,
    ;; which renders a working-looking button that does nothing.
    :on-analyze        (fn [_]  (switch-install! state))
-   :on-cancel         (fn [_]  (cancel-download! state))
-   :on-retry          (fn [_]  (run-download! state))
+   :on-cancel         (fn [_]  (cancel-transfer! state))
+   ;; the button says "Resume switch" after a switch, and it must mean it:
+   ;; run-download! resolves the version and downloads the WHOLE game into
+   ;; :folder, so retrying a failed switch that way fetched fifteen gigabytes
+   ;; into a folder the user never chose
+   :on-retry          (fn [_]  (if (:switch? (:snapshot @state))
+                                 (switch-install! state)
+                                 (run-download! state)))
    :on-back           (fn [_]  (back-to-library! state))
    :on-open           (fn [_]  (open-install-folder! state))})
 

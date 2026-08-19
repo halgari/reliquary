@@ -1367,3 +1367,76 @@
           (is (pos? (:session-bytes-per-sec @seen)) "the ETA divides by this")
           (is (pos? (:wire-bytes-per-sec @seen)) "and the speedometer shows this")
           (is (seq (:samples @seen)) "and the sparkline draws these"))))))
+
+;; ---------------------------------------------------------------------------
+;; the transfer screen's buttons, when the transfer is a switch
+;;
+;; The screen is shared with downloads, so its two buttons were wired to the
+;; download's handlers. On a switch both were wrong, and one was dangerous.
+
+(deftest cancelling-a-switch-actually-stops-it
+  (testing "Cancel renders for switch stages -- running-stage? includes them --
+            and called cancel-download!, which cancels a download context a
+            switch does not have. The button was inert on the one operation
+            that most needs stopping."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "public" :label "Latest"}
+                            :selected-version-id "public"})
+              aborted (atom false)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [{:keys [abort?]}]
+                                      ;; the switch asks; the button must answer
+                                      (main/cancel-transfer! state)
+                                      (reset! aborted (boolean (abort?)))
+                                      nil)]
+            @(main/switch-install! state)
+            (is @aborted "cancel must reach the switch's abort predicate")))))))
+
+(deftest a-cancelled-switch-goes-back-to-the-library-not-to-done
+  (testing "an aborted run returns having done part of the work; landing on
+            `is ready` would tell the user a switch they stopped had finished"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "public" :label "Latest"}
+                            :selected-version-id "public"})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/open-session! (constantly {:conn :fake})
+                        main/close-session! (fn [] nil)
+                        switch/run! (fn [_] (main/cancel-transfer! state) nil)]
+            @(main/switch-install! state)
+            (is (= :library (:screen @state)))
+            (is (not= :done (:stage (:snapshot @state))))))))))
+
+(deftest retrying-a-failed-switch-switches-rather-than-downloading
+  (testing "the button says `Resume switch`, and :on-retry ran run-download! --
+            which resolves the version and downloads the WHOLE game into
+            :folder. Pressing it after a failed switch would have fetched
+            fifteen gigabytes into a folder the user never chose."
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game] :selected-appid 413150 :install an-install
+                            :installed-version {:id "public" :label "Latest"}
+                            :selected-version-id "public"
+                            :snapshot {:switch? true :stage :failed}})
+              switched (atom false)]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/switch-install! (fn [_] (reset! switched true) (doto (promise) (deliver :done)))
+                        main/run-download! (fn [_] (throw (AssertionError. "must not download")))]
+            @((:on-retry (main/initial-state state nil)) nil)
+            (is @switched)))))))
+
+(deftest retrying-a-failed-download-still-downloads
+  (with-tmp
+    (fn []
+      (let [state (wired {:snapshot {:stage :failed}})   ; no :switch?
+            downloaded (atom false)]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/run-download! (fn [_] (reset! downloaded true) nil)
+                      main/switch-install! (fn [_] (throw (AssertionError. "must not switch")))]
+          ((:on-retry (main/initial-state state nil)) nil)
+          (is @downloaded))))))
