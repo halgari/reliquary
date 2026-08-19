@@ -15,9 +15,7 @@
    per-file bar sits at 2% and then jumps to 98% on one .bsa. Measured on a real
    15 GB install a hashing pass takes about sixteen seconds, so this is a bar
    that genuinely moves rather than a spinner standing in for one."
-  (:require [cljfx.api :as fx]
-            [reliquary.ui.theme :as theme])
-  (:import (javafx.scene.layout Region StackPane)))
+  (:require [reliquary.ui.theme :as theme]))
 
 (def ^:private c theme/color)
 
@@ -75,7 +73,10 @@
   (let [done  (long (or done 0))
         total (long (or total 0))
         ;; the first callback can arrive before a total is known
-        frac  (if (pos? total) (/ (double done) total) 0.0)
+        ;; clamped: a phase that re-runs can report more done than it first
+        ;; announced as the total, and a percentage over 100 becomes a negative
+        ;; column width, which GridPane rejects outright
+        frac  (if (pos? total) (min 1.0 (max 0.0 (/ (double done) total))) 0.0)
         eta   (clock done total session-bytes-per-sec)]
     {:fx/type :v-box :spacing 9
      :padding 14
@@ -97,29 +98,36 @@
       ;; A 3px track with a gold fill sized by fraction. A :progress-bar would
       ;; drag JavaFX's Modena skin in and need overriding in four places.
       ;;
-      ;; The fill's width is BOUND to the track's live width rather than computed
-      ;; from a pixel constant. Both earlier copies of this box got that wrong in
-      ;; turn: the panel's first version hardcoded 236 inside a track about 324
-      ;; wide, and the switch screen's scaled by its 620px box inside a track
-      ;; 28px narrower. Both looked entirely reasonable in the description map
-      ;; and were wrong on screen. A binding is right at any width -- which is
-      ;; now the point, since this renders in a 324px panel and a 620px screen --
-      ;; and survives a re-layout, which a constant does not.
-      {:fx/type fx/ext-on-instance-lifecycle
-       :on-created
-       (fn [^StackPane track]
-         (when-let [fill (first (.getChildren track))]
-           (.bind (.maxWidthProperty ^Region fill)
-                  (.multiply (.widthProperty track) (double frac)))))
-       :desc
-       {:fx/type :stack-pane
-        :alignment :center-left
-        :min-height 3 :max-height 3
-        :style (theme/style {:-fx-background-color (:line c) :-fx-background-radius 2})
-        :children [{:fx/type :region
-                    :min-height 3 :max-height 3
-                    :style (theme/style {:-fx-background-color (:gold c)
-                                          :-fx-background-radius 2})}]}}
+      ;; The fraction is expressed as GridPane column percentages, so it is
+      ;; recomputed by the renderer on every update and costs no pixel constant.
+      ;; Both earlier attempts got this wrong in different ways. The switch
+      ;; screen scaled a :max-width by its 620px box while sitting in a track
+      ;; 28px narrower, so the bar ran long. The panel bound the fill's width to
+      ;; the track's inside an :on-created handler -- which fires exactly ONCE,
+      ;; with `frac` captured in its closure, so every later render left the bar
+      ;; pinned at the fraction it was first created with. That is zero, and a
+      ;; whole 15 GB pass ran under a bar that never moved.
+      ;;
+      ;; A binding would have to be re-established on advance to be correct. The
+      ;; percentages simply have no state to go stale.
+      {:fx/type :grid-pane
+       :min-height 3 :max-height 3
+       ;; a Region's default maxWidth is its COMPUTED size, so without this the
+       ;; track shrank to the ~40px its content asked for and the bar was a
+       ;; fraction of that instead of a fraction of the box
+       :max-width Double/MAX_VALUE
+       :style (theme/style {:-fx-background-color (:line c) :-fx-background-radius 2})
+       :column-constraints [{:fx/type :column-constraints :percent-width (* 100.0 frac)}
+                            {:fx/type :column-constraints
+                             :percent-width (* 100.0 (- 1.0 frac))}]
+       :children [{:fx/type :region
+                   :grid-pane/column 0 :grid-pane/row 0
+                   :min-height 3 :max-height 3
+                   ;; fill the cell the percentage sized, rather than a Region's
+                   ;; computed preferred width, which is zero
+                   :max-width Double/MAX_VALUE
+                   :style (theme/style {:-fx-background-color (:gold c)
+                                         :-fx-background-radius 2})}]}
       ;; wrapped, not clipped: this line is at its longest in the narrowest
       ;; place it renders, the library's ~324px panel
       {:fx/type :label
