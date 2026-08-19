@@ -233,8 +233,9 @@
       (is (str/includes? s "Scan to sign in"))))
 
   (testing ":library"
-    (let [s (pr-str (main/view (screen-state :library {:games [game]})))]
-      (is (str/includes? s "1 of 1 titles"))
+    ;; :owned, the tab that shows the whole catalog. The app opens on
+    ;; :installed, which shows only what is on disk -- nothing, here.
+    (let [s (pr-str (main/view (screen-state :library {:games [game] :tab :owned})))]
       (is (str/includes? s "Stardew Valley"))
       (is (not (str/includes? s "Scan to sign in"))
           "a signed-in user must never be told to scan a code")))
@@ -319,7 +320,7 @@
           (main/enter-library! state)
           (.join (main/load-ownership! state) 10000)
           (is (= #{413150} (:owned @state)))
-          (is (str/includes? (pr-str (main/view @state)) "Not owned")
+          (is (str/includes? (pr-str (main/view (assoc @state :tab :owned))) "Not owned")
               "with a real answer, the games the account does not own are marked"))))))
 
 (deftest selecting-a-different-game-clears-the-version-selection
@@ -1627,3 +1628,42 @@
           (is (not (contains? @screens :download))
               "the download screen is for downloads; its buttons are a download's")
           (is (contains? @screens :switch)))))))
+
+(deftest entering-the-library-finds-what-is-installed
+  (testing "the app opens on the Installed tab, so the switch needs the index
+            before it can show anything at all"
+    (with-tmp
+      (fn []
+        (let [state (wired {})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        art/prefetch! (fn [_] nil)
+                        art/capsule (fn [_] nil)
+                        main/load-ownership! (fn [_] nil)
+                        main/nudge-art! (fn [_] nil)
+                        installs/installed-apps
+                        (fn [] [{:appid 413150 :path "/steam/common/Stardew" :bytes 7}])]
+            (main/enter-library! state)
+            (.join ^Thread (main/load-installs! state) 10000)
+            (is (= #{413150} (set (keys (:installs @state)))))))))))
+
+(deftest the-app-opens-on-the-installed-tab
+  (testing "it exists to change builds of games you already have, and that is
+            the shorter list"
+    (with-tmp
+      (fn []
+        (is (= :installed (:tab (main/initial-state (atom nil) {:account "x"}))))))))
+
+(deftest changing-tab-clears-the-selection-and-the-query
+  (testing "the panel would otherwise stay open on a game the grid no longer
+            shows, and a query typed against one library rarely means anything
+            in the other"
+    (with-tmp
+      (fn []
+        (let [state (wired {:tab :installed :query "sky" :selected-appid 489830
+                            :selected-version-id "public" :install {:path "/x"}
+                            :installed-version {:id "public"}})]
+          ((:on-tab @state) :owned)
+          (is (= :owned (:tab @state)))
+          (is (= "" (:query @state)))
+          (is (nil? (:selected-appid @state)))
+          (is (nil? (:install @state))))))))

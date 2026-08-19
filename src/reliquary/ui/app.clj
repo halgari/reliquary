@@ -215,10 +215,80 @@
                          :-fx-font-size 16
                          :-fx-padding 0})})
 
-(defn title-bar [{:keys [status-line signed-in? on-sign-out on-close]}]
+(def ^:private tab-active-bg
+  "The selected tab's fill. One step above :surface and not in the palette,
+   because the switch sits ON :bg in the title bar and :surface against it is
+   almost invisible (design: #242424)."
+  "#242424")
+
+(defn- tab-button
+  "Named tab-BUTTON because `tab` is also the state key this switch reads, and
+   the destructured parameter shadowed the function."
+  [{:keys [label selected? on-select]}]
+  {:fx/type :button :text label
+   :on-action (fn [_] (when on-select (on-select)))
+   :min-height 26 :max-height 26
+   :padding {:left 14 :right 14}
+   :style (theme/style
+           (if selected?
+             {:-fx-background-color tab-active-bg
+              :-fx-text-fill (:text c)
+              :-fx-background-radius 3
+              :-fx-font-size 12
+              :-fx-font-family (theme/ui-semibold-font)
+              ;; JavaFX has no inset box-shadow: the design's gold inset ring
+              ;; becomes a real 1px border in the same colour, and the outer
+              ;; bloom stays an effect
+              :-fx-border-color (theme/rgba (:gold c) 0.35)
+              :-fx-border-radius 3
+              :-fx-effect (theme/glow (:gold c) {:blur 16 :spread -8 :alpha 0.9})}
+             {:-fx-background-color "transparent"
+              :-fx-text-fill (:text-muted c)
+              :-fx-background-radius 3
+              :-fx-font-size 12
+              :-fx-font-family (theme/ui-semibold-font)}))})
+
+(defn- library-controls
+  "The Installed/Owned switch and the filter, in the title bar where the design
+   puts them -- immediately right of the logo, not over the card grid."
+  [{:keys [tab query on-tab on-query-change]}]
+  (let [installed? (not= :owned tab)]
+    {:fx/type :h-box
+     :alignment :center-left
+     :spacing 16
+     :children
+     [{:fx/type :h-box
+       :alignment :center-left
+       :spacing 2
+       :padding 2
+       :style (theme/style {:-fx-background-color (:bg c)
+                             :-fx-border-color (:line c)
+                             :-fx-border-radius 4
+                             :-fx-background-radius 4})
+       :children [(tab-button {:label "Installed" :selected? installed?
+                        :on-select #(when on-tab (on-tab :installed))})
+                  (tab-button {:label "Owned" :selected? (not installed?)
+                        :on-select #(when on-tab (on-tab :owned))})]}
+      {:fx/type :text-field
+       :text (or query "")
+       ;; the placeholder names what is being searched, so the switch and the
+       ;; filter read as one control rather than two
+       :prompt-text (if installed? "Search installed" "Search library")
+       :on-text-changed (or on-query-change (fn [_]))
+       :min-width 230 :max-width 230 :min-height 30 :max-height 30
+       :style (theme/style {:-fx-background-color (:bg c)
+                             :-fx-border-color (:line c)
+                             :-fx-border-radius 4
+                             :-fx-background-radius 4
+                             :-fx-text-fill (:text c)
+                             :-fx-font-size 12
+                             :-fx-padding "0 11 0 11"})}]}))
+
+(defn title-bar [{:keys [status-line signed-in? tab query
+                         on-tab on-query-change on-sign-out on-close]}]
   {:fx/type :h-box
    :alignment :center-left
-   :spacing 10
+   :spacing 26
    :min-height 52 :max-height 52
    :padding {:left 22 :right 14}
    ;; the window's grab handle, now that the OS provides none
@@ -238,12 +308,17 @@
    ;; The close button is appended LAST, after the conditional Sign out, because
    ;; "far right" has to hold whether or not Sign out is there -- a cond-> that
    ;; conj'd Sign out after it would put Sign out to its right when signed in.
-   :children (-> [(logo)
+   :children (-> [(logo)]
+                 (cond-> signed-in?
+                   (conj (library-controls {:tab tab :query query
+                                            :on-tab on-tab
+                                            :on-query-change on-query-change})))
+                 (conj
                   {:fx/type :region :h-box/hgrow :always}
                   {:fx/type :label :text (or status-line "")
                    :style (theme/style {:-fx-font-family (theme/mono-font)
                                          :-fx-font-size 11
-                                         :-fx-text-fill (:text-muted c)})}]
+                                         :-fx-text-fill (:text-muted c)})})
                  (cond-> signed-in?
                    (conj {:fx/type :button :text "Sign out"
                           :on-action on-sign-out

@@ -201,3 +201,59 @@
     (let [bar (app/title-bar {})]
       (is (fn? (:on-mouse-pressed bar)))
       (is (fn? (:on-mouse-dragged bar))))))
+
+;; ---------------------------------------------------------------------------
+;; the library controls, which belong in the title bar
+;;
+;; Both were built in the wrong place. The design puts the Installed/Owned
+;; switch and the filter in the title bar, immediately right of the logo; the
+;; first implementation had no switch at all and hung the filter over the card
+;; grid with a "N of M titles" counter the design does not have.
+
+(deftest the-installed-owned-switch-is-in-the-title-bar
+  (let [s (pr-str (app/title-bar {:signed-in? true :tab :installed}))]
+    (is (str/includes? s "Installed"))
+    (is (str/includes? s "Owned"))))
+
+(deftest the-filter-is-in-the-title-bar
+  (let [s (pr-str (app/title-bar {:signed-in? true :tab :owned}))]
+    (is (str/includes? s "Search library")
+        "and its placeholder names the tab it is filtering")
+    (is (str/includes? (pr-str (app/title-bar {:signed-in? true :tab :installed}))
+                       "Search installed"))))
+
+(deftest neither-control-shows-when-signed-out
+  (testing "there is no library behind the login screen to filter"
+    (let [s (pr-str (app/title-bar {:signed-in? false}))]
+      (is (not (str/includes? s "Installed")))
+      (is (not (str/includes? s "Search"))))))
+
+(deftest the-controls-sit-left-of-the-status-line-not-right
+  (testing "design order: logo, switch, filter, then everything else pushed
+            right by the spacer"
+    (let [kids (:children (app/title-bar {:signed-in? true :tab :installed
+                                          :status-line "halgari"}))
+          idx  (fn [pred] (first (keep-indexed #(when (pred %2) %1) kids)))
+          spacer (idx #(= :region (:fx/type %)))
+          ;; the switch and the filter are one group, as in the design, so this
+          ;; looks for the child CONTAINING the filter rather than for a
+          ;; text-field sitting directly in the bar
+          filt   (idx #(str/includes? (pr-str %) "Search installed"))]
+      (is (some? spacer))
+      (is (some? filt))
+      (is (< filt spacer) "the filter is before the spacer, so it sits on the left"))))
+
+(deftest the-selected-tab-is-the-one-that-reads-as-selected
+  (let [installed (pr-str (app/title-bar {:signed-in? true :tab :installed}))
+        owned     (pr-str (app/title-bar {:signed-in? true :tab :owned}))]
+    (is (not= installed owned) "the switch shows which side is active")))
+
+(deftest both-tabs-are-clickable
+  (let [hits (atom [])
+        bar  (app/title-bar {:signed-in? true :tab :installed
+                             :on-tab (fn [t] (swap! hits conj t))})
+        btns (filter #(#{"Installed" "Owned"} (:text %))
+                     (tree-seq coll? #(if (map? %) (vals %) (seq %)) bar))]
+    (is (= 2 (count btns)))
+    (doseq [b btns] ((:on-action b) nil))
+    (is (= #{:installed :owned} (set @hits)))))

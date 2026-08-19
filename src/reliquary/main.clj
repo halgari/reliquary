@@ -425,6 +425,40 @@
      1 1 TimeUnit/SECONDS)
     sched))
 
+(defn load-installs!
+  "Populate `:installs` and `:installed-labels` for the whole library, on a
+   daemon thread.
+
+   The Installed tab is a different library, not a different sort, so the switch
+   needs to know what is on disk before it can show anything -- and every card on
+   that tab names the build it has and where it lives.
+
+   The labels come from the appmanifest's depot manifest ids, NOT from hashing.
+   That is a deliberate difference from the selected game's panel: identifying by
+   content means reading the executables of every installed game, which is the
+   one thing that cannot happen behind a library that has to paint now. The panel
+   still hashes, and the panel is what a switch is driven from.
+
+   A failure leaves both empty, which reads as `nothing installed` -- the same
+   thing an empty Steam folder means, and a strictly better outcome than a
+   library that will not open."
+  [state]
+  (daemon!
+   "reliquary-installs"
+   (fn []
+     (try
+       (let [found  (installs/installed-apps)
+             by-id  (into {} (map (juxt :appid identity)) found)
+             games  (:games @state)
+             labels (into {}
+                          (keep (fn [g]
+                                  (when-let [i (get by-id (:appid g))]
+                                    (when-let [v (installs/installed-version g i)]
+                                      [(:appid g) (:label v)]))))
+                          games)]
+         (fx-run! #(swap! state assoc :installs by-id :installed-labels labels)))
+       (catch Throwable _ nil)))))
+
 (defn enter-library!
   "Land on the library screen: the catalog now, ownership and art when they
    arrive. Safe to call from any thread -- every state change goes through
@@ -438,6 +472,7 @@
                      :error nil))
     (daemon! "reliquary-art-prefetch" (fn [] (run! art/prefetch! games)))
     (load-ownership! state)
+    (load-installs! state)
     (nudge-art! state)
     games))
 
@@ -1114,6 +1149,11 @@
    :games []
    :owned nil
    :query ""
+   ;; the design opens on Installed: the app exists to change builds of games
+   ;; you already have, and that is the shorter list
+   :tab :installed
+   :installs {}
+   :installed-labels {}
    :folder (config/folder)
    :capsule-fn capsule-image
    :screenshot-fn screenshot-image
@@ -1124,6 +1164,14 @@
    :on-guard          (fn [v]  (swap! state assoc :guard-code v))
    :on-submit         (fn [_]  (submit-credentials! state))
    :on-query-change   (fn [q]  (swap! state assoc :query q))
+   ;; changing tab clears the selection and the query, as the design does: the
+   ;; panel would otherwise stay open on a game the grid no longer shows, and a
+   ;; query typed against one library rarely means anything in the other
+   :on-tab            (fn [t]  (swap! state assoc
+                                      :tab t :query ""
+                                      :selected-appid nil :selected-version-id nil
+                                      :install nil :installed-version nil
+                                      :hashing nil))
    :on-select-game    (fn [id] (select-game! state id))
    :on-select-version (fn [id] (select-version! state id))
    :on-change-folder  (fn [_]  (choose-folder! state))

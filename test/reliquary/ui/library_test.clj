@@ -75,10 +75,35 @@
     (is (= 2 (count (library/filter-games games ""))))
     (is (= 2 (count (library/filter-games games nil))))))
 
-(deftest the-count-label-reads-filtered-of-total
-  (let [desc (library/view {:games games :query "stardew"})
-        label (find-node desc :label)]
-    (is (str/includes? (pr-str desc) "1 of 2 titles"))))
+(deftest the-grid-carries-no-filter-row-of-its-own
+  (testing "the design puts the filter in the title bar beside the
+            Installed/Owned switch, and has no `N of M titles` counter at all.
+            Both were built here instead, over the grid."
+    (let [s (pr-str (library/view {:games games :query "stardew"}))]
+      (is (not (str/includes? s "titles")))
+      (is (not (str/includes? s "Filter library")))
+      (is (str/includes? s "Stardew") "the query still narrows the grid"))))
+
+(deftest the-installed-tab-shows-only-what-is-on-disk
+  (let [installs {100 {:path "/steam/common/Stardew" :bytes 700000000}}
+        s (pr-str (library/view {:games games :tab :installed :installs installs}))]
+    (is (str/includes? s "Stardew"))
+    (is (not (str/includes? s "Skyrim")) "not installed, so not on this tab")))
+
+(deftest the-owned-tab-shows-everything
+  (let [s (pr-str (library/view {:games games :tab :owned
+                                 :installs {100 {:path "/x"}}}))]
+    (is (str/includes? s "Stardew"))
+    (is (str/includes? s "Skyrim"))))
+
+(deftest an-installed-card-says-which-build-and-where
+  (testing "on this tab the card answers `which build is on disk and where`,
+            not `what is this and how big`"
+    (let [installs {100 {:path "/steam/common/Stardew" :bytes 700000000}}
+          s (pr-str (library/view {:games games :tab :installed :installs installs
+                                   :installed-labels {100 "1.6.8"}}))]
+      (is (str/includes? s "1.6.8"))
+      (is (str/includes? s "/steam/common/Stardew")))))
 
 (deftest unowned-games-render-muted-with-a-plain-reason-and-no-owned-games-block-nothing
   (testing "an explicit owned set mutes the games outside it"
@@ -422,3 +447,22 @@
     (is (some? btn))
     ((:on-action btn) nil)
     (is @fired)))
+
+(deftest an-empty-installed-tab-says-why-rather-than-showing-nothing
+  (testing "the app opens on Installed. A user with none of these games on disk
+            would otherwise meet a blank window and no way to know the Owned tab
+            is where everything is."
+    (let [s (pr-str (library/view {:games games :tab :installed :installs {}}))]
+      (is (str/includes? s "Owned")))))
+
+(deftest a-non-empty-installed-tab-says-nothing-of-the-kind
+  (let [installs {100 {:path "/steam/common/Stardew" :bytes 1}}
+        s (pr-str (library/view {:games games :tab :installed :installs installs}))]
+    (is (not (str/includes? s "None of these games")))))
+
+(deftest an-empty-result-from-the-FILTER-is-not-the-same-as-an-empty-tab
+  (testing "typing gibberish into the filter is not `nothing is installed`"
+    (let [installs {100 {:path "/x" :bytes 1}}
+          s (pr-str (library/view {:games games :tab :installed :installs installs
+                                   :query "zzzzzz"}))]
+      (is (not (str/includes? s "None of these games"))))))

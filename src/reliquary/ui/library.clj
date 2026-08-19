@@ -137,7 +137,15 @@
                     r (- w r) r r w r h r r r r)})
 
 ;; art + (8 top padding + 34 title + 4 spacing + ~15 meta row + 10 bottom)
-(def ^:private card-total-height (+ card-height 71 (* 2 card-border)))
+(def ^:private card-body-height (+ card-height 71 (* 2 card-border)))
+
+;; the Installed tab adds a third line -- the install path -- so the card is
+;; taller there. It has to be computed rather than fixed: the height is also the
+;; CLIP, and a card clipped to the two-line height simply cut the path in half.
+(def ^:private card-sub-height 18)
+
+(defn- card-total-height [sub?]
+  (+ card-body-height (if sub? card-sub-height 0)))
 
 (defn- capsule-placeholder
   "The mockup's diagonal hatch, drawn with a repeating linear gradient --
@@ -206,7 +214,7 @@
    the SKSE-stable build before you decide to buy -- so the ownership gate
    belongs on the download button, not on the click. The card stays dimmed and
    says `Not owned` so the state is legible, but the panel opens."
-  [{:keys [game selected? owned? capsule-fn on-select]}]
+  [{:keys [game selected? owned? install installed-label capsule-fn on-select]}]
   (let [primary (first (catalog/versions game))
         ;; Two lines, wrapped. On one line every Elder Scrolls title truncates
         ;; to "The Elder Scrolls V: S..." -- Skyrim and Skyrim Special Edition
@@ -221,7 +229,23 @@
                  :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
                                        :-fx-font-size 13
                                        :-fx-text-fill (:text c)})}
-        meta-row (if owned?
+        mono     (fn [text fill]
+                   {:fx/type :label :text text
+                    :style (theme/style {:-fx-font-family (theme/mono-font)
+                                          :-fx-font-size 11
+                                          :-fx-text-fill fill})})
+        ;; On the Installed tab a card answers a different question: not "what
+        ;; is this and how big", but "which build is on disk and where". The
+        ;; version reads gold because it is the thing the tab exists for.
+        meta-row (cond
+                   install
+                   {:fx/type :h-box
+                    :children [(mono (or installed-label (str "app " (:appid game)))
+                                     (if installed-label (:gold c) (:text-muted c)))
+                               {:fx/type :region :h-box/hgrow :always}
+                               (mono (size-label (:bytes install)) (:text-muted c))]}
+
+                   owned?
                    {:fx/type :h-box
                     :children [{:fx/type :label :text (str "app " (:appid game))
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
@@ -232,6 +256,8 @@
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
                                                       :-fx-text-fill (:text-muted c)})}]}
+
+                   :else
                    {:fx/type :h-box
                     :children [{:fx/type :label :text (str "app " (:appid game))
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
@@ -241,7 +267,17 @@
                                {:fx/type :label :text "Not owned"
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
-                                                      :-fx-text-fill (:text-muted c)})}]})]
+                                                      :-fx-text-fill (:text-muted c)})}]})
+        ;; the third line, Installed tab only: where those bytes are
+        sub-row  (when install
+                   {:fx/type :label :text (str (:path install))
+                    :max-width (- art-width 20)
+                    ;; the TAIL is the useful half of an install path -- the
+                    ;; folder the game is in -- so the ellipsis eats the front
+                    :text-overrun :leading-ellipsis
+                    :style (theme/style {:-fx-font-family (theme/mono-font)
+                                          :-fx-font-size 10
+                                          :-fx-text-fill (:text-dim c)})})]
     (-> (cond-> {;; The GLOW FRAME. It carries the selected state's glow and
                  ;; lift and is deliberately NOT clipped, because a clip and an
                  ;; -fx-effect on the SAME node compose: the clip masks the
@@ -257,7 +293,8 @@
                  ;; still lays the grid out on the old geometry.
                  :fx/type :stack-pane
                  :min-width card-width :max-width card-width
-                 :min-height card-total-height :max-height card-total-height
+                 :min-height (card-total-height (some? sub-row))
+                 :max-height (card-total-height (some? sub-row))
                  :style (theme/style
                          (cond-> {}
                            ;; Selected card gets the ring's glow beneath it and
@@ -279,10 +316,11 @@
                    ;; because JavaFX's arcWidth is the full width of the corner
                    ;; ellipse rather than its radius.
                    :clip {:fx/type :rectangle
-                          :width card-width :height card-total-height
+                          :width card-width :height (card-total-height (some? sub-row))
                           :arc-width (* 2 card-radius) :arc-height (* 2 card-radius)}
                    :min-width card-width :max-width card-width
-                   :min-height card-total-height :max-height card-total-height
+                   :min-height (card-total-height (some? sub-row))
+                   :max-height (card-total-height (some? sub-row))
                    :style (theme/style
                            (cond-> {:-fx-background-color (:surface c)
                                     :-fx-background-radius card-radius
@@ -295,7 +333,8 @@
                    :children [(capsule-art game capsule-fn)
                               {:fx/type :v-box :spacing 4
                                :padding {:top 8 :bottom 10 :left 10 :right 10}
-                               :children [title meta-row]}]}]}
+                               :children (cond-> [title meta-row]
+                                           sub-row (conj sub-row))}]}]}
           :always (assoc :on-mouse-clicked (fn [_] (on-select (:appid game)))))
         ;; Fade + rise + settle, ONCE. cljfx's default :children diffing
         ;; (cljfx.lifecycle/wrap-many with no :fx/key on these cards) keys
@@ -313,7 +352,8 @@
         ;; screenshot harness's `*animate*` false still suppresses it.
         (anim/with-anim anim/rise-in!))))
 
-(defn- grid [{:keys [games selected-appid owned capsule-fn on-select-game]}]
+(defn- grid [{:keys [games selected-appid owned installs installed-labels
+                     capsule-fn on-select-game]}]
   {:fx/type :flow-pane
    :hgap 18 :vgap 18
    :padding 24
@@ -321,55 +361,58 @@
                       (card {:game g
                              :selected? (= selected-appid (:appid g))
                              :owned? (owned?* owned (:appid g))
+                             :install (get installs (:appid g))
+                             :installed-label (get installed-labels (:appid g))
                              :capsule-fn capsule-fn
                              :on-select on-select-game}))
                     games)})
 
-(defn- filter-box [{:keys [query on-query-change]}]
-  {:fx/type :text-field
-   :text (or query "")
-   :prompt-text "Filter library"
-   :on-text-changed on-query-change
-   :min-width 280 :max-width 280 :min-height 36 :max-height 36
-   :style (theme/style {:-fx-background-color (:surface c)
-                         :-fx-border-color (:line c)
-                         :-fx-border-radius 3
-                         :-fx-background-radius 3
-                         :-fx-text-fill (:text c)
-                         :-fx-font-size 13
-                         :-fx-padding "0 10 0 10"})})
+;; The filter used to live here, over the grid, with an "N of M titles"
+;; counter beside it. Both are gone: the design puts the filter in the title
+;; bar next to the Installed/Owned switch, and has no counter at all.
 
-(defn- count-label [n total]
-  {:fx/type :label
-   :text (str n " of " total " titles")
-   :style (theme/style {:-fx-font-family (theme/mono-font)
-                         :-fx-font-size 11
-                         :-fx-text-fill (:text-muted c)})})
+(defn- nothing-installed
+  "Shown when the Installed tab has nothing to show AND the filter is not the
+   reason. The design has no empty state -- it was drawn with a populated
+   fixture -- but the app opens on this tab, so without one a user who has none
+   of these games meets a blank window and no hint that Owned is where the
+   catalogue lives."
+  []
+  {:fx/type :v-box
+   :alignment :center
+   :spacing 8
+   :padding 60
+   :children
+   [{:fx/type :label :text "No games from this catalog are installed"
+     :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
+                           :-fx-font-size 15 :-fx-text-fill (:text c)})}
+    {:fx/type :label
+     :text "Switch to Owned to browse everything Reliquary can download."
+     :style (theme/style {:-fx-font-family (theme/mono-font)
+                           :-fx-font-size 12 :-fx-text-fill (:text-muted c)})}]})
 
 (defn- grid-panel
-  [{:keys [games filtered query selected-appid owned capsule-fn
-           on-query-change on-select-game]}]
+  [{:keys [filtered selected-appid owned installs installed-labels
+           empty-tab? capsule-fn on-select-game]}]
   {:fx/type :v-box
    :h-box/hgrow :always
    :min-width 0
    :style (theme/style {:-fx-background-color (:bg c)})
    :children
-   [{:fx/type :h-box
-     :alignment :center-left
-     :spacing 14
-     :padding {:top 20 :bottom 14 :left 24 :right 24}
-     :children [(filter-box {:query query :on-query-change on-query-change})
-                (count-label (count filtered) (count games))]}
-    {:fx/type :scroll-pane
-     :v-box/vgrow :always
-     :fit-to-width true
-     :style (theme/style {:-fx-background-color "transparent"
-                           :-fx-background "transparent"})
-     :content (grid {:games filtered
+   [(if empty-tab?
+      (assoc (nothing-installed) :v-box/vgrow :always)
+      {:fx/type :scroll-pane
+       :v-box/vgrow :always
+       :fit-to-width true
+       :style (theme/style {:-fx-background-color "transparent"
+                             :-fx-background "transparent"})
+       :content (grid {:games filtered
                       :selected-appid selected-appid
                       :owned owned
-                      :capsule-fn capsule-fn
-                      :on-select-game on-select-game})}]})
+                      :installs installs
+                      :installed-labels installed-labels
+                        :capsule-fn capsule-fn
+                        :on-select-game on-select-game})})]})
 
 ;; ---------------------------------------------------------------------
 ;; Side panel
@@ -699,7 +742,8 @@
    The side panel only appears once `:selected-appid` names a game actually
    present in `:games` -- an id left over from a previous, now-filtered-out
    library must not conjure a panel for a game the grid isn't showing."
-  [{:keys [games query selected-appid selected-version-id owned folder capsule-fn
+  [{:keys [games query tab installs installed-labels
+           selected-appid selected-version-id owned folder capsule-fn
            install installed-version hashing
            on-query-change on-select-game on-select-version on-change-folder
            on-download on-analyze]
@@ -711,14 +755,30 @@
            on-download        (fn [_])
            on-analyze         (fn [_])}}]
   (let [games         (or games [])
-        filtered      (filter-games games query)
+        ;; The Installed tab is a different LIBRARY, not a different sort: only
+        ;; games Steam actually has on disk. The filter then applies within
+        ;; whichever pool the switch has chosen, which is why the placeholder
+        ;; in the title bar names the tab.
+        ;; Only an EXPLICIT :installed narrows. nil means the caller is not
+        ;; using the switch, and a view that hid every card because it was not
+        ;; told which tab it was on would be a blank window on a missing key.
+        pool          (if (= :installed tab)
+                        (filterv #(get installs (:appid %)) games)
+                        games)
+        filtered      (filter-games pool query)
         selected-game (find-game games selected-appid)]
     {:fx/type :h-box
      :children
-     (cond-> [(grid-panel {:games games :filtered filtered :query query
+     (cond-> [(grid-panel {:filtered filtered
+                            ;; empty because nothing is INSTALLED, not because
+                            ;; the filter matched nothing -- typing gibberish is
+                            ;; not the same statement about the machine
+                            :empty-tab? (and (= :installed tab)
+                                             (empty? pool))
                             :selected-appid selected-appid :owned owned
+                            :installs (when (= :installed tab) installs)
+                            :installed-labels installed-labels
                             :capsule-fn capsule-fn
-                            :on-query-change on-query-change
                             :on-select-game on-select-game})]
        selected-game
        (conj (side-panel {:game selected-game
