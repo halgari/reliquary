@@ -218,3 +218,133 @@
     (let [idx (local/index-files (concat [{:name "a.bsa" :size "1" :sha-content "aa"}]
                                          [{:name "SkyrimSE.exe" :size "2" :sha-content "bb"}]))]
       (is (= 2 (count idx))))))
+
+;; ---------------------------------------------------------------------------
+;; the local chunk index
+;;
+;; Measured between Skyrim SE's public and 1.6.1130 manifests: 1 of 46 files is
+;; reusable, and 15853 of 16074 chunks are -- 14.99 GB against 0.21 GB. So the
+;; unit that matters is the chunk, and the index is what makes a chunk already on
+;; disk findable.
+;;
+;; Steam's chunk boundaries come from a MANIFEST; they cannot be recomputed from
+;; local bytes. So the index is built with the INSTALLED version's manifest as
+;; the boundary map, which is why identification has to happen first.
+
+(defn- write-bytes! [f ^bytes b]
+  (io/make-parents f)
+  (with-open [out (io/output-stream f)] (.write out b)))
+
+(defn- bytes-of [^String s] (.getBytes s "UTF-8"))
+
+(deftest a-byte-range-hashes-independently-of-the-rest-of-the-file
+  (let [d (tmp-dir)]
+    (try
+      (let [f (io/file d "f.bin")]
+        (write-bytes! f (bytes-of "XXXabcYYY"))
+        ;; the known SHA-1 of "abc", read from the middle of a larger file
+        (is (= "a9993e364706816aba3e25717850c26c9cd0d89d" (local/sha1-range f 3 3))))
+      (finally (rm-rf d)))))
+
+(deftest a-range-past-the-end-of-the-file-is-nil
+  (testing "a local file shorter than the manifest says -- a truncated download,
+            or a file a user replaced with a smaller one"
+    (let [d (tmp-dir)]
+      (try
+        (let [f (io/file d "short.bin")]
+          (write-bytes! f (bytes-of "abc"))
+          (is (nil? (local/sha1-range f 0 100))))
+        (finally (rm-rf d))))))
+
+(def ^:private sha-abc "a9993e364706816aba3e25717850c26c9cd0d89d")
+(def ^:private sha-xyz "66b27417d37e024c46526c2f6d358a754fc552f3")
+
+;; Chunk offsets are STRINGS in a real manifest -- a uint64 that survived
+;; protobuf -- while cb-original is an Integer. The fixtures below carry those
+;; types deliberately: an earlier version used tidy numbers throughout, passed
+;; every test, and then threw ClassCastException on the first real manifest.
+
+(deftest the-index-records-chunks-whose-content-matches-their-id
+  (let [d (tmp-dir)]
+    (try
+      (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+      (let [files [{:name "a.bin"
+                    :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                             {:id sha-xyz :offset "3" :cb-original 3}]}]
+            idx (local/chunk-index d files {})]
+        (is (= #{sha-abc sha-xyz} (set (keys idx))))
+        (is (= {:path "a.bin" :offset 0 :size 3} (get idx sha-abc))))
+      (finally (rm-rf d)))))
+
+(deftest a-chunk-whose-content-does-not-match-is-not-indexed
+  (testing "this is the verification pass, not a bookkeeping read: a file a mod
+            overwrote hashes to something else, and claiming we hold that chunk
+            would corrupt whatever we copied it into"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "MODDED"))
+        (let [idx (local/chunk-index d [{:name "a.bin"
+                                         :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+                                     {})]
+          (is (empty? idx)))
+        (finally (rm-rf d))))))
+
+(deftest a-missing-file-contributes-no-chunks
+  (let [d (tmp-dir)]
+    (try
+      (let [idx (local/chunk-index d [{:name "gone.bin"
+                                       :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+                                   {})]
+        (is (empty? idx)))
+      (finally (rm-rf d)))))
+
+(deftest indexing-reports-progress-in-bytes-and-can-be-stopped
+  (testing "the design's hashing bar is a percentage, and files are wildly uneven
+            in size -- counting files would jump from 2% to 98% on one .bsa"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+        (let [seen (atom [])]
+          (local/chunk-index d [{:name "a.bin"
+                                 :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                          {:id sha-xyz :offset "3" :cb-original 3}]}]
+                             {:on-progress (fn [p] (swap! seen conj p))})
+          (is (= [3 6] (map :done @seen)) "progress counts BYTES hashed")
+          (is (every? #(= 6 (:total %)) @seen)))
+        (testing "and aborting leaves a partial index rather than running on"
+          (let [idx (local/chunk-index d [{:name "a.bin"
+                                           :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                                    {:id sha-xyz :offset "3" :cb-original 3}]}]
+                                       {:abort? (constantly true)})]
+            (is (empty? idx))))
+        (finally (rm-rf d))))))
+
+(deftest a-chunk-is-reusable-from-anywhere-on-disk
+  (testing "content addressing is the whole point. 98.6% reuse comes from chunks
+            found wherever they happen to sit -- a chunk the target wants in
+            Data/big.bsa may already be on disk inside a completely different
+            file, and copying it locally beats fetching it."
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "somewhere-else.bin") (bytes-of "PADabc"))
+        (let [idx (local/chunk-index d [{:name "somewhere-else.bin"
+                                         :chunks [{:id sha-abc :offset "3" :cb-original 3}]}]
+                                     {})
+              target [{:name "Data/wanted.bsa"
+                       :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                {:id "deadbeef" :offset "3" :cb-original 7}]}]
+              p (local/plan-chunks idx target)]
+          (is (= 1 (count (:have p))))
+          (is (= "somewhere-else.bin" (-> p :have first :from :path))
+              "and the plan says where to copy it from")
+          (is (= ["deadbeef"] (map :id (:fetch p))))
+          (is (= 7 (:bytes p)) "only the chunks actually fetched are counted"))
+        (finally (rm-rf d))))))
+
+(deftest a-switch-with-nothing-to-fetch-is-a-no-op
+  (testing "re-running a completed switch, which is what makes an interrupted one
+            safe to simply run again"
+    (let [idx {sha-abc {:path "a.bin" :offset 0 :size 3}}
+          p (local/plan-chunks idx [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}])]
+      (is (empty? (:fetch p)))
+      (is (zero? (:bytes p))))))
