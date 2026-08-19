@@ -200,3 +200,116 @@
         (spit (io/file d "a.bin") "abcxyz")
         (is (some? (run-forced d {})) "it ran at all")
         (finally (rm-rf d))))))
+
+(defn- spit! 
+  "spit, but making the directories first -- spit does not, and a test that
+   silently failed to create its own fixture would prove nothing."
+  [f content]
+  (io/make-parents f)
+  (spit f content))
+
+;; ---------------------------------------------------------------------------
+;; a modded install, through the whole orchestration
+;;
+;; The engine-level guarantees are in reliquary.steam.local-test. This is the
+;; same question asked of `run!`, because that is what the app actually calls
+;; and because a switch is the one operation that rewrites a folder the user has
+;; spent months arranging.
+
+(deftest a-switch-leaves-the-users-own-files-alone
+  (testing "a real Skyrim folder holds SKSE, plugins, ini edits and whatever a
+            mod manager left behind, none of it in any Steam manifest"
+    (let [d (tmp-dir)]
+      (try
+        (spit (io/file d "a.bin") "abcxyz")
+        (spit! (io/file d "skse64_loader.exe") "loader")
+        (spit! (io/file d "Data" "MyMod.esp") "plugin bytes")
+        (spit! (io/file d "SkyrimCustom.ini") "[General]")
+        (run-switch d {})
+        (is (= "abcNEWxyz" (slurp (io/file d "a.bin"))) "the switch happened")
+        (is (= "loader" (slurp (io/file d "skse64_loader.exe"))))
+        (is (= "plugin bytes" (slurp (io/file d "Data" "MyMod.esp"))))
+        (is (= "[General]" (slurp (io/file d "SkyrimCustom.ini"))))
+        (finally (rm-rf d))))))
+
+(deftest a-switch-creates-a-file-the-target-version-adds
+  (testing "an upgrade that introduces content the install has never had, in a
+            directory that does not exist yet"
+    (let [d (tmp-dir)]
+      (try
+        (spit! (io/file d "a.bin") "abcxyz")
+        (spit! (io/file d "Data" "MyMod.esp") "plugin bytes")
+        (with-redefs [download/version-manifests
+                      (fn [_ _ v]
+                        (if (= "public" (:id v))
+                          (manifests-for [{:id sha-abc :offset "0" :cb-original 3}
+                                          {:id sha-xyz :offset "3" :cb-original 3}])
+                          ;; the target keeps a.bin as it was and adds a file
+                          {:hosts ["cdn.example"]
+                           :manifests [{:depot-id 7 :key-hex "ab"
+                                        :files [{:name "a.bin"
+                                                 :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                                          {:id sha-xyz :offset "3" :cb-original 3}]}
+                                                {:name "Data/NewDLC/thing.bsa"
+                                                 :chunks [{:id sha-new :offset "0" :cb-original 3}]}]}]}))
+                      chunk/fetch-decoded (fn [{:keys [chunk]}]
+                                            (when (= sha-new (:id chunk))
+                                              (.getBytes "NEW" "UTF-8")))]
+          (switch/run! {:session :s :game game :install {:path (str d)}
+                        :from from :to to}))
+        (is (= "NEW" (slurp (io/file d "Data" "NewDLC" "thing.bsa")))
+            "the new file, and the folder it needed, were created")
+        (is (= "abcxyz" (slurp (io/file d "a.bin"))) "the file that did not change was left alone")
+        (is (= "plugin bytes" (slurp (io/file d "Data" "MyMod.esp")))
+            "and the user's own file in the same tree survived")
+        (finally (rm-rf d))))))
+
+(deftest the-staging-area-does-not-take-user-files-with-it
+  (testing "staging lives INSIDE the install, so clearing it runs a delete
+            inside a folder full of things that are not ours"
+    (let [d (tmp-dir)]
+      (try
+        (spit! (io/file d "a.bin") "abcxyz")
+        (spit! (io/file d "Data" "MyMod.esp") "plugin bytes")
+        (run-switch d {})
+        (is (not (.exists (io/file d ".reliquary-staging"))) "staging is gone")
+        (is (= "plugin bytes" (slurp (io/file d "Data" "MyMod.esp"))) "and nothing else is")
+        (finally (rm-rf d))))))
+
+(deftest a-file-only-the-newer-build-has-survives-a-downgrade
+  (testing "The flip side of never deleting, recorded deliberately rather than
+            discovered later.
+
+            Steam's own downgrade would remove a file the older build does not
+            have. This does not: nothing enumerates the local tree, which is
+            exactly what keeps a user's mods safe, and the same rule keeps a
+            leftover from the newer build. For Bethesda titles that is usually
+            harmless -- an unreferenced archive is not loaded -- but it is a real
+            difference from a clean install and belongs in a test rather than in
+            somebody's bug report."
+    (let [d (tmp-dir)]
+      (try
+        (spit! (io/file d "a.bin") "abcxyz")
+        ;; content the newer build shipped and the older one never had
+        (spit! (io/file d "Data" "NewBuildOnly.bsa") "only in the new build")
+        (with-redefs [download/version-manifests
+                      (fn [_ _ v]
+                        (if (= "public" (:id v))
+                          ;; what is on disk now: the newer build, which names it
+                          {:hosts ["cdn.example"]
+                           :manifests [{:depot-id 7 :key-hex "ab"
+                                        :files [{:name "a.bin"
+                                                 :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                                          {:id sha-xyz :offset "3" :cb-original 3}]}
+                                                {:name "Data/NewBuildOnly.bsa"
+                                                 :chunks []}]}]}
+                          ;; the older build: no such file
+                          (manifests-for [{:id sha-abc :offset "0" :cb-original 3}
+                                          {:id sha-xyz :offset "3" :cb-original 3}])))
+                      chunk/fetch-decoded (fn [_] nil)]
+          (switch/run! {:session :s :game game :install {:path (str d)}
+                        :from from :to to}))
+        (is (.isFile (io/file d "Data" "NewBuildOnly.bsa"))
+            "left in place: the switch removes nothing at all")
+        (is (= "only in the new build" (slurp (io/file d "Data" "NewBuildOnly.bsa"))))
+        (finally (rm-rf d))))))

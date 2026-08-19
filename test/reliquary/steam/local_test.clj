@@ -604,3 +604,112 @@
                           (local/catalog-candidates catalog-versions))]
     (is (nil? (:version r)))
     (is (= :unknown (:confidence r)))))
+
+;; ---------------------------------------------------------------------------
+;; what a switch must NOT touch, and what it must create
+;;
+;; A modded install is the normal case, not the exception: a Skyrim folder holds
+;; SKSE, a few hundred plugins, ini edits and whatever a mod manager left behind,
+;; none of which appear in any Steam manifest. A switch that removed them would
+;; take the user's setup with it, and the user would find out after the download
+;; finished.
+;;
+;; Nothing here enumerates the local tree -- planning walks the TARGET's files --
+;; so deletion should be structurally impossible. These prove it rather than
+;; trusting the reading.
+
+(deftest a-switch-does-not-touch-files-that-are-not-in-the-manifest
+  (let [d (tmp-dir)]
+    (try
+      (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+      ;; the things a real install is full of
+      (write-bytes! (io/file d "skse64_loader.exe") (bytes-of "loader"))
+      (write-bytes! (io/file d "Data" "MyMod.esp") (bytes-of "plugin bytes"))
+      (write-bytes! (io/file d "Data" "textures" "big.dds") (bytes-of "texture"))
+      (write-bytes! (io/file d "SkyrimCustom.ini") (bytes-of "[General]"))
+      (let [src [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                         {:id sha-xyz :offset "3" :cb-original 3}]}]
+            tgt [{:name "a.bin" :chunks [{:id sha-xyz :offset "0" :cb-original 3}
+                                         {:id sha-abc :offset "3" :cb-original 3}]}]
+            idx (local/chunk-index d src {})
+            plan (local/plan-switch idx tgt)
+            staged (local/stage! d plan {})]
+        (local/apply! d plan staged {:fetch (fn [_] nil)})
+        (local/clear-staging! d)
+        (is (= "xyzabc" (read-file (io/file d "a.bin"))) "the switch happened")
+        (is (= "loader" (read-file (io/file d "skse64_loader.exe"))))
+        (is (= "plugin bytes" (read-file (io/file d "Data" "MyMod.esp"))))
+        (is (= "texture" (read-file (io/file d "Data" "textures" "big.dds"))))
+        (is (= "[General]" (read-file (io/file d "SkyrimCustom.ini")))))
+      (finally (rm-rf d)))))
+
+(deftest an-extra-file-is-not-truncated-to-a-manifest-size
+  (testing ":sizes exists so a file that SHRANK between builds does not keep the
+            tail of the old one. It must key off the target's own file list --
+            applied to anything else it would cut a mod in half."
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abcxyz"))
+        (write-bytes! (io/file d "Data" "MyMod.esp") (bytes-of "a much longer plugin file"))
+        (let [idx (local/chunk-index
+                   d [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}
+                                              {:id sha-xyz :offset "3" :cb-original 3}]}] {})
+              ;; the target's a.bin is half the length of the local one
+              ;; one chunk of 3 bytes, so the target length is 3 -- :sizes is
+              ;; computed from the chunks' own extents, not from a size field
+              tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch idx tgt)]
+          (local/apply! d plan {} {:fetch (fn [_] nil)})
+          (is (= "abc" (read-file (io/file d "a.bin"))) "the target file shrank")
+          (is (= "a much longer plugin file" (read-file (io/file d "Data" "MyMod.esp")))
+              "and the file nobody mentioned did not"))
+        (finally (rm-rf d))))))
+
+(deftest a-file-the-target-adds-is-created
+  (testing "an upgrade that introduces a file the install has never had -- the
+            new build's own content, not something left over"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abc"))
+        (let [idx (local/chunk-index
+                   d [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}] {})
+              tgt [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}
+                   {:name "brand-new.bin" :chunks [{:id sha-new :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch idx tgt)]
+          (local/apply! d plan {} {:fetch (fn [_] (bytes-of "NEW"))})
+          (is (.isFile (io/file d "brand-new.bin")) "the new file exists")
+          (is (= "NEW" (read-file (io/file d "brand-new.bin")))))
+        (finally (rm-rf d))))))
+
+(deftest a-new-file-in-a-directory-that-does-not-exist-yet-is-created
+  (testing "a build that adds a whole folder. RandomAccessFile will not make one,
+            so the parents have to be created first or the write throws"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abc"))
+        (let [idx (local/chunk-index
+                   d [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}] {})
+              tgt [{:name "Data/NewDLC/thing.bsa"
+                    :chunks [{:id sha-new :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch idx tgt)]
+          (local/apply! d plan {} {:fetch (fn [_] (bytes-of "NEW"))})
+          (is (= "NEW" (read-file (io/file d "Data" "NewDLC" "thing.bsa")))))
+        (finally (rm-rf d))))))
+
+(deftest a-file-the-target-does-not-mention-survives-even-when-it-shares-a-name-prefix
+  (testing "guards against any future \"clean up alongside\" logic matching on
+            paths rather than on the manifest"
+    (let [d (tmp-dir)]
+      (try
+        (write-bytes! (io/file d "a.bin") (bytes-of "abc"))
+        (write-bytes! (io/file d "a.bin.bak") (bytes-of "user backup"))
+        (write-bytes! (io/file d "a.bin.disabled") (bytes-of "turned off"))
+        (let [idx (local/chunk-index
+                   d [{:name "a.bin" :chunks [{:id sha-abc :offset "0" :cb-original 3}]}] {})
+              tgt [{:name "a.bin" :chunks [{:id sha-new :offset "0" :cb-original 3}]}]
+              plan (local/plan-switch idx tgt)]
+          (local/apply! d plan {} {:fetch (fn [_] (bytes-of "NEW"))})
+          (is (= "NEW" (read-file (io/file d "a.bin"))))
+          (is (= "user backup" (read-file (io/file d "a.bin.bak"))))
+          (is (= "turned off" (read-file (io/file d "a.bin.disabled")))))
+        (finally (rm-rf d))))))
