@@ -144,7 +144,44 @@ jobs:
             echo 'NEXUS_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # Idempotence, and not a nicety: the manual trigger and the publish trigger
+      # can both fire for one release -- upload a draft by hand, then publish it,
+      # and the same version goes up twice. Nexus has no notion of "the version I
+      # already sent", so the check has to happen here.
+      - name: Skip if this version is already on the file
+        id: existing
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -uo pipefail
+          resp=$(curl -sS -w '\n%{http_code}' \
+            -H "apikey: $NEXUS_API_KEY" \
+            -H 'accept: application/json' \
+            "https://api.nexusmods.com/v3/mod-files/${NEXUS_FILE_ID}/versions")
+          code=$(printf '%s' "$resp" | tail -n1)
+          body=$(printf '%s' "$resp" | sed '$d')
+          echo "listing versions of file ${NEXUS_FILE_ID} -> HTTP $code"
+          if [ "$code" != "200" ]; then
+            # not fatal: a listing we cannot read is not evidence the version is
+            # absent, but refusing to release over it would be worse
+            echo "::warning::could not list existing versions (HTTP $code); uploading anyway"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # every `version` field anywhere in the response, so this does not
+          # depend on the envelope's exact shape
+          have=$(printf '%s' "$body" | jq -r '[.. | objects | .version? // empty] | .[]' 2>/dev/null | sort -u)
+          echo "already on this file: $(printf '%s' "$have" | tr '\n' ' ')"
+          if printf '%s\n' "$have" | grep -Fxq "$VERSION"; then
+            echo "::notice::version $VERSION is already on this file; not uploading it again"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload
+        if: steps.existing.outputs.skip != 'true'
         uses: Nexus-Mods/upload-action@c96019556046053aa26044b44396cd38929daf23 # v1.0.0-beta.10
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
