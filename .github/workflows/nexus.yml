@@ -102,16 +102,30 @@ jobs:
         env:
           NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           [ -n "${NEXUS_API_KEY:-}" ] || {
             echo "::error::NEXUSMODS_API_KEY is not set"; exit 1; }
-          body=$(curl -sS --fail-with-body \
+          url="https://api.nexusmods.com/v3/games/${NEXUS_GAME_DOMAIN}/mods/${NEXUS_MOD_PAGE_ID}"
+          resp=$(curl -sS -w '\n%{http_code}' \
             -H "apikey: $NEXUS_API_KEY" \
-            -H 'accept: application/json' \
-            "https://api.nexusmods.com/v3/games/${NEXUS_GAME_DOMAIN}/mods/${NEXUS_MOD_PAGE_ID}")
-          id=$(echo "$body" | jq -er '.id')
-          echo "Resolved ${NEXUS_GAME_DOMAIN}/${NEXUS_MOD_PAGE_ID} to internal id $id"
-          echo "id=$id" >> "$GITHUB_OUTPUT"
+            -H 'accept: application/json' "$url")
+          code=$(printf '%s' "$resp" | tail -n1)
+          body=$(printf '%s' "$resp" | sed '$d')
+          echo "GET $url -> HTTP $code"
+          printf '%s' "$body" | head -c 1000; echo
+          # The id can be nested depending on the endpoint's envelope, so try the
+          # obvious shapes rather than assuming one.
+          id=$(printf '%s' "$body" | jq -r '.id // .data.id // .mod.id // empty' 2>/dev/null)
+          if [ -n "$id" ]; then
+            echo "Resolved ${NEXUS_GAME_DOMAIN}/${NEXUS_MOD_PAGE_ID} to internal id $id"
+            echo "id=$id" >> "$GITHUB_OUTPUT"
+          else
+            # NOT fatal. mod_id is only needed to attach a changelog; the upload
+            # itself needs the file id and nothing else. Losing the changelog is
+            # worth far less than failing a release upload over it.
+            echo "::warning::could not resolve an internal mod id (HTTP $code); uploading without a changelog"
+            echo "id=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Changelog from the release notes
         id: notes
