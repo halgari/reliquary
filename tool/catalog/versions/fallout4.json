@@ -53,9 +53,9 @@
       "id": "public",
       "label": "Latest \u2014 public",
       "branch": "public",
-      "build": "22848228",
-      "date": "2026-05-27",
-      "bytes": 30410020902,
+      "build": "24564252",
+      "date": "2026-08-18",
+      "bytes": 30410085942,
       "depots": [
         {
           "depot-id": 377161,
@@ -63,11 +63,11 @@
         },
         {
           "depot-id": 377162,
-          "manifest-gid": "387388833281246371"
+          "manifest-gid": "4737695048810094469"
         },
         {
           "depot-id": 377163,
-          "manifest-gid": "8363807899725426636"
+          "manifest-gid": "5944191827186292545"
         },
         {
           "depot-id": 377164,
@@ -75,8 +75,8 @@
         }
       ],
       "executables": {
-        "Fallout4.exe": "478b7e9ddc4212c09dc9acdc50bef9ed6023abb4",
-        "Fallout4Launcher.exe": "8b9a70813a594c15cf8e2649044e60f7cb2175df"
+        "Fallout4.exe": "97a1e7d780a8fd4a86c27cd1e1d42d05bf7eb4b5",
+        "Fallout4Launcher.exe": "b39e6c29f631814fe94631df46164cce1b159ab8"
       }
     }
   ]

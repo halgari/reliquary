@@ -16,26 +16,26 @@
       "id": "public",
       "label": "Latest \u2014 public",
       "branch": "public",
-      "build": "13189953",
-      "date": "2024-01-17",
-      "bytes": 16095731388,
+      "build": "24604991",
+      "date": "2026-08-20",
+      "bytes": 16092528893,
       "depots": [
         {
           "depot-id": 489831,
-          "manifest-gid": "8442952117333549665"
+          "manifest-gid": "3552311541133526669"
         },
         {
           "depot-id": 489832,
-          "manifest-gid": "8042843504692938467"
+          "manifest-gid": "1885196179801530198"
         },
         {
           "depot-id": 489833,
-          "manifest-gid": "1914580699073641964"
+          "manifest-gid": "8156748093655676596"
         }
       ],
       "executables": {
-        "SkyrimSELauncher.exe": "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d",
-        "SkyrimSE.exe": "1c9636207b4613254b03d76c410540e10b539dc9"
+        "SkyrimSELauncher.exe": "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d",
+        "SkyrimSE.exe": "5516489a45d63e63ad5d24c74a8b80918cf403b6"
       }
     }
   ]

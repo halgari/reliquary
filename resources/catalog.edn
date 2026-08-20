@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-19T23:38:11Z"
+ :generated "2026-08-20T20:26:07Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -27,19 +27,19 @@
                  {:text "You will carry forty unenchanted iron daggers to sell later. You never sell them."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "1.6.1170"
+                    :label "Latest"
                     :branch "public"
-                    :build "13189953"
-                    :date "2024-01-17"
-                    :bytes 16095731388
-                    :executables {"SkyrimSELauncher.exe" "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d"
-                                 "SkyrimSE.exe" "1c9636207b4613254b03d76c410540e10b539dc9"}
+                    :build "24604991"
+                    :date "2026-08-20"
+                    :bytes 16092528893
+                    :executables {"SkyrimSELauncher.exe" "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d"
+                                 "SkyrimSE.exe" "5516489a45d63e63ad5d24c74a8b80918cf403b6"}
                     :depots [{:depot-id 489831
-                             :manifest-gid "8442952117333549665"}
+                             :manifest-gid "3552311541133526669"}
                             {:depot-id 489832
-                             :manifest-gid "8042843504692938467"}
+                             :manifest-gid "1885196179801530198"}
                             {:depot-id 489833
-                             :manifest-gid "1914580699073641964"}]}
+                             :manifest-gid "8156748093655676596"}]}
                    {:id "1_5_97"
                     :label "1.5.97"
                     :branch "public"
@@ -165,7 +165,21 @@
                             {:depot-id 489832
                              :manifest-gid "4341968404481569190"}
                             {:depot-id 489833
-                             :manifest-gid "2442187225363891157"}]}]}
+                             :manifest-gid "2442187225363891157"}]}
+                   {:id "1_6_1170"
+                    :label "1.6.1170"
+                    :branch "public"
+                    :build ""
+                    :date "2024-01-17"
+                    :bytes 16095731388
+                    :executables {"SkyrimSELauncher.exe" "70db49944b12b7bf74d0bb9e677e5b00c3a97d3d"
+                                 "SkyrimSE.exe" "1c9636207b4613254b03d76c410540e10b539dc9"}
+                    :depots [{:depot-id 489831
+                             :manifest-gid "8442952117333549665"}
+                            {:depot-id 489832
+                             :manifest-gid "8042843504692938467"}
+                            {:depot-id 489833
+                             :manifest-gid "1914580699073641964"}]}]}
         {:appid 377160
          :title "Fallout 4"
          :studio "Bethesda Game Studios"
@@ -193,6 +207,22 @@
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
                     :label "Latest"
+                    :branch "public"
+                    :build "24564252"
+                    :date "2026-08-18"
+                    :bytes 30410085942
+                    :executables {"Fallout4.exe" "97a1e7d780a8fd4a86c27cd1e1d42d05bf7eb4b5"
+                                 "Fallout4Launcher.exe" "b39e6c29f631814fe94631df46164cce1b159ab8"}
+                    :depots [{:depot-id 377161
+                             :manifest-gid "5983086794954940044"}
+                            {:depot-id 377162
+                             :manifest-gid "4737695048810094469"}
+                            {:depot-id 377163
+                             :manifest-gid "5944191827186292545"}
+                            {:depot-id 377164
+                             :manifest-gid "8492427313392140315"}]}
+                   {:id "build_22848228"
+                    :label "Build 22848228"
                     :branch "public"
                     :build "22848228"
                     :date "2026-05-27"
