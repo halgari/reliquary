@@ -5,7 +5,11 @@ Notable changes per release. Newest first.
 The top section is published as the GitHub release notes and the Nexus file
 description. It is written for someone deciding whether to update.
 
-## 0.1.4 - 2026-08-21
+## 1.0.0 - 2026-08-21
+
+First release out of beta. Downloading a chosen version and switching an
+existing install have both been in use through the 0.1.x series; the version
+numbering says so.
 
 ### Fixed
 
