@@ -67,7 +67,7 @@
                  "--sun-misc-unsafe-memory-access=allow"]}
 
   :dev
-  {:extra-paths ["test" "test/resources" "spike"]
+  {:extra-paths ["test" "test/resources"]
    :jvm-opts    ["--enable-native-access=ALL-UNNAMED"]}
 
   :build

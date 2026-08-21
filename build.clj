@@ -7,15 +7,7 @@
 (def class-dir "target/classes")
 (def uber-file "target/lib/reliquary.jar")
 
-;; `spike` is deliberately not in :paths -- it must never ship in a normal
-;; build. It has to be on the compile classpath here only because the spike
-;; window is currently the default entry point. compile-clj's :src-dirs is
-;; used for namespace *discovery* only; the classpath it compiles against
-;; comes from the basis, so adding it there is what actually matters.
-(def basis
-  (delay (b/create-basis {:project "deps.edn"
-                          :extra   {:aliases {:build/spike {:extra-paths ["spike"]}}}
-                          :aliases [:build/spike]})))
+(def basis (delay (b/create-basis {:project "deps.edn"})))
 
 ;; b/uber matches exclusions with re-matches, so each must match a whole path.
 ;;
@@ -43,9 +35,6 @@
 (defn uber
   "Build target/lib/reliquary.jar with `main` as its Main-Class.
 
-   Defaults to the spike window so the packaging pipeline can be proven before
-   the application has an entry point of its own.
-
    :omit-javafx true drops the bundled JavaFX jars. Use it only for a jar
    destined for bin/package.sh, whose jlink runtime carries JavaFX as
    modules; the resulting jar will not run under a plain `java -jar`."
@@ -53,7 +42,7 @@
   (b/delete {:path class-dir})
   (b/copy-dir {:src-dirs ["resources"] :target-dir class-dir})
   (b/compile-clj {:basis      @basis
-                  :src-dirs   ["src" "spike"]
+                  :src-dirs   ["src"]
                   :ns-compile [main]
                   :class-dir  class-dir})
   (b/uber {:class-dir class-dir

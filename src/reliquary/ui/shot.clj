@@ -35,9 +35,7 @@
    `System/exit` once the suite finishes, which tears down the whole JVM
    (FX thread included) regardless of daemon status. A bare script that
    requires this namespace and does not itself call `System/exit` or
-   `javafx.application.Platform/exit` will hang forever -- see
-   `spike/reliquary/spike/fx_window.clj` for the same tradeoff made
-   explicit.
+   `javafx.application.Platform/exit` will hang forever.
 
    SIZE IS A HARD FRAME, NOT A SUGGESTION. `render!`'s `:width`/`:height`
    become the Scene's exact size; JavaFX lays the root out to precisely that
