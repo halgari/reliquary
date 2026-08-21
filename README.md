@@ -97,24 +97,30 @@ Tagging is the whole trigger:
     git tag v0.1.0 && git push origin v0.1.0
 
 `.github/workflows/release.yml` then builds the jar on Linux, packages and signs
-a Windows app image, and opens a **draft** release carrying
-`Reliquary-<version>-win-x64.zip` and `SHA256SUMS`. It stays a draft on purpose —
-publishing is a human decision.
+a Windows app image, and publishes a release carrying
+`Reliquary-<version>-win-x64.zip` and `SHA256SUMS`.
 
-Publishing that draft is what puts the release on Nexus Mods.
-`.github/workflows/nexus.yml` fires on `release: published`, takes the ZIP that
-is already attached to the release — not a rebuild, so what goes on the mod page
-is the artifact that was signed and tested — and adds it as a new version of the
-existing file on [site/mods/2188](https://www.nexusmods.com/site/mods/2188),
-with the release notes as its changelog. It needs a `NEXUSMODS_API_KEY` secret,
-from <https://www.nexusmods.com/settings/api-keys>.
+Publishing fires `.github/workflows/nexus.yml`, which takes the ZIP already
+attached to the release (not a rebuild, so the mod page gets the artifact that
+was signed and tested) and adds it as a new version of the existing file on
+[site/mods/2188](https://www.nexusmods.com/site/mods/2188). It needs a
+`NEXUSMODS_API_KEY` secret, from <https://www.nexusmods.com/settings/api-keys>.
 
-So there are two human gates and the rest is automatic:
+**The tag is the only gate.** Pushing one goes all the way to the public mod
+page without anyone pressing anything else:
 
-    git push --tags   ->   draft release   ->   [publish]   ->   Nexus
+    git push --tags   ->   build + sign   ->   GitHub release   ->   Nexus
+
+### Release notes
+
+`CHANGELOG.md`'s top section is the release body and the Nexus file
+description, extracted by `bin/changelog-section.sh`. Write that section before
+tagging: the release job **fails** when the tag has no matching section, since a
+release whose notes are silently empty is worse than one that does not build.
 
 A failed or half-finished upload can be re-run from the Actions tab: `nexus` has
-a `workflow_dispatch` that takes the tag.
+a `workflow_dispatch` that takes the tag. It will not upload a version that is
+already on the file.
 
 Linux releases are not wired up yet. Authenticode does not apply to an ELF
 binary, so that needs checksums plus a detached GPG or minisign signature rather

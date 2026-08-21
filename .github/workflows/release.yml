@@ -214,6 +214,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # the changelog is the release notes, so the repo has to be here
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v8
         with:
           name: windows-zip
@@ -228,9 +231,25 @@ jobs:
           sha256sum -- *.zip > SHA256SUMS
           cat SHA256SUMS
 
-      # Draft, not published: a release is outward-facing and irreversible in
-      # practice once people have the URL, so the last step stays a human one.
-      - name: Create the draft release
+      # The notes are CHANGELOG.md's top section rather than --generate-notes.
+      # A generated list of commit subjects describes the diff; the changelog
+      # describes the release, and it is the same text the Nexus file gets.
+      #
+      # This FAILS when the tag has no section, on purpose: a release whose notes
+      # are quietly empty is worse than one that does not build, because the
+      # empty one ships.
+      - name: Release notes from the changelog
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          ./bin/changelog-section.sh "$tag" > dist/NOTES.md
+          echo "--- notes for $tag ---"
+          cat dist/NOTES.md
+
+      # PUBLISHED, not drafted. Publishing is what triggers nexus.yml, so a tag
+      # now goes all the way to the mod page without anyone pressing anything.
+      # The gate that remains is the tag itself.
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -239,8 +258,7 @@ jobs:
           gh release create "$tag" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Reliquary $tag" \
-            --generate-notes \
-            --draft \
+            --notes-file dist/NOTES.md \
             --verify-tag \
             dist/*.zip dist/SHA256SUMS
-          echo "Draft release $tag created. Review it, then publish."
+          echo "Released $tag."

@@ -134,8 +134,12 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
-          # The release body, with GitHub's compare link dropped: it means
-          # nothing to a reader on a mod page.
+          # The release body, which release.yml fills from CHANGELOG.md's top
+          # section. Taken from the release rather than re-read from the repo so
+          # the mod page and the release cannot drift apart, and so a re-run
+          # months later still publishes what that release actually said.
+          #
+          # GitHub's compare link is dropped: it means nothing on a mod page.
           notes=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' \
                   | sed '/^\*\*Full Changelog\*\*/d')
           {
@@ -191,6 +195,10 @@ jobs:
           version: ${{ steps.tag.outputs.version }}
           category: main
           mod_id: ${{ steps.mod.outputs.id }}
+          # the same text in both places Nexus shows it: on the file itself,
+          # which is what somebody reads before downloading, and in the mod's
+          # changelog tab, which is what they read afterwards
+          description: ${{ steps.notes.outputs.body }}
           changelog: ${{ steps.notes.outputs.body }}
           # the mod page's version should track what is actually on it
           update_mod_version: true
