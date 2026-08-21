@@ -214,7 +214,8 @@
    the SKSE-stable build before you decide to buy -- so the ownership gate
    belongs on the download button, not on the click. The card stays dimmed and
    says `Not owned` so the state is legible, but the panel opens."
-  [{:keys [game selected? owned? install installed-label capsule-fn on-select]}]
+  [{:keys [game selected? owned? install installed-label on-disk-label reserve-sub?
+           capsule-fn on-select]}]
   (let [primary (first (catalog/versions game))
         ;; Two lines, wrapped. On one line every Elder Scrolls title truncates
         ;; to "The Elder Scrolls V: S..." -- Skyrim and Skyrim Special Edition
@@ -268,8 +269,27 @@
                                 :style (theme/style {:-fx-font-family (theme/mono-font)
                                                       :-fx-font-size 11
                                                       :-fx-text-fill (:text-muted c)})}]})
-        ;; the third line, Installed tab only: where those bytes are
-        sub-row  (when install
+        ;; The third line. On the Installed tab it is where the bytes are; on
+        ;; Owned it is merely THAT there are some, because the question that tab
+        ;; answers is "do I have this", not "where is it" -- and a full install
+        ;; path is a great deal of card to spend saying yes.
+        sub-row  (cond
+                   ;; Reserved but blank. The Owned tab mixes cards that have a
+                   ;; third line with cards that do not, and since the card's
+                   ;; height is computed from its contents, a row came out
+                   ;; ragged -- some tiles ending 18px above their neighbours,
+                   ;; which reads as a layout bug rather than as information.
+                   (and reserve-sub? (not on-disk-label))
+                   {:fx/type :region :min-height card-sub-height :max-height card-sub-height}
+
+                   on-disk-label
+                   {:fx/type :label :text on-disk-label
+                    :max-width (- art-width 20)
+                    :style (theme/style {:-fx-font-family (theme/mono-font)
+                                          :-fx-font-size 10
+                                          :-fx-text-fill (:gold c)})}
+
+                   install
                    {:fx/type :label :text (str (:path install))
                     :max-width (- art-width 20)
                     ;; the TAIL is the useful half of an install path -- the
@@ -352,7 +372,7 @@
         ;; screenshot harness's `*animate*` false still suppresses it.
         (anim/with-anim anim/rise-in!))))
 
-(defn- grid [{:keys [games selected-appid owned installs installed-labels
+(defn- grid [{:keys [games selected-appid owned installs installed-labels on-disk
                      capsule-fn on-select-game]}]
   {:fx/type :flow-pane
    :hgap 18 :vgap 18
@@ -363,6 +383,11 @@
                              :owned? (owned?* owned (:appid g))
                              :install (get installs (:appid g))
                              :installed-label (get installed-labels (:appid g))
+                             :on-disk-label (when (get on-disk (:appid g))
+                                              (if-let [v (get installed-labels (:appid g))]
+                                                (str "Installed · " v)
+                                                "Installed"))
+                             :reserve-sub? (some? on-disk)
                              :capsule-fn capsule-fn
                              :on-select on-select-game}))
                     games)})
@@ -395,7 +420,7 @@
                            :-fx-font-size 12 :-fx-text-fill (:text-muted c)})}]})
 
 (defn- grid-panel
-  [{:keys [filtered selected-appid owned installs installed-labels
+  [{:keys [filtered selected-appid owned installs installed-labels on-disk
            empty-tab? capsule-fn on-select-game]}]
   {:fx/type :v-box
    :h-box/hgrow :always
@@ -414,6 +439,7 @@
                       :owned owned
                       :installs installs
                       :installed-labels installed-labels
+                      :on-disk on-disk
                         :capsule-fn capsule-fn
                         :on-select-game on-select-game})})]})
 
@@ -645,7 +671,14 @@
    second copy anywhere else. Changing a build is a thing you do on Installed;
    Owned is the catalogue, and the action there is always install-to-a-location."
   [{:keys [tab install] :as state}]
-  (if (and (= :installed tab) install)
+  (if (or
+       ;; A folder the user PICKED, on whichever tab they picked it from. The
+       ;; design's rule is about Steam-detected installs, and it has to be: the
+       ;; way in for an undetected game lives on the Owned tab, so keying on the
+       ;; tab alone made choosing a folder there set :install and change nothing
+       ;; on screen. Choosing a folder is an explicit "operate on this one".
+       (:chosen? install)
+       (and (= :installed tab) install))
     (switch-footer state)
     (panel-download-footer state)))
 
@@ -822,7 +855,13 @@
         pool          (if (= :installed tab)
                         (filterv #(get installs (:appid %)) games)
                         games)
-        filtered      (filter-games pool query)
+        filtered      (cond->> (filter-games pool query)
+                        ;; Owned is the whole catalog; the games worth acting on
+                        ;; are the ones already on disk, so they come first.
+                        ;; `sort-by` is stable, so catalog order survives inside
+                        ;; each group rather than being reshuffled.
+                        (= :owned tab)
+                        (sort-by #(if (get installs (:appid %)) 0 1)))
         selected-game (find-game games selected-appid)]
     {:fx/type :h-box
      :children
@@ -834,6 +873,9 @@
                                              (empty? pool))
                             :selected-appid selected-appid :owned owned
                             :installs (when (= :installed tab) installs)
+                            ;; Owned marks what is on disk without spending the
+                            ;; card on a path; Installed shows the path itself
+                            :on-disk (when (= :owned tab) installs)
                             :installed-labels installed-labels
                             :capsule-fn capsule-fn
                             :on-select-game on-select-game})]

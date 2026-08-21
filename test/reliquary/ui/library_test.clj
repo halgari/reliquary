@@ -613,3 +613,62 @@
       (let [v (panel state)]
         (doseq [b (concat (find-nodes v :button) (find-nodes v :hyperlink))]
           (is (fn? (:on-action b)) (str (:text b) " must be pressable")))))))
+
+(deftest a-chosen-folder-switches-the-panel-into-switch-mode-on-any-tab
+  (testing "the whole point of `Already have a copy?` is that it lives on the
+            OWNED tab, where an undetected game is the only place it can be
+            reached. Keying switch mode on the tab alone meant choosing a folder
+            there set :install and changed nothing on screen -- the button was a
+            no-op with extra steps."
+    (let [s (untracked (pr-str (library/view
+                                {:games games :tab :owned
+                                 :selected-appid 100
+                                 :selected-version-id "public"
+                                 :install {:path "/elsewhere/Stardew" :bytes 1 :chosen? true}
+                                 :installed-version {:id "1_5_97" :label "1.5.97"}})))]
+      (is (str/includes? s "CHOSEN FOLDER") "it is showing the chosen install")
+      (is (not (str/includes? s "INSTALL TO")) "and not still offering a download"))))
+
+;; ---------------------------------------------------------------------------
+;; the Owned tab, where a game may or may not already be on disk
+
+(defn- card-order
+  "The titles in the grid, in the order they are laid out."
+  [desc]
+  (->> (find-nodes desc :label)
+       (map :text)
+       (filter (set (map :title games)))
+       (distinct)
+       (vec)))
+
+(deftest owned-sorts-the-games-already-on-disk-first
+  (testing "the Owned tab is the whole catalog, and the games worth acting on
+            are the ones the user already has. Skyrim is second in the catalog
+            and installed; Stardew is first and is not."
+    (let [v (library/view {:games games :tab :owned
+                           :installs {200 {:path "/steam/common/Skyrim" :bytes 1}}})]
+      (is (= ["Skyrim Special Edition" "Stardew Valley"] (card-order v))))))
+
+(deftest owned-keeps-catalog-order-within-each-group
+  (let [v (library/view {:games games :tab :owned :installs {}})]
+    (is (= ["Stardew Valley" "Skyrim Special Edition"] (card-order v))
+        "nothing installed, so nothing moves")))
+
+(deftest an-owned-card-says-when-the-game-is-already-on-disk
+  (testing "not the path -- on this tab the question is `do I have this`, not
+            `where is it`, and a full install path is a lot of card for that"
+    (let [s (pr-str (library/view {:games games :tab :owned
+                                   :installs {200 {:path "/steam/common/Skyrim" :bytes 1}}
+                                   :installed-labels {200 "1.6.1170"}}))]
+      (is (str/includes? s "Installed · 1.6.1170"))
+      (is (not (str/includes? s "/steam/common/Skyrim"))
+          "the path belongs to the Installed tab"))))
+
+(deftest an-owned-card-with-no-known-version-still-says-it-is-installed
+  (let [s (pr-str (library/view {:games games :tab :owned
+                                 :installs {200 {:path "/steam/common/Skyrim" :bytes 1}}}))]
+    (is (str/includes? s "Installed"))))
+
+(deftest an-owned-card-for-a-game-not-on-disk-says-nothing-extra
+  (let [s (pr-str (library/view {:games games :tab :owned :installs {}}))]
+    (is (not (str/includes? s "Installed ·")))))
