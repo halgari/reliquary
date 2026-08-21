@@ -208,6 +208,11 @@ def build_game(domain):
                for ver in versions if ver["id"] == "public"
                for d in ver["depots"]}
     public_number = None
+    # From the SOURCE document, not from `versions` above: that loop rebuilds
+    # each entry with a fixed field list, so anything it does not name is gone by
+    # the time this runs.
+    public_stamp = next((v.get("version") for v in pics_doc.get("versions", [])
+                         if v["id"] == "public"), None)
     for v in (load(f"{TOOL}/versions-historical/{domain}.json") or {}).get("versions", []):
         dep = {int(d["depot-id"]): str(d["manifest-gid"]) for d in v["depots"]}
         # The version row in the UI is one line beside a size and a build id --
@@ -253,10 +258,18 @@ def build_game(domain):
                          "executables": v.get("executables") or {},
                          "depots": norm_depots(drop_excluded(v["depots"], excluded))})
     # Name the live build with the number, now that we know it.
-    if public_number:
-        for ver in versions:
-            if ver["id"] == "public":
-                ver["label"] = public_number
+    #
+    # Two sources, and the curated one wins. A historical entry that matches the
+    # live build depot for depot was named by somebody who knew what the
+    # community calls it; the executable's own VS_FIXEDFILEINFO (exe_versions.py's
+    # `version`) is the publisher's stamp, which is authoritative but occasionally
+    # says something like 3.0.80.51928 where players say 2.3. Prefer the human
+    # name where there is one, fall back to the stamp, and only then to "Latest".
+    for ver in versions:
+        if ver["id"] == "public":
+            name = public_number or public_stamp
+            if name:
+                ver["label"] = name
     if not versions:
         return None, "no versions from any source"
     return {"appid": appid, "title": clean_title(g["title"]), "studio": g.get("studio"),

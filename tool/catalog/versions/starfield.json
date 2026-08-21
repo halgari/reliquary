@@ -20,12 +20,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "23518663",
       "date": "2026-06-11",
-      "bytes": 137931370869,
       "depots": [
         {
           "depot-id": 1716741,
@@ -38,7 +33,13 @@
       ],
       "executables": {
         "Starfield.exe": "56b36086062f6561cbec3bca44bd46cb6b7f9ced"
-      }
+      },
+      "build": "23518663",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 137931370869,
+      "version": "1.16.244",
+      "branch": "public"
     }
   ]
 }

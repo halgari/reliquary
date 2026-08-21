@@ -7,12 +7,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "1510067",
       "date": "2018-05-08",
-      "bytes": 1142479546,
       "depots": [
         {
           "depot-id": 22321,
@@ -21,9 +16,15 @@
       ],
       "executables": {
         "Morrowind.exe": "adc1c26cc9ca583144e862e7068bd3a7f33956f4",
-        "MWUninstall\/Setup.exe": "4f494142e3fb00c6d6845525cd4540ba3f7be9ef",
+        "Setup.exe": "4f494142e3fb00c6d6845525cd4540ba3f7be9ef",
         "Morrowind Launcher.exe": "3cdc4c103e3fe8961c1ef40facf5bd49c9328321"
-      }
+      },
+      "build": "1510067",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 1142479546,
+      "version": "1.6.0.1820",
+      "branch": "public"
     }
   ]
 }

@@ -4,12 +4,7 @@
   "foreign-language-depots": [],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "16826371",
       "date": "2024-12-22",
-      "bytes": 691846347,
       "depots": [
         {
           "depot-id": 413151,
@@ -19,7 +14,13 @@
       "executables": {
         "Stardew Valley.exe": "9340b07d73357452e30ec5685c66727e676f968c",
         "createdump.exe": "e2846481c76e4720ce86f57bf7864533a7ec753d"
-      }
+      },
+      "build": "16826371",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 691846347,
+      "version": "1.6.15.24356",
+      "branch": "public"
     },
     {
       "id": "compatibility",

@@ -9,12 +9,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "1510065",
       "date": "2018-05-08",
-      "bytes": 5931321158,
       "depots": [
         {
           "depot-id": 22331,
@@ -23,9 +18,15 @@
       ],
       "executables": {
         "OblivionLauncher.exe": "8c9760fbf1a898773249d99e7795de43665860e4",
-        "directx\/DXSETUP.exe": "9356cec9ae27e6a41e63466f18847a7bbc24eaa8",
+        "DXSETUP.exe": "9356cec9ae27e6a41e63466f18847a7bbc24eaa8",
         "Oblivion.exe": "42b5268a3dc938683c3fe9ea6bdac99744ac6121"
-      }
+      },
+      "build": "1510065",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 5931321158,
+      "version": "1.2.0.416",
+      "branch": "public"
     }
   ]
 }

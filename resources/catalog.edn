@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-20T20:26:07Z"
+ :generated "2026-08-21T20:22:07Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -27,7 +27,7 @@
                  {:text "You will carry forty unenchanted iron daggers to sell later. You never sell them."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.7.99"
                     :branch "public"
                     :build "24604991"
                     :date "2026-08-20"
@@ -206,7 +206,7 @@
                  {:text "You promise yourself just one more settlement, then the main quest. Still promising it at level 80."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.11.240"
                     :branch "public"
                     :build "24564252"
                     :date "2026-08-18"
@@ -287,14 +287,14 @@
                  {:text "You fast-travel everywhere, then feel guilty and walk once, just to see the scenery."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.9.32"
                     :branch "public"
                     :build "15039560"
                     :date "2024-09-05"
                     :bytes 6031556640
-                    :executables {"DirectX10/DXSETUP.exe" "3bf8b321c2e43af72307508df417a154c3f1afd5"
-                                 "VCRedist/vcredist_x86.exe" "b84b83a8a6741a17bfb5f3578b983c1de512589d"
-                                 "DotNetFX/dotnetfx35setup.exe" "ec9f0c31b9949ca1cf14e9a43bca065fa5bc0e71"
+                    :executables {"DXSETUP.exe" "3bf8b321c2e43af72307508df417a154c3f1afd5"
+                                 "vcredist_x86.exe" "b84b83a8a6741a17bfb5f3578b983c1de512589d"
+                                 "dotnetfx35setup.exe" "ec9f0c31b9949ca1cf14e9a43bca065fa5bc0e71"
                                  "TESV.exe" "f39aecebf6e332616c4c518617073f6e8250e0f8"
                                  "SkyrimLauncher.exe" "41cea263e1a60af22aa0b1fdf08d3f20f251f0f0"}
                     :depots [{:depot-id 72851
@@ -329,13 +329,13 @@
                  {:text "You pick Wild Wasteland for the jokes, then forget you did until a UFO crashes into the road ahead."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.4.0.525"
                     :branch "public"
                     :build "1510068"
                     :date "2018-05-08"
                     :bytes 9539179509
-                    :executables {"Redists/vcredist_x86.exe" "6939100e397cef26ec22e95e53fcd9fc979b7bc9"
-                                 "Redists/directx/DXSETUP.exe" "90f13de2a28ab89b835ceb8cbd352adfd5ae3c95"
+                    :executables {"vcredist_x86.exe" "6939100e397cef26ec22e95e53fcd9fc979b7bc9"
+                                 "directx/DXSETUP.exe" "90f13de2a28ab89b835ceb8cbd352adfd5ae3c95"
                                  "FalloutNVLauncher.exe" "92131d74c331974b4a74774fedeeffdecf4f2138"
                                  "FalloutNV.exe" "d068f394521a67c6e74fe572f59bd1be71e855f3"}
                     :depots [{:depot-id 22381
@@ -380,13 +380,13 @@
                  {:text "By the twentieth Oblivion Gate, you're closing them out of obligation, not heroism."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.2.0.416"
                     :branch "public"
                     :build "1510065"
                     :date "2018-05-08"
                     :bytes 5931321158
                     :executables {"OblivionLauncher.exe" "8c9760fbf1a898773249d99e7795de43665860e4"
-                                 "directx/DXSETUP.exe" "9356cec9ae27e6a41e63466f18847a7bbc24eaa8"
+                                 "DXSETUP.exe" "9356cec9ae27e6a41e63466f18847a7bbc24eaa8"
                                  "Oblivion.exe" "42b5268a3dc938683c3fe9ea6bdac99744ac6121"}
                     :depots [{:depot-id 22331
                              :manifest-gid "7977703601170745652"}]}]}
@@ -417,7 +417,7 @@
                  {:text "You tell yourself this will be the year you get to bed before 2am in-game. It will not."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.6.15.24356"
                     :branch "public"
                     :build "16826371"
                     :date "2024-12-22"
@@ -492,16 +492,16 @@
                  {:text "Everyone swears they will romance exactly one person in Night City. Most end up juggling three apartments."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "3.0.80.51928"
                     :branch "public"
                     :build "20383525"
                     :date "2025-10-14"
                     :bytes 66366228927
-                    :executables {"bin/x64/CrashReporter/CrashReporter.exe" "f6a3fd402fcdb5c4ca0aedb47200afa5b714a292"
-                                 "bin/x64/CrashReporter/7za.exe" "c002c5072784956056661296907160a44a75a6e2"
-                                 "bin/x64/REDEngineErrorReporter.exe" "ff1741a484184861bf1b997e72b855857623d805"
+                    :executables {"x64/CrashReporter/CrashReporter.exe" "f6a3fd402fcdb5c4ca0aedb47200afa5b714a292"
+                                 "x64/CrashReporter/7za.exe" "c002c5072784956056661296907160a44a75a6e2"
+                                 "x64/REDEngineErrorReporter.exe" "ff1741a484184861bf1b997e72b855857623d805"
                                  "REDprelauncher.exe" "e24f84649d653ee38afefdce67412984ba6a42c9"
-                                 "bin/x64/Cyberpunk2077.exe" "dd0932fda62fd95379d01f984eda5e769c085e6a"}
+                                 "x64/Cyberpunk2077.exe" "dd0932fda62fd95379d01f984eda5e769c085e6a"}
                     :depots [{:depot-id 1091501
                              :manifest-gid "3389237510439361019"}]}
                    {:id "2_30_old"
@@ -511,10 +511,10 @@
                     :date "2025-09-11"
                     :bytes 67331782951
                     :executables {"REDprelauncher.exe" "e24f84649d653ee38afefdce67412984ba6a42c9"
-                                 "bin/x64/REDEngineErrorReporter.exe" "5b43f630e74e83644f49698e4348479b2bb6e372"
-                                 "bin/x64/CrashReporter/CrashReporter.exe" "41ca5a2b5b797ac56c1d1d4a18e7c3f5a7b9c8a2"
-                                 "bin/x64/Cyberpunk2077.exe" "ce79b87b1febf011291541619a4e3b62d8905581"
-                                 "bin/x64/CrashReporter/7za.exe" "ef2c9940acd0c06a9b0538090c11b8464a52c5c6"}
+                                 "x64/REDEngineErrorReporter.exe" "5b43f630e74e83644f49698e4348479b2bb6e372"
+                                 "x64/CrashReporter/CrashReporter.exe" "41ca5a2b5b797ac56c1d1d4a18e7c3f5a7b9c8a2"
+                                 "x64/Cyberpunk2077.exe" "ce79b87b1febf011291541619a4e3b62d8905581"
+                                 "x64/CrashReporter/7za.exe" "ef2c9940acd0c06a9b0538090c11b8464a52c5c6"}
                     :depots [{:depot-id 1091501
                              :manifest-gid "6814019010317238099"}]}
                    {:id "2_21_old"
@@ -523,10 +523,10 @@
                     :build "17055519"
                     :date "2025-07-17"
                     :bytes 66043436302
-                    :executables {"bin/x64/REDEngineErrorReporter.exe" "1da9add2d68b691190eae083c0d6437e04cc17c7"
-                                 "bin/x64/CrashReporter/7za.exe" "5c9d2bec3d2f9a417e6b98e1c6d0295ecf5e8d50"
-                                 "bin/x64/Cyberpunk2077.exe" "ef9eeb418dcaf87351c09f90eeeac59d172b34eb"
-                                 "bin/x64/CrashReporter/CrashReporter.exe" "204438d4b73e678816f3bf16a59c676e39f34844"
+                    :executables {"x64/REDEngineErrorReporter.exe" "1da9add2d68b691190eae083c0d6437e04cc17c7"
+                                 "x64/CrashReporter/7za.exe" "5c9d2bec3d2f9a417e6b98e1c6d0295ecf5e8d50"
+                                 "x64/Cyberpunk2077.exe" "ef9eeb418dcaf87351c09f90eeeac59d172b34eb"
+                                 "x64/CrashReporter/CrashReporter.exe" "204438d4b73e678816f3bf16a59c676e39f34844"
                                  "REDprelauncher.exe" "6e3c89b06715236a67ac429c592fdefab2fb084b"}
                     :depots [{:depot-id 1091501
                              :manifest-gid "8420445566849588826"}]}
@@ -536,10 +536,10 @@
                     :build "15646965"
                     :date "2024-12-10"
                     :bytes 65871998280
-                    :executables {"bin/x64/REDEngineErrorReporter.exe" "2b305d1f7a78a8bb14f2afa8340c624a40e3013c"
-                                 "bin/x64/CrashReporter/7za.exe" "32c09f6ab49e3bb1e1545ceb2b9c6e5770ca0150"
-                                 "bin/x64/CrashReporter/CrashReporter.exe" "15d8e2659927689c9ce3f1bf12f22d9774af86e5"
-                                 "bin/x64/Cyberpunk2077.exe" "a377a6c82016a6f828e3d0d8d88bd304d3de7e63"
+                    :executables {"x64/REDEngineErrorReporter.exe" "2b305d1f7a78a8bb14f2afa8340c624a40e3013c"
+                                 "x64/CrashReporter/7za.exe" "32c09f6ab49e3bb1e1545ceb2b9c6e5770ca0150"
+                                 "x64/CrashReporter/CrashReporter.exe" "15d8e2659927689c9ce3f1bf12f22d9774af86e5"
+                                 "x64/Cyberpunk2077.exe" "a377a6c82016a6f828e3d0d8d88bd304d3de7e63"
                                  "REDprelauncher.exe" "9195658cb0ccfe6c84643f516293a600fdaa2ea7"}
                     :depots [{:depot-id 1091501
                              :manifest-gid "4350623720177810551"}]}
@@ -550,11 +550,11 @@
                     :date "2023-09-21"
                     :bytes 69245530209
                     :executables {"setup_redlauncher.exe" "08fa530b016a9b89f2c439b5208c9e5e3e369190"
-                                 "bin/x64/CrashReporter/7za.exe" "d0acbf9ae29ec74acc67b53b2063bbc9739bc9e8"
-                                 "bin/x64/Cyberpunk2077.exe" "203b92ac2b02b3d6d0ef534133d3ca37a6b782eb"
+                                 "x64/CrashReporter/7za.exe" "d0acbf9ae29ec74acc67b53b2063bbc9739bc9e8"
+                                 "x64/Cyberpunk2077.exe" "203b92ac2b02b3d6d0ef534133d3ca37a6b782eb"
                                  "REDprelauncher.exe" "7c6df04feaaef848c5cda08b25a4cd24a2b711b4"
-                                 "bin/x64/CrashReporter/CrashReporter.exe" "219978fc7bb0164d7e59fab38191361cfe240cd8"
-                                 "bin/x64/REDEngineErrorReporter.exe" "4c97b24c8d256438b26bbf9179025546fef83522"}
+                                 "x64/CrashReporter/CrashReporter.exe" "219978fc7bb0164d7e59fab38191361cfe240cd8"
+                                 "x64/REDEngineErrorReporter.exe" "4c97b24c8d256438b26bbf9179025546fef83522"}
                     :depots [{:depot-id 1091501
                              :manifest-gid "6594873489665865240"}]}]}
         {:appid 1086940
@@ -655,13 +655,13 @@
                  {:text "You will hoard bottle caps, pre-War money, and teddy bears you will never once use."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.7.0.4"
                     :branch "public"
                     :build "14365463"
                     :date "2024-06-04"
                     :bytes 9347718020
-                    :executables {"DotNetFX/dotnetfx3_x64.exe" "2e3fb244038b73cd2d57d324370be174fab923c8"
-                                 "DotNetFX/dotnetfx3.exe" "f3d2c3c7e4c0c35450cf6dab1f9f2e9e7ff50039"
+                    :executables {"dotnetfx3_x64.exe" "2e3fb244038b73cd2d57d324370be174fab923c8"
+                                 "dotnetfx3.exe" "f3d2c3c7e4c0c35450cf6dab1f9f2e9e7ff50039"
                                  "Fallout3 - Garden of Eden Creation Kit.exe" "7a8d5bbe6c5664282d085fca9ef5ea35ebeb8eb3"
                                  "Fallout3Launcher.exe" "f5352bb32a587f484211b43d0c023edb435d294f"
                                  "Fallout3.exe" "6d09781426a5c61aed59addec130a8009849e3c7"}
@@ -694,13 +694,13 @@
                  {:text "New players fight the first screeching cliff racer. Everyone else just starts running."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.6.0.1820"
                     :branch "public"
                     :build "1510067"
                     :date "2018-05-08"
                     :bytes 1142479546
                     :executables {"Morrowind.exe" "adc1c26cc9ca583144e862e7068bd3a7f33956f4"
-                                 "MWUninstall/Setup.exe" "4f494142e3fb00c6d6845525cd4540ba3f7be9ef"
+                                 "Setup.exe" "4f494142e3fb00c6d6845525cd4540ba3f7be9ef"
                                  "Morrowind Launcher.exe" "3cdc4c103e3fe8961c1ef40facf5bd49c9328321"}
                     :depots [{:depot-id 22321
                              :manifest-gid "1293785437610275498"}]}]}
@@ -731,7 +731,7 @@
                  {:text "Players begged for a flight sim, then fast-travel past every system they unlock."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "Latest"
+                    :label "1.16.244"
                     :branch "public"
                     :build "23518663"
                     :date "2026-06-11"

@@ -60,12 +60,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "1510068",
       "date": "2018-05-08",
-      "bytes": 9539179509,
       "depots": [
         {
           "depot-id": 22381,
@@ -101,11 +96,17 @@
         }
       ],
       "executables": {
-        "Redists\/vcredist_x86.exe": "6939100e397cef26ec22e95e53fcd9fc979b7bc9",
-        "Redists\/directx\/DXSETUP.exe": "90f13de2a28ab89b835ceb8cbd352adfd5ae3c95",
+        "vcredist_x86.exe": "6939100e397cef26ec22e95e53fcd9fc979b7bc9",
+        "directx\/DXSETUP.exe": "90f13de2a28ab89b835ceb8cbd352adfd5ae3c95",
         "FalloutNVLauncher.exe": "92131d74c331974b4a74774fedeeffdecf4f2138",
         "FalloutNV.exe": "d068f394521a67c6e74fe572f59bd1be71e855f3"
-      }
+      },
+      "build": "1510068",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 9539179509,
+      "version": "1.4.0.525",
+      "branch": "public"
     }
   ]
 }

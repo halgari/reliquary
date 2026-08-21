@@ -13,12 +13,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "24604991",
       "date": "2026-08-20",
-      "bytes": 16092528893,
       "depots": [
         {
           "depot-id": 489831,
@@ -36,7 +31,13 @@
       "executables": {
         "SkyrimSELauncher.exe": "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d",
         "SkyrimSE.exe": "5516489a45d63e63ad5d24c74a8b80918cf403b6"
-      }
+      },
+      "build": "24604991",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 16092528893,
+      "version": "1.7.99",
+      "branch": "public"
     }
   ]
 }

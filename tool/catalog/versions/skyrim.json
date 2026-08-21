@@ -41,12 +41,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "15039560",
       "date": "2024-09-05",
-      "bytes": 6031556640,
       "depots": [
         {
           "depot-id": 72851,
@@ -62,12 +57,18 @@
         }
       ],
       "executables": {
-        "DirectX10\/DXSETUP.exe": "3bf8b321c2e43af72307508df417a154c3f1afd5",
-        "VCRedist\/vcredist_x86.exe": "b84b83a8a6741a17bfb5f3578b983c1de512589d",
-        "DotNetFX\/dotnetfx35setup.exe": "ec9f0c31b9949ca1cf14e9a43bca065fa5bc0e71",
+        "DXSETUP.exe": "3bf8b321c2e43af72307508df417a154c3f1afd5",
+        "vcredist_x86.exe": "b84b83a8a6741a17bfb5f3578b983c1de512589d",
+        "dotnetfx35setup.exe": "ec9f0c31b9949ca1cf14e9a43bca065fa5bc0e71",
         "TESV.exe": "f39aecebf6e332616c4c518617073f6e8250e0f8",
         "SkyrimLauncher.exe": "41cea263e1a60af22aa0b1fdf08d3f20f251f0f0"
-      }
+      },
+      "build": "15039560",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 6031556640,
+      "version": "1.9.32",
+      "branch": "public"
     }
   ]
 }

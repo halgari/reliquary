@@ -25,12 +25,7 @@
   ],
   "versions": [
     {
-      "id": "public",
-      "label": "Latest \u2014 public",
-      "branch": "public",
-      "build": "20383525",
       "date": "2025-10-14",
-      "bytes": 66366228927,
       "depots": [
         {
           "depot-id": 1091501,
@@ -38,12 +33,18 @@
         }
       ],
       "executables": {
-        "bin\/x64\/CrashReporter\/CrashReporter.exe": "f6a3fd402fcdb5c4ca0aedb47200afa5b714a292",
-        "bin\/x64\/CrashReporter\/7za.exe": "c002c5072784956056661296907160a44a75a6e2",
-        "bin\/x64\/REDEngineErrorReporter.exe": "ff1741a484184861bf1b997e72b855857623d805",
+        "x64\/CrashReporter\/CrashReporter.exe": "f6a3fd402fcdb5c4ca0aedb47200afa5b714a292",
+        "x64\/CrashReporter\/7za.exe": "c002c5072784956056661296907160a44a75a6e2",
+        "x64\/REDEngineErrorReporter.exe": "ff1741a484184861bf1b997e72b855857623d805",
         "REDprelauncher.exe": "e24f84649d653ee38afefdce67412984ba6a42c9",
-        "bin\/x64\/Cyberpunk2077.exe": "dd0932fda62fd95379d01f984eda5e769c085e6a"
-      }
+        "x64\/Cyberpunk2077.exe": "dd0932fda62fd95379d01f984eda5e769c085e6a"
+      },
+      "build": "20383525",
+      "label": "Latest \u2014 public",
+      "id": "public",
+      "bytes": 66366228927,
+      "version": "3.0.80.51928",
+      "branch": "public"
     },
     {
       "id": "2_30_old",
@@ -60,10 +61,10 @@
       ],
       "executables": {
         "REDprelauncher.exe": "e24f84649d653ee38afefdce67412984ba6a42c9",
-        "bin\/x64\/REDEngineErrorReporter.exe": "5b43f630e74e83644f49698e4348479b2bb6e372",
-        "bin\/x64\/CrashReporter\/CrashReporter.exe": "41ca5a2b5b797ac56c1d1d4a18e7c3f5a7b9c8a2",
-        "bin\/x64\/Cyberpunk2077.exe": "ce79b87b1febf011291541619a4e3b62d8905581",
-        "bin\/x64\/CrashReporter\/7za.exe": "ef2c9940acd0c06a9b0538090c11b8464a52c5c6"
+        "x64\/REDEngineErrorReporter.exe": "5b43f630e74e83644f49698e4348479b2bb6e372",
+        "x64\/CrashReporter\/CrashReporter.exe": "41ca5a2b5b797ac56c1d1d4a18e7c3f5a7b9c8a2",
+        "x64\/Cyberpunk2077.exe": "ce79b87b1febf011291541619a4e3b62d8905581",
+        "x64\/CrashReporter\/7za.exe": "ef2c9940acd0c06a9b0538090c11b8464a52c5c6"
       }
     },
     {
@@ -80,10 +81,10 @@
         }
       ],
       "executables": {
-        "bin\/x64\/REDEngineErrorReporter.exe": "1da9add2d68b691190eae083c0d6437e04cc17c7",
-        "bin\/x64\/CrashReporter\/7za.exe": "5c9d2bec3d2f9a417e6b98e1c6d0295ecf5e8d50",
-        "bin\/x64\/Cyberpunk2077.exe": "ef9eeb418dcaf87351c09f90eeeac59d172b34eb",
-        "bin\/x64\/CrashReporter\/CrashReporter.exe": "204438d4b73e678816f3bf16a59c676e39f34844",
+        "x64\/REDEngineErrorReporter.exe": "1da9add2d68b691190eae083c0d6437e04cc17c7",
+        "x64\/CrashReporter\/7za.exe": "5c9d2bec3d2f9a417e6b98e1c6d0295ecf5e8d50",
+        "x64\/Cyberpunk2077.exe": "ef9eeb418dcaf87351c09f90eeeac59d172b34eb",
+        "x64\/CrashReporter\/CrashReporter.exe": "204438d4b73e678816f3bf16a59c676e39f34844",
         "REDprelauncher.exe": "6e3c89b06715236a67ac429c592fdefab2fb084b"
       }
     },
@@ -101,10 +102,10 @@
         }
       ],
       "executables": {
-        "bin\/x64\/REDEngineErrorReporter.exe": "2b305d1f7a78a8bb14f2afa8340c624a40e3013c",
-        "bin\/x64\/CrashReporter\/7za.exe": "32c09f6ab49e3bb1e1545ceb2b9c6e5770ca0150",
-        "bin\/x64\/CrashReporter\/CrashReporter.exe": "15d8e2659927689c9ce3f1bf12f22d9774af86e5",
-        "bin\/x64\/Cyberpunk2077.exe": "a377a6c82016a6f828e3d0d8d88bd304d3de7e63",
+        "x64\/REDEngineErrorReporter.exe": "2b305d1f7a78a8bb14f2afa8340c624a40e3013c",
+        "x64\/CrashReporter\/7za.exe": "32c09f6ab49e3bb1e1545ceb2b9c6e5770ca0150",
+        "x64\/CrashReporter\/CrashReporter.exe": "15d8e2659927689c9ce3f1bf12f22d9774af86e5",
+        "x64\/Cyberpunk2077.exe": "a377a6c82016a6f828e3d0d8d88bd304d3de7e63",
         "REDprelauncher.exe": "9195658cb0ccfe6c84643f516293a600fdaa2ea7"
       }
     },
@@ -123,11 +124,11 @@
       ],
       "executables": {
         "setup_redlauncher.exe": "08fa530b016a9b89f2c439b5208c9e5e3e369190",
-        "bin\/x64\/CrashReporter\/7za.exe": "d0acbf9ae29ec74acc67b53b2063bbc9739bc9e8",
-        "bin\/x64\/Cyberpunk2077.exe": "203b92ac2b02b3d6d0ef534133d3ca37a6b782eb",
+        "x64\/CrashReporter\/7za.exe": "d0acbf9ae29ec74acc67b53b2063bbc9739bc9e8",
+        "x64\/Cyberpunk2077.exe": "203b92ac2b02b3d6d0ef534133d3ca37a6b782eb",
         "REDprelauncher.exe": "7c6df04feaaef848c5cda08b25a4cd24a2b711b4",
-        "bin\/x64\/CrashReporter\/CrashReporter.exe": "219978fc7bb0164d7e59fab38191361cfe240cd8",
-        "bin\/x64\/REDEngineErrorReporter.exe": "4c97b24c8d256438b26bbf9179025546fef83522"
+        "x64\/CrashReporter\/CrashReporter.exe": "219978fc7bb0164d7e59fab38191361cfe240cd8",
+        "x64\/REDEngineErrorReporter.exe": "4c97b24c8d256438b26bbf9179025546fef83522"
       }
     }
   ]
