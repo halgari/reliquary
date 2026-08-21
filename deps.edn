@@ -12,6 +12,10 @@
         com.google.protobuf/protobuf-java    {:mvn/version "4.35.1"}
         com.google.zxing/core                {:mvn/version "3.5.4"}
         org.tukaani/xz                       {:mvn/version "1.12"}
+        ;; Zstandard, for the VSZ chunks Steam now serves. Pure Java on purpose,
+        ;; the same reason org.tukaani/xz is: zstd-jni would put a native library
+        ;; inside the jar, and this app ships as a jlink runtime built by jdeps.
+        io.airlift/aircompressor              {:mvn/version "2.0.2"}
 
         ;; catalog
         org.clojure/data.json                {:mvn/version "2.5.2"}}

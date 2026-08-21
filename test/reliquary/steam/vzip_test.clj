@@ -128,3 +128,50 @@
             "decoded length matches what the manifest declared")
         (is (= (:id meta) (sha1-hex decoded))
             "the chunk id is the SHA-1 of the DECODED plaintext")))))
+
+;; ---------------------------------------------------------------------------
+;; VSZa -- Valve's Zstandard container
+;;
+;; Steam began serving these and the decoder did not know them, so they fell
+;; through to `inflate` and died with "malformed deflate stream". Found against
+;; the live CDN: two of the six chunks of Skyrim SE's launcher on the build
+;; shipped 2026-08-20 are VSZa, and every download or switch touching one of
+;; them failed.
+
+(defn- vsza
+  "A VSZa buffer around `payload`, in the layout the CDN serves: 8-byte header
+   ('VSZa' + 4 bytes), the zstd frame, then a 15-byte footer."
+  [^bytes raw]
+  (let [comp   (io.airlift.compress.zstd.ZstdCompressor.)
+        buf    (byte-array (.maxCompressedLength comp (alength raw)))
+        n      (.compress comp raw 0 (alength raw) buf 0 (alength buf))
+        out    (java.io.ByteArrayOutputStream.)]
+    (.write out (byte-array (map unchecked-byte [0x56 0x53 0x5A 0x61  0xA3 0x9A 0x6D 0x84])))
+    (.write out buf 0 n)
+    ;; crc(4) + size(4) + 4 + magic "zsv"(3)
+    (.write out (byte-array (map unchecked-byte [0xA3 0x9A 0x6D 0x84])))
+    (.write out (byte-array [(unchecked-byte (bit-and (alength raw) 0xFF))
+                             (unchecked-byte (bit-and (bit-shift-right (alength raw) 8) 0xFF))
+                             (unchecked-byte (bit-and (bit-shift-right (alength raw) 16) 0xFF))
+                             (unchecked-byte (bit-and (bit-shift-right (alength raw) 24) 0xFF))]))
+    (.write out (byte-array 4))
+    (.write out (byte-array (map unchecked-byte [0x7A 0x73 0x76])))
+    (.toByteArray out)))
+
+(deftest unwraps-a-vszip-chunk
+  (let [raw (.getBytes (apply str (repeat 500 "reliquary ")) "UTF-8")]
+    (is (= (seq raw) (seq (vzip/decompress (vsza raw)))))))
+
+(deftest vszip?-recognises-only-the-vszip-magic
+  (is (true? (vzip/vszip? (vsza (.getBytes "x" "UTF-8")))))
+  (is (false? (vzip/vszip? (byte-array (repeat 40 0)))))
+  (testing "VZ is not VSZ: the two differ in one byte of magic and entirely in
+            payload format"
+    (is (false? (vzip/vszip? (byte-array (map unchecked-byte
+                                              (concat [0x56 0x5A 0x61] (repeat 30 0)))))))))
+
+(deftest a-vszip-buffer-too-short-to-hold-a-frame-is-incorrect-not-a-crash
+  (is (thrown? clojure.lang.ExceptionInfo
+               (vzip/decompress (byte-array (map unchecked-byte
+                                                 [0x56 0x53 0x5A 0x61 0 0 0 0
+                                                  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]))))))

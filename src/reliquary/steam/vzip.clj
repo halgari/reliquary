@@ -14,7 +14,8 @@
    zip, so 2b needs the zip branch on its critical path. The LZMA branch is
    ported here and proved in 2c, against a captured chunk."
   (:require [reliquary.error :as error])
-  (:import (java.io ByteArrayInputStream ByteArrayOutputStream)
+  (:import (io.airlift.compress.zstd ZstdDecompressor)
+           (java.io ByteArrayInputStream ByteArrayOutputStream)
            (java.util Arrays)
            (java.util.zip Inflater)
            (org.tukaani.xz LZMAInputStream)))
@@ -49,6 +50,39 @@
 (defn vzip? [^bytes buf]
   (and (>= (alength buf) VZIP-MIN-LEN)
        (= VZIP-HEADER (read-u16-le buf 0))))
+
+;; "VSZa" -- Valve's Zstandard container, and the reason a Skyrim SE download
+;; could fail on the build Steam shipped today. Same shape as VZ: a header, the
+;; payload, a footer carrying the decompressed size and a 3-byte magic ("zsv").
+;; The payload begins at 8 and is an ordinary zstd frame, which is
+;; self-describing -- so the footer never has to be parsed to decode one.
+(def ^:private VSZIP-HEADER 0x615A5356)       ; 'V' 'S' 'Z' 'a', little-endian
+(def ^:private VSZIP-PAYLOAD-AT 8)
+(def ^:private VSZIP-FOOTER-LEN 15)
+(def ^:private VSZIP-MIN-LEN (+ VSZIP-PAYLOAD-AT VSZIP-FOOTER-LEN))
+
+(defn vszip? [^bytes buf]
+  (and (>= (alength buf) VSZIP-MIN-LEN)
+       (= VSZIP-HEADER (read-u32-le buf 0))))
+
+(defn- vszip-decode
+  "The zstd frame inside a VSZa buffer.
+
+   The frame's own header carries the decompressed size, so that is read from
+   zstd rather than from Valve's footer: one less piece of someone else's format
+   to have guessed right, and the two must agree anyway or the chunk would fail
+   its sha1 a moment later."
+  ^bytes [^bytes buf]
+  (let [payload-len (- (alength buf) VSZIP-PAYLOAD-AT VSZIP-FOOTER-LEN)
+        _ (when-not (pos? payload-len)
+            (error/raise :incorrect "vszip payload is empty"
+                         {:length (alength buf)}))
+        size (ZstdDecompressor/getDecompressedSize buf VSZIP-PAYLOAD-AT payload-len)
+        _ (when-not (pos? size)
+            (error/raise :incorrect "vszip frame declares no decompressed size" {}))
+        out  (byte-array size)
+        n    (.decompress (ZstdDecompressor.) buf VSZIP-PAYLOAD-AT payload-len out 0 size)]
+    (if (= n size) out (Arrays/copyOfRange out 0 (int n)))))
 
 (defn to-lzma-stream
   "Build a .lzma-alone stream from a VZip buffer. Layout: 7-byte header, 5
@@ -139,5 +173,6 @@
   ^bytes [^bytes buf]
   (cond
     (vzip? buf)                                          (lzma-decode (to-lzma-stream buf))
+    (vszip? buf)                                         (vszip-decode buf)
     (and (>= (alength buf) 4) (= 0x04034B50 (read-u32-le buf 0))) (unzip-pk buf)
     :else                                                (inflate buf false)))
