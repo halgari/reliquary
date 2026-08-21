@@ -246,9 +246,10 @@ jobs:
           echo "--- notes for $tag ---"
           cat dist/NOTES.md
 
-      # PUBLISHED, not drafted. Publishing is what triggers nexus.yml, so a tag
-      # now goes all the way to the mod page without anyone pressing anything.
-      # The gate that remains is the tag itself.
+      # PUBLISHED, not drafted. The Nexus upload is a job below rather than
+      # something the publish event triggers: GitHub raises no workflow events
+      # for actions taken with GITHUB_TOKEN, so `on: release: published` never
+      # fires for a release this job creates.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -262,3 +263,14 @@ jobs:
             --verify-tag \
             dist/*.zip dist/SHA256SUMS
           echo "Released $tag."
+
+  # ---------------------------------------------------------------------------
+  # Called, not triggered. See the note above the publish step.
+  nexus:
+    name: publish to Nexus Mods
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/nexus.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

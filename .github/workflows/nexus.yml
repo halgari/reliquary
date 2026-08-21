@@ -3,17 +3,20 @@
 #
 # Publish a release's Windows ZIP to the Nexus Mods page.
 #
-# WHEN THIS RUNS. Not on a tag. `release.yml` builds a tag into a DRAFT release
-# precisely because publishing is outward-facing and stays a human decision, and
-# a Nexus upload is further out still: it is public the moment it lands, it
-# notifies everyone tracking the mod, and there is no unpublishing it in any way
-# that matters. So this hangs off the act that already IS the human decision --
-# publishing the draft -- and does nothing until someone does that.
+# WHEN THIS RUNS. Called by release.yml once it has published the release, and
+# by hand from the Actions tab.
 #
-#   tag  ->  release.yml  ->  draft release  ->  [you press publish]  ->  here
+#   tag  ->  release.yml  ->  GitHub release  ->  (calls this)  ->  Nexus
 #
-# `workflow_dispatch` is there for a re-run when an upload fails halfway, and
-# takes the tag to publish so it cannot be pointed at nothing by accident.
+# It used to trigger on `release: published` instead, which never fired: GitHub
+# does not raise workflow events for anything done with GITHUB_TOKEN, as a
+# loop-prevention rule, so a release created by the release job cannot trigger a
+# workflow. That is silent -- the release publishes, everything is green, and
+# nothing reaches the mod page. Calling this directly is the fix, and needs no
+# personal access token to do it.
+#
+# `workflow_dispatch` remains for a re-run when an upload fails halfway, and
+# takes the tag so it cannot be pointed at nothing by accident.
 #
 # WHAT IT UPLOADS. The ZIP attached to the GitHub release, not a fresh build.
 # The release asset is the artifact that was signed, checksummed and actually
@@ -21,13 +24,18 @@
 name: nexus
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag to upload'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to upload (e.g. v0.1.3)'
+        description: 'Release tag to upload (e.g. v1.0.0)'
         required: true
+        type: string
 
 # `write`, not `read`, and only for one reason: a DRAFT release is invisible to
 # a read-only token. The normal path -- publish, which fires this -- would be
@@ -64,11 +72,10 @@ jobs:
         id: tag
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_TAG: ${{ github.event.release.tag_name }}
           INPUT_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          tag="${EVENT_TAG:-$INPUT_TAG}"
+          tag="$INPUT_TAG"
           [ -n "$tag" ] || { echo "::error::no tag to upload"; exit 1; }
           # Nexus versions are plain numbers; the tag carries a leading v.
           echo "tag=$tag"                >> "$GITHUB_OUTPUT"

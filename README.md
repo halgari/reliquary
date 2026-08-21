@@ -100,11 +100,16 @@ Tagging is the whole trigger:
 a Windows app image, and publishes a release carrying
 `Reliquary-<version>-win-x64.zip` and `SHA256SUMS`.
 
-Publishing fires `.github/workflows/nexus.yml`, which takes the ZIP already
+The release job then calls `.github/workflows/nexus.yml`, which takes the ZIP already
 attached to the release (not a rebuild, so the mod page gets the artifact that
 was signed and tested) and adds it as a new version of the existing file on
 [site/mods/2188](https://www.nexusmods.com/site/mods/2188). It needs a
 `NEXUSMODS_API_KEY` secret, from <https://www.nexusmods.com/settings/api-keys>.
+
+It is CALLED by the release job, not triggered by the release being published.
+GitHub raises no workflow events for anything done with `GITHUB_TOKEN`, so
+`on: release: published` never fires for a release the release job created --
+silently, with every job green and nothing on the mod page.
 
 **The tag is the only gate.** Pushing one goes all the way to the public mod
 page without anyone pressing anything else:
