@@ -672,3 +672,53 @@
 (deftest an-owned-card-for-a-game-not-on-disk-says-nothing-extra
   (let [s (pr-str (library/view {:games games :tab :owned :installs {}}))]
     (is (not (str/includes? s "Installed ·")))))
+
+;; ---------------------------------------------------------------------------
+;; naming the build Steam ships today
+
+(def ^:private named-current
+  [{:appid 300 :title "Named Current" :studio "S"
+    :versions [{:id "public" :label "1.6.1170" :branch "public" :date "2026-08-20" :bytes 1}
+               {:id "1_6_1130" :label "1.6.1130" :branch "public" :date "2023-12-05" :bytes 1}]}])
+
+(def ^:private unnamed-current
+  [{:appid 301 :title "Unnamed Current" :studio "S"
+    :versions [{:id "public" :label "Latest" :branch "public" :date "2026-08-20" :bytes 1}
+               {:id "1_6_1130" :label "1.6.1130" :branch "public" :date "2023-12-05" :bytes 1}]}])
+
+(deftest the-current-build-is-marked-as-latest-beside-its-number
+  (testing "naming it by number alone lost the one thing `Latest` was good for:
+            which of these Steam gives you today"
+    (let [s (pr-str (library/view {:games named-current :tab :owned :selected-appid 300}))]
+      (is (str/includes? s "1.6.1170 (Latest)"))
+      (is (str/includes? s "1.6.1130") "and the others are untouched")
+      (is (not (str/includes? s "1.6.1130 (Latest)"))))))
+
+(deftest an-unnamed-current-build-does-not-say-latest-twice
+  (testing "when the number is not known the label already IS `Latest`"
+    (let [s (pr-str (library/view {:games unnamed-current :tab :owned :selected-appid 301}))]
+      (is (str/includes? s "Latest"))
+      (is (not (str/includes? s "Latest (Latest)"))))))
+
+(deftest only-the-public-entry-is-the-latest-one
+  (testing "historical entries live on the public BRANCH too, so the marker has
+            to key off the version id rather than the branch"
+    (let [g [{:appid 302 :title "T" :studio "S"
+              :versions [{:id "public" :label "9.9" :branch "public" :date "2026-01-01" :bytes 1}
+                         {:id "8_8" :label "8.8" :branch "public" :date "2025-01-01" :bytes 1}]}]
+          s (pr-str (library/view {:games g :tab :owned :selected-appid 302}))]
+      (is (str/includes? s "9.9 (Latest)"))
+      (is (not (str/includes? s "8.8 (Latest)"))))))
+
+(deftest an-install-that-is-the-current-build-says-so
+  (testing "the picker row and the install line answer the same question and
+            should not disagree about it"
+    (let [s (pr-str (panel {:install install
+                            :installed-version {:id "public" :label "1.6.1170"}}))]
+      (is (str/includes? s "1.6.1170 (Latest)")))))
+
+(deftest an-install-on-an-older-build-is-just-its-number
+  (let [s (pr-str (panel {:install install
+                          :installed-version {:id "1_5_97" :label "1.5.97"}}))]
+    (is (str/includes? s "1.5.97"))
+    (is (not (str/includes? s "(Latest)")))))

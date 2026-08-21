@@ -447,6 +447,27 @@
 ;; Side panel
 ;; ---------------------------------------------------------------------
 
+(defn version-label
+  "How a version is named in the picker.
+
+   The build Steam ships today gets its number AND the word: \"1.6.1170
+   (Latest)\". Naming it by number alone -- which is what the catalog carries,
+   since the number is the durable fact and \"Latest\" is only true until the
+   next update -- lost the one thing the old label was good for, which is
+   knowing which of these rows Steam would give you right now.
+
+   Keyed on the version ID, not the branch: historical entries live on the
+   public branch too, because that is the branch their manifest request codes
+   have to be asked for. `public` is the entry that means the current build.
+
+   When the number is not known the label already IS \"Latest\", and saying it
+   twice helps nobody."
+  [{:keys [id label]}]
+  (let [label (str label)]
+    (if (and (= "public" id) (not= "Latest" label))
+      (str label " (Latest)")
+      label)))
+
 (defn- version-row
   [{:keys [version selected? on-select]}]
   {:fx/type :v-box
@@ -475,7 +496,7 @@
                            ;; scrolled past the row's own gold border.
                            selected? (assoc :-fx-effect (theme/glow (:gold c)
                                                                      {:blur 12 :spread -1 :alpha 0.9}))))}
-                {:fx/type :label :text (:label version)
+                {:fx/type :label :text (version-label version)
                  :style (theme/style {:-fx-font-family (theme/ui-semibold-font)
                                        :-fx-font-size 13
                                        :-fx-text-fill (:text c)})}]}
@@ -613,7 +634,9 @@
                                        :-fx-font-size 12})}]}
               {:fx/type :label
                :text (str (if installed-version
-                            (:label installed-version)
+                            ;; same rule as the picker above it: if these bytes
+                            ;; are the build Steam ships today, say so
+                            (version-label installed-version)
                             ;; identification is by content; when the bytes match
                             ;; no version we carry, saying so beats naming the
                             ;; nearest one and being believed
