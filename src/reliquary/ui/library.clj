@@ -541,7 +541,7 @@
    an existing install is not choosing a folder -- the folder is Steam's, and
    offering to pick another would invite them to install a second copy of a game
    they already have."
-  [{:keys [install installed-version selected-version hashing on-analyze]}]
+  [{:keys [install installed-version selected-version hashing on-analyze on-change-install]}]
   {:fx/type :v-box :spacing 14
    :children
    (cond-> [{:fx/type :v-box :spacing 6
@@ -559,15 +559,32 @@
                           ;; for letter-spacing. Its .1em tracking is finer than
                           ;; `tracked` produces, so it is left plain rather than
                           ;; spaced out to twice the intended width at 10px.
-                          {:fx/type :label :text "FROM STEAM"
+                          ;; and it stops saying STEAM once it is not Steam's:
+                          ;; the tag is there to tell the user whose folder this
+                          ;; is, so on a folder they picked it would be a lie
+                          {:fx/type :label
+                           :text (if (:chosen? install) "CHOSEN FOLDER" "FROM STEAM")
                            :style (theme/style {:-fx-font-family (theme/mono-font)
                                                  :-fx-font-size 10
                                                  :-fx-text-fill (:text-dim c)})}]}
-              {:fx/type :label :text (str (:path install))
-               :wrap-text true :max-width 300
-               :style (theme/style {:-fx-font-family (theme/mono-font)
-                                     :-fx-font-size 12
-                                     :-fx-text-fill (:text c)})}
+              {:fx/type :h-box :spacing 8 :alignment :center-left
+               :children
+               [{:fx/type :label :text (str (:path install))
+                 :wrap-text true :max-width 232 :h-box/hgrow :always
+                 :style (theme/style {:-fx-font-family (theme/mono-font)
+                                       :-fx-font-size 12
+                                       :-fx-text-fill (:text c)})}
+                ;; Same shape as the download footer's folder row, deliberately:
+                ;; it is the same act, and a user who has already met one should
+                ;; recognise the other.
+                {:fx/type :button :text "Change…"
+                 :on-action (or on-change-install (fn [_]))
+                 :style (theme/style {:-fx-background-color "transparent"
+                                       :-fx-border-color (:line c)
+                                       :-fx-border-radius 3
+                                       :-fx-background-radius 3
+                                       :-fx-text-fill (:text-muted c)
+                                       :-fx-font-size 12})}]}
               {:fx/type :label
                :text (str (if installed-version
                             (:label installed-version)
@@ -633,7 +650,7 @@
     (panel-download-footer state)))
 
 (defn- panel-download-footer
-  [{:keys [folder selected-version owned? on-change-folder on-download]}]
+  [{:keys [folder selected-version owned? on-change-folder on-download on-change-install]}]
   (let [owned?   (not (false? owned?))
         ready?   (and owned? (some? selected-version))
         btn-text (download-button-label selected-version owned?)]
@@ -685,11 +702,31 @@
                               {:-fx-background-color (:bg c) :-fx-text-fill (:text-muted c)
                                :-fx-border-color (:line c)
                                :-fx-border-radius 3
-                               :-fx-background-radius 3 :-fx-font-size 14}))}]}))
+                               :-fx-background-radius 3 :-fx-font-size 14}))}
+      ;; The way in for a copy Steam never reported. Without it the switch is
+      ;; reachable only through `installs/find-install`, so a second install
+      ;; kept at a known-good build, a folder restored from a backup or a game
+      ;; moved by hand cannot be switched at all -- and those are exactly the
+      ;; folders somebody is most likely to want pinned to a version.
+      ;;
+      ;; A link rather than a button: it is the alternative to the action above
+      ;; it, not a competing one.
+      {:fx/type :hyperlink :text "Already have a copy? Choose its folder…"
+       :on-action (or on-change-install (fn [_]))
+       ;; its own class, not the footer credit's: that one is styled gold with a
+       ;; rule under it, and borrowing it would have meant this link inherited a
+       ;; hover rule drawn for a border it does not have
+       :style-class ["hyperlink" "panel-link"]
+       :style (theme/style {:-fx-font-family (theme/mono-font)
+                             :-fx-font-size 11
+                             :-fx-text-fill (:text-muted c)
+                             :-fx-underline false
+                             :-fx-padding 0
+                             :-fx-background-color "transparent"})}]}))
 
 (defn- side-panel
   [{:keys [game selected-version-id folder owned? install installed-version hashing
-           on-select-version on-change-folder on-download on-analyze]
+           on-select-version on-change-folder on-download on-analyze on-change-install]
     :as   state}]
   (let [versions         (catalog/versions game)
         selected-version (find-version game selected-version-id)]
@@ -765,14 +802,15 @@
            selected-appid selected-version-id owned folder capsule-fn
            install installed-version hashing
            on-query-change on-select-game on-select-version on-change-folder
-           on-download on-analyze]
+           on-download on-analyze on-change-install]
     :or   {capsule-fn         (constantly nil)
            on-query-change    (fn [_])
            on-select-game     (fn [_])
            on-select-version  (fn [_])
            on-change-folder   (fn [_])
            on-download        (fn [_])
-           on-analyze         (fn [_])}}]
+           on-analyze         (fn [_])
+           on-change-install  (fn [_])}}]
   (let [games         (or games [])
         ;; The Installed tab is a different LIBRARY, not a different sort: only
         ;; games Steam actually has on disk. The filter then applies within
@@ -812,4 +850,5 @@
                            :on-select-version on-select-version
                            :on-change-folder on-change-folder
                            :on-download on-download
-                           :on-analyze on-analyze})))}))
+                           :on-analyze on-analyze
+                           :on-change-install on-change-install})))}))

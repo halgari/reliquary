@@ -204,3 +204,13 @@
       (is (fn? (:on-action b)) (str (:text b) " must be pressable")))
     (doseq [b (switch-screen/buttons (view {}))]
       (is (fn? (:on-action b))))))
+
+(deftest the-screen-does-not-call-a-chosen-folder-steams-either
+  (testing "the panel and the screen show the same install; only one of them
+            saying where it came from would be worse than neither"
+    (let [chosen (pr-str (switch-screen/view {:game game
+                                              :install (assoc install :chosen? true)
+                                              :installed-version from :target-version to}))]
+      (is (str/includes? chosen "CHOSEN FOLDER"))
+      (is (not (str/includes? chosen "FROM STEAM"))))
+    (is (str/includes? (pr-str (view {})) "FROM STEAM"))))

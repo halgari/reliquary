@@ -559,3 +559,57 @@
                                      :button)))]
     (is (some? b))
     (is (true? (:disable b)))))
+
+;; ---------------------------------------------------------------------------
+;; pointing the switch at a folder Steam never reported
+;;
+;; A copy of a game outside Steam's libraries is an ordinary thing to have: a
+;; second install kept at a known-good build, a folder restored from a backup, a
+;; game moved by hand. Until there was a way to choose one, the switch could only
+;; ever act on what `installs/find-install` returned.
+
+(deftest the-switch-panel-can-change-the-folder-it-is-pointed-at
+  (let [fired (atom false)
+        v (panel {:install install
+                  :installed-version {:id "public" :label "Latest"}
+                  :selected-version-id "1_5_97"
+                  :on-change-install (fn [_] (reset! fired true))})
+        btn (first (filter #(= "Change…" (:text %)) (find-nodes v :button)))]
+    (is (some? btn) "the switch footer offers a way to re-point it")
+    ((:on-action btn) nil)
+    (is @fired)))
+
+(deftest a-chosen-folder-does-not-claim-to-be-steams
+  (testing "the tag exists to say whose folder this is; on one the user picked
+            it would be a lie"
+    (let [s (pr-str (panel {:install (assoc install :chosen? true)
+                            :installed-version {:id "public" :label "Latest"}}))]
+      (is (str/includes? s "CHOSEN FOLDER"))
+      (is (not (str/includes? s "FROM STEAM"))))))
+
+(deftest a-steam-install-still-says-so
+  (let [s (pr-str (panel {:install install
+                          :installed-version {:id "public" :label "Latest"}}))]
+    (is (str/includes? s "FROM STEAM"))
+    (is (not (str/includes? s "CHOSEN FOLDER")))))
+
+(deftest a-game-steam-has-not-installed-can-still-point-at-a-copy
+  (testing "without this the switch is reachable only through find-install, so a
+            copy outside Steam's libraries could not be switched at all -- and
+            that is exactly the folder someone wants pinned to a version"
+    (let [fired (atom false)
+          v (panel {:install nil :selected-version-id "public"
+                    :on-change-install (fn [_] (reset! fired true))})
+          link (first (filter #(str/includes? (str (:text %)) "Already have a copy")
+                              (find-nodes v :hyperlink)))]
+      (is (some? link) "the download footer offers a way in")
+      ((:on-action link) nil)
+      (is @fired))))
+
+(deftest neither-entry-point-dies-without-a-handler
+  (testing "cljfx cannot coerce a nil :on-action"
+    (doseq [state [{:install install :installed-version {:id "public" :label "Latest"}}
+                   {:install nil :selected-version-id "public"}]]
+      (let [v (panel state)]
+        (doseq [b (concat (find-nodes v :button) (find-nodes v :hyperlink))]
+          (is (fn? (:on-action b)) (str (:text b) " must be pressable")))))))

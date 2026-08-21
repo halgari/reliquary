@@ -1731,3 +1731,70 @@
                       app/browse! (fn [_] "no browser here")]
           (.join ^Thread (main/open-credit! state app/credit-url) 10000)
           (is (= "no browser here" (:error @state))))))))
+
+;; ---------------------------------------------------------------------------
+;; pointing the switch at a folder the user chose
+
+(deftest choosing-a-folder-puts-it-on-the-panel-and-identifies-it
+  (testing "a copy outside Steam's libraries is switched exactly like one inside
+            it: the version comes from hashing the executables, which needs no
+            appmanifest and no Steam"
+    (with-tmp
+      (fn []
+        (let [state (wired {:games [game-with-exes] :selected-appid 413150})]
+          (with-redefs [main/fx-run! (fn [f] (f))
+                        main/pick-directory! (fn [_ _] "/elsewhere/Skyrim")
+                        main/folder-size (constantly 16095731388)
+                        local/hash-paths (constantly {"Game.exe" "bbbb"})]
+            @(main/choose-install-folder! state)
+            (is (= "/elsewhere/Skyrim" (:path (:install @state))))
+            (is (true? (:chosen? (:install @state))) "marked as not Steam's")
+            (is (= 16095731388 (:bytes (:install @state))) "sized by walking it")
+            (is (= "old" (:id (:installed-version @state))) "and identified by content")))))))
+
+(deftest cancelling-the-chooser-changes-nothing
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game-with-exes] :selected-appid 413150
+                          :install an-install
+                          :installed-version {:id "public" :label "Latest"}})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/pick-directory! (fn [_ _] nil)
+                      local/hash-paths (fn [& _] (throw (AssertionError. "must not hash")))]
+          @(main/choose-install-folder! state)
+          (is (= an-install (:install @state)))
+          (is (= "public" (:id (:installed-version @state)))))))))
+
+(deftest a-chosen-folder-that-matches-no-version-is-unrecognised-not-refused
+  (testing "the most likely folder to be chosen by hand is one that was already
+            downgraded, which is exactly the build the catalog cannot name"
+      (with-tmp
+        (fn []
+          (let [state (wired {:games [game-with-exes] :selected-appid 413150})]
+            (with-redefs [main/fx-run! (fn [f] (f))
+                          main/pick-directory! (fn [_ _] "/elsewhere/Skyrim")
+                          main/folder-size (constantly 1)
+                          local/hash-paths (constantly {"Game.exe" "not-a-known-hash"})]
+              @(main/choose-install-folder! state)
+              (is (some? (:install @state)) "the folder is still on the panel")
+              (is (nil? (:installed-version @state)) "just unnamed -- forced switch handles it")))))))
+
+(deftest the-hashing-bar-is-cleared-after-choosing-a-folder
+  (with-tmp
+    (fn []
+      (let [state (wired {:games [game-with-exes] :selected-appid 413150})]
+        (with-redefs [main/fx-run! (fn [f] (f))
+                      main/pick-directory! (fn [_ _] "/elsewhere/Skyrim")
+                      main/folder-size (constantly 1)
+                      local/hash-paths
+                      (fn [_ _ {:keys [on-progress]}]
+                        (when on-progress (on-progress {:done 1 :total 2 :path "Game.exe"}))
+                        {"Game.exe" "bbbb"})]
+          (with-redefs [main/hashing-visible-after-ms 0]
+            @(main/choose-install-folder! state))
+          (is (nil? (:hashing @state))))))))
+
+(deftest the-initial-state-wires-the-change-install-handler
+  (with-tmp
+    (fn []
+      (is (fn? (:on-change-install (main/initial-state (atom nil) {:account "x"})))))))

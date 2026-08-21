@@ -615,6 +615,113 @@
       ;; file of Steam's bookkeeping, not a pass over the install
       (installs/installed-version game install))))
 
+(defn- identify-with-progress!
+  "Hash `install` to work out which version it is, reporting into `:hashing`.
+
+   Shared by the Steam lookup and the browse button, because the two differ only
+   in where the folder came from -- the hashing, the throttling, the abort and
+   the bar are identical, and were about to be identical twice."
+  [state appid game install]
+  (let [stale? (fn [] (not= appid (:selected-appid @state)))
+        t0     (System/currentTimeMillis)
+        rate*  (atom {})]
+    (identify-installed
+     game install
+     {:abort? stale?
+      :on-progress
+      (fn [{:keys [done total]}]
+        ;; throttled and rate-tracked exactly like the switch screen's, so the
+        ;; box gets the rate and the clock it now renders
+        (let [now (System/currentTimeMillis)
+              r   (swap! rate* advance-rate done now)]
+          (when (and (:emit? r)
+                     (>= (- now t0) hashing-visible-after-ms))
+            (fx-run!
+             #(swap! state
+                     (fn [st]
+                       (if (= appid (:selected-appid st))
+                         (assoc st :hashing
+                                {:done done :total total
+                                 :bytes-per-sec (:bytes-per-sec r)
+                                 :session-bytes-per-sec (:session-bytes-per-sec r)})
+                         st)))))))})))
+
+(defn pick-directory!
+  "Ask the user for a directory. Returns its absolute path, or nil if they
+   cancelled. Runs on the calling thread, which must be the FX one: it opens a
+   window.
+
+   Public and separate from its callers so a test can stub it. A DirectoryChooser
+   cannot be driven headlessly, and the interesting logic is entirely in what
+   happens to the answer."
+  [title initial]
+  (let [chooser (DirectoryChooser.)
+        dir     (some-> ^String initial io/file)]
+    (.setTitle chooser ^String title)
+    (when (and dir (.isDirectory ^File dir))
+      (.setInitialDirectory chooser dir))
+    (some-> ^File (.showDialog chooser nil) (.getAbsolutePath))))
+
+(defn folder-size
+  "Total bytes under `path`. Public so a test can stub it.
+
+   A Steam install carries its size in the appmanifest; a folder the user picked
+   carries nothing at all, and the panel would read \"size unknown\" next to a
+   fifteen gigabyte game. Walking a Skyrim tree is about forty thousand stat
+   calls and no reads, which is why this can run on the same daemon thread as
+   the hashing rather than needing its own story."
+  [path]
+  (try
+    (transduce (comp (filter #(.isFile ^File %)) (map #(.length ^File %)))
+               + 0 (file-seq (io/file path)))
+    (catch Throwable _ 0)))
+
+(defn choose-install-folder!
+  "The `Change…` / `Use an existing copy…` button: point the switch at a folder
+   the user chooses instead of one Steam reported.
+
+   A copy of a game outside Steam's libraries is an ordinary thing to have -- a
+   second install kept at a known-good build, a folder restored from a backup,
+   a game moved by hand -- and until now none of them could be switched, because
+   the only way an install reached the panel was `installs/find-install`.
+
+   Nothing about the switch itself changes: it identifies by hashing the
+   executables, which needs no appmanifest and no Steam at all.
+
+   Returns a promise, delivered once the folder has been identified."
+  [state]
+  (let [p       (promise)
+        current (or (:path (:install @state)) (:folder @state))
+        appid   (:selected-appid @state)
+        game    (first (filter #(= appid (:appid %)) (:games @state)))]
+    (if-let [path (pick-directory! "Choose the game folder" current)]
+      (let []
+        ;; on screen immediately, so the panel does not sit on the old folder
+        ;; while the walk and the hashing run
+        (swap! state assoc
+               :install {:appid appid :path path :chosen? true}
+               :installed-version nil)
+        (daemon!
+         "reliquary-chosen-install"
+         (fn []
+           (try
+             (let [install {:appid appid :path path :chosen? true
+                            :bytes (folder-size path)}
+                   version (when game (identify-with-progress! state appid game install))]
+               (fx-run! #(swap! state (fn [s]
+                                        (if (= appid (:selected-appid s))
+                                          (assoc s :install install :installed-version version)
+                                          s)))))
+             (catch Throwable _ nil)
+             (finally
+               (fx-run! #(swap! state (fn [s]
+                                        (if (= appid (:selected-appid s))
+                                          (assoc s :hashing nil)
+                                          s))))
+               (deliver p :done))))))
+      (deliver p :cancelled))
+    p))
+
 (defn detect-install!
   "Look for an existing Steam install of `appid` and, if it is still the selected
    game when the answer arrives, put it on the panel. Returns a promise.
@@ -641,32 +748,8 @@
                ;; already cleared the panel and started another detect by then,
                ;; and a user clicking down a library must not leave one thread
                ;; per game reading executables off a spinning disk.
-               stale?  (fn [] (not= appid (:selected-appid @state)))
-               t0      (System/currentTimeMillis)
-               rate*   (atom {})
                version (when (and install game)
-                         (identify-installed
-                          game install
-                          {:abort? stale?
-                           :on-progress
-                           (fn [{:keys [done total]}]
-                             ;; throttled and rate-tracked exactly like the
-                             ;; switch screen's, so the box gets the rate and
-                             ;; the clock it now renders
-                             (let [now (System/currentTimeMillis)
-                                   r   (swap! rate* advance-rate done now)]
-                               (when (and (:emit? r)
-                                          (>= (- now t0) hashing-visible-after-ms))
-                                 (fx-run!
-                                  #(swap! state
-                                          (fn [st]
-                                            (if (= appid (:selected-appid st))
-                                              (assoc st :hashing
-                                                     {:done done :total total
-                                                      :bytes-per-sec (:bytes-per-sec r)
-                                                      :session-bytes-per-sec
-                                                      (:session-bytes-per-sec r)})
-                                              st)))))))}))]
+                         (identify-with-progress! state appid game install))]
            (fx-run! #(swap! state (fn [s]
                                     (if (= appid (:selected-appid s))
                                       (assoc s :install install :installed-version version)
@@ -1189,6 +1272,9 @@
    :on-select-game    (fn [id] (select-game! state id))
    :on-select-version (fn [id] (select-version! state id))
    :on-change-folder  (fn [_]  (choose-folder! state))
+   ;; the switch panel's Change…, and the download panel's "use an existing
+   ;; copy": both point the switch at a folder Steam never reported
+   :on-change-install (fn [_]  (choose-install-folder! state))
    :on-download       (fn [_]  (download-pressed! state))
    ;; the Switch button. Hashing and the switch itself land next; wiring the
    ;; handler now keeps library/view from silently defaulting it to a no-op,

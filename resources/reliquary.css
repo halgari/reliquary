@@ -136,3 +136,17 @@
 .credit-link:hover {
     -fx-border-color: transparent transparent #C2A35F transparent;
 }
+
+/* A quiet secondary action inside a panel -- "already have a copy?" under the
+   download button. Muted at rest so it does not compete with the action above
+   it, and gold on hover so it reads as something you can press. Distinct from
+   .credit-link, which is gold at rest and carries a rule beneath it. */
+.panel-link,
+.panel-link:visited,
+.panel-link:focused {
+    -fx-underline: false;
+}
+
+.panel-link:hover {
+    -fx-text-fill: #C2A35F;
+}

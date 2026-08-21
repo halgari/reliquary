@@ -69,7 +69,10 @@
    ;; nothing to attach itself to.
    [{:fx/type :h-box :spacing 8 :alignment :center
      :children [(caption (tracked "Installed at"))
-                {:fx/type :label :text "· FROM STEAM"
+                ;; matches the panel: a folder the user picked is not Steam's,
+                ;; and the tag exists to say whose it is
+                {:fx/type :label
+                 :text (if (:chosen? install) "· CHOSEN FOLDER" "· FROM STEAM")
                  :style (theme/style {:-fx-font-family (theme/mono-font) :-fx-font-size 10
                                        :-fx-text-fill (:text-dim c)})}]}
     {:fx/type :label :text (str (:path install)) :wrap-text true :max-width block-width
