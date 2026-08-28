@@ -13,30 +13,30 @@
   ],
   "versions": [
     {
-      "date": "2026-08-20",
+      "date": "2026-08-27",
       "depots": [
         {
           "depot-id": 489831,
-          "manifest-gid": "3552311541133526669"
+          "manifest-gid": "4940892828028256588"
         },
         {
           "depot-id": 489832,
-          "manifest-gid": "1885196179801530198"
+          "manifest-gid": "5728778377666085157"
         },
         {
           "depot-id": 489833,
-          "manifest-gid": "8156748093655676596"
+          "manifest-gid": "4886117324142477814"
         }
       ],
       "executables": {
-        "SkyrimSELauncher.exe": "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d",
-        "SkyrimSE.exe": "5516489a45d63e63ad5d24c74a8b80918cf403b6"
+        "SkyrimSELauncher.exe": "34732a41e2afd59ded5b37a53ed7afae89d64e11",
+        "SkyrimSE.exe": "2f784a183f884067a9a41338664b55f6dc198a48"
       },
-      "build": "24604991",
+      "build": "24914197",
       "label": "Latest \u2014 public",
       "id": "public",
-      "bytes": 16092528893,
-      "version": "1.7.99",
+      "bytes": 16092533099,
+      "version": "1.7.104",
       "branch": "public"
     }
   ]

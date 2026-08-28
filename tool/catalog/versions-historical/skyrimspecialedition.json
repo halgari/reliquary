@@ -1,6 +1,6 @@
 {
   "appid": 489830,
-  "source_notes": "Skyrim Special Edition (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from community downgrade guides -- SKSE and most native-code mods break on every executable update, so the modding community has documented exact depot\/manifest triples for every notable version since the Anniversary Edition (AE) launched in Nov 2021. Depot 489831 = main game content ('MAIN2' in some guides), 489832 = a second content depot ('MAIN'), 489833 = the executable ('EXE'). A fourth depot, 489838, carries optional Russian localization and was not recorded here (out of scope). Two classes of source were used: (1) individually-authored Steam Community guides, each verified by direct WebFetch of the guide page, and (2) the Nexus Mods article 'Steam Manifest List for Skyrim' (nexusmods.com\/skyrimspecialedition\/articles\/6536), a maintained table the author says is sourced from steamdb.info manifest histories -- fetched here via a Wayback Machine snapshot (web.archive.org, capture 2025-07-31) because Nexus Mods 403s direct curl\/WebFetch from this environment. Confidence 'high' below means the Nexus article's numbers were independently corroborated by at least one separately-authored Steam Community guide with no shared authorship; 'low' means the Nexus article is the only source found (searches turned up no second independent source, including checks of the Nexus 'Unofficial Downgrade Patcher' mod page comments, r\/skyrimmods, and Nexus\/STEP forum threads, none of which quoted the raw manifest IDs). No conflicts were found between sources for any version recorded here -- all agreeing sources matched exactly. CORRECTION APPLIED: this run originally discarded the entire 1.6.342 entry because its depot-489831 manifest ('349141704917442044') is 18 digits and the initial brief said manifest GIDs must be 19-20 digits. That digit-count rule was wrong -- a manifest GID is any decimal value that fits a uint64 (1-20 digits), and 18-digit values occur legitimately roughly 1 time in 20. After the coordinator corrected the rule, 1.6.342 was restored below (still confidence 'low', single-sourced, unaffected in substance by the correction). This was the only manifest ID affected by the bad rule in this run -- no other candidate was discarded for being too short. Release dates are taken from the same Nexus article and are single-sourced (not independently cross-checked); build IDs were not obtainable without steamdb.info, which this task explicitly excludes, so 'build' is null throughout.",
+  "source_notes": "Skyrim Special Edition (Steam) publishes only a 'public' branch, so PICS only ever exposes the CURRENT manifest. Historical manifests below were recovered from community downgrade guides -- SKSE and most native-code mods break on every executable update, so the modding community has documented exact depot\/manifest triples for every notable version since the Anniversary Edition (AE) launched in Nov 2021. Depot 489831 = main game content ('MAIN2' in some guides), 489832 = a second content depot ('MAIN'), 489833 = the executable ('EXE'). A fourth depot, 489838, carries optional Russian localization and was not recorded here (out of scope). Two classes of source were used: (1) individually-authored Steam Community guides, each verified by direct WebFetch of the guide page, and (2) the Nexus Mods article 'Steam Manifest List for Skyrim' (nexusmods.com\/skyrimspecialedition\/articles\/6536), a maintained table the author says is sourced from steamdb.info manifest histories -- fetched here via a Wayback Machine snapshot (web.archive.org, capture 2025-07-31) because Nexus Mods 403s direct curl\/WebFetch from this environment. Confidence 'high' below means the Nexus article's numbers were independently corroborated by at least one separately-authored Steam Community guide with no shared authorship; 'low' means the Nexus article is the only source found (searches turned up no second independent source, including checks of the Nexus 'Unofficial Downgrade Patcher' mod page comments, r\/skyrimmods, and Nexus\/STEP forum threads, none of which quoted the raw manifest IDs). No conflicts were found between sources for any version recorded here -- all agreeing sources matched exactly. CORRECTION APPLIED: this run originally discarded the entire 1.6.342 entry because its depot-489831 manifest ('349141704917442044') is 18 digits and the initial brief said manifest GIDs must be 19-20 digits. That digit-count rule was wrong -- a manifest GID is any decimal value that fits a uint64 (1-20 digits), and 18-digit values occur legitimately roughly 1 time in 20. After the coordinator corrected the rule, 1.6.342 was restored below (still confidence 'low', single-sourced, unaffected in substance by the correction). This was the only manifest ID affected by the bad rule in this run -- no other candidate was discarded for being too short. Release dates are taken from the same Nexus article and are single-sourced (not independently cross-checked); build IDs were not obtainable without steamdb.info, which this task explicitly excludes, so 'build' is null throughout. ADDENDUM (2026-08-28): Steam shipped build 24914197 on 2026-08-27, retiring 24604991. That outgoing build was captured from live PICS and recorded below as 1_7_99 BEFORE fetch_versions.py was re-run, because PICS exposes only the current manifest on a public branch -- once refetched, those three manifest GIDs would have existed nowhere and the build every current SKSE setup targets would have become undownloadable. Its version number is not invented: exe_versions.clj had already read 1.7.99 out of SkyrimSE.exe's own VS_FIXEDFILEINFO while the build was live, so this entry is confidence 'high' -- PICS-sourced manifests plus the publisher's own version stamp, not a community guide.",
   "versions": [
     {
       "date": "2019-11-20",
@@ -338,6 +338,36 @@
       "id": "1_6_1170",
       "bytes": 16095731388,
       "confidence": "low"
+    },
+    {
+      "date": "2026-08-20",
+      "depots": [
+        {
+          "depot-id": 489831,
+          "manifest-gid": "3552311541133526669",
+          "label": "Skyrim SE main content"
+        },
+        {
+          "depot-id": 489832,
+          "manifest-gid": "1885196179801530198",
+          "label": "Skyrim SE content 2"
+        },
+        {
+          "depot-id": 489833,
+          "manifest-gid": "8156748093655676596",
+          "label": "Skyrim SE exe"
+        }
+      ],
+      "source": "captured from PICS while it was the live public build, before Steam rolled it",
+      "executables": {
+        "SkyrimSELauncher.exe": "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d",
+        "SkyrimSE.exe": "5516489a45d63e63ad5d24c74a8b80918cf403b6"
+      },
+      "build": "24604991",
+      "label": "1.7.99 -- public from 2026-08-20 until the 2026-08-27 update",
+      "id": "1_7_99",
+      "bytes": 16092528893,
+      "confidence": "high"
     }
   ]
 }

@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-21T20:22:07Z"
+ :generated "2026-08-28T16:08:31Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -27,19 +27,19 @@
                  {:text "You will carry forty unenchanted iron daggers to sell later. You never sell them."
                   :attrib "every player, eventually"}]
          :versions [{:id "public"
-                    :label "1.7.99"
+                    :label "1.7.104"
                     :branch "public"
-                    :build "24604991"
-                    :date "2026-08-20"
-                    :bytes 16092528893
-                    :executables {"SkyrimSELauncher.exe" "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d"
-                                 "SkyrimSE.exe" "5516489a45d63e63ad5d24c74a8b80918cf403b6"}
+                    :build "24914197"
+                    :date "2026-08-27"
+                    :bytes 16092533099
+                    :executables {"SkyrimSELauncher.exe" "34732a41e2afd59ded5b37a53ed7afae89d64e11"
+                                 "SkyrimSE.exe" "2f784a183f884067a9a41338664b55f6dc198a48"}
                     :depots [{:depot-id 489831
-                             :manifest-gid "3552311541133526669"}
+                             :manifest-gid "4940892828028256588"}
                             {:depot-id 489832
-                             :manifest-gid "1885196179801530198"}
+                             :manifest-gid "5728778377666085157"}
                             {:depot-id 489833
-                             :manifest-gid "8156748093655676596"}]}
+                             :manifest-gid "4886117324142477814"}]}
                    {:id "1_5_97"
                     :label "1.5.97"
                     :branch "public"
@@ -179,7 +179,21 @@
                             {:depot-id 489832
                              :manifest-gid "8042843504692938467"}
                             {:depot-id 489833
-                             :manifest-gid "1914580699073641964"}]}]}
+                             :manifest-gid "1914580699073641964"}]}
+                   {:id "1_7_99"
+                    :label "1.7.99"
+                    :branch "public"
+                    :build "24604991"
+                    :date "2026-08-20"
+                    :bytes 16092528893
+                    :executables {"SkyrimSELauncher.exe" "085756ebfb43d0456b2b2a31f058e1bdb4e42f7d"
+                                 "SkyrimSE.exe" "5516489a45d63e63ad5d24c74a8b80918cf403b6"}
+                    :depots [{:depot-id 489831
+                             :manifest-gid "3552311541133526669"}
+                            {:depot-id 489832
+                             :manifest-gid "1885196179801530198"}
+                            {:depot-id 489833
+                             :manifest-gid "8156748093655676596"}]}]}
         {:appid 377160
          :title "Fallout 4"
          :studio "Bethesda Game Studios"
