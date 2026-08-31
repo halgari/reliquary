@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-31T00:30:00Z"
+ :generated "2026-08-31T01:00:00Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -274,7 +274,37 @@
                             {:depot-id 435870
                              :manifest-gid "1213339795579796878"}
                             {:depot-id 393885
-                             :manifest-gid "5000262035721758737"}]}]}
+                             :manifest-gid "5000262035721758737"}]}
+                   {:id "1_10_163"
+                    :label "1.10.163"
+                    :branch "public"
+                    :build ""
+                    :date "2019-12-04"
+                    :bytes 32587673600
+                    :executables {"Fallout4.exe" "7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
+                                 "Fallout4Launcher.exe" "a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4"}
+                    :depots [{:depot-id 377161
+                             :manifest-gid "7497069378349273908"}
+                            {:depot-id 377162
+                             :manifest-gid "5847529232406005096"}
+                            {:depot-id 377163
+                             :manifest-gid "5819088023757897745"}
+                            {:depot-id 377164
+                             :manifest-gid "2178106366609958945"}
+                            {:depot-id 435870
+                             :manifest-gid "1691678129192680960"}
+                            {:depot-id 435871
+                             :manifest-gid "5106118861901111234"}
+                            {:depot-id 435881
+                             :manifest-gid "1207717296920736193"}
+                            {:depot-id 435882
+                             :manifest-gid "8482181819175811242"}
+                            {:depot-id 480631
+                             :manifest-gid "6588493486198824788"}
+                            {:depot-id 490650
+                             :manifest-gid "4873048792354485093"}
+                            {:depot-id 393895
+                             :manifest-gid "7677765994120765493"}]}]}
         {:appid 72850
          :title "The Elder Scrolls V: Skyrim"
          :studio "Bethesda Game Studios"
