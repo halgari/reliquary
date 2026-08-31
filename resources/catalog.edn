@@ -795,36 +795,7 @@
                              :manifest-gid "6284719385946382741"}
                             {:depot-id 1245624
                              :manifest-gid "2857493681029384756"}]}
-                   {:id "1_03"
-                    :label "1.03"
-                    :branch "public"
-                    :build ""
-                    :date "2022-03-17"
-                    :bytes 49494753280
-                    :executables {"eldenring.exe" "d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8"}
-                    :depots [{:depot-id 1245621
-                             :manifest-gid "4121984677645683704"}
-                            {:depot-id 1245622
-                             :manifest-gid "1293847562938475629"}
-                            {:depot-id 1245623
-                             :manifest-gid "5738291649283746928"}
-                            {:depot-id 1245624
-                             :manifest-gid "1984118169889838981"}]}
-                   {:id "1_02_3"
-                    :label "1.02.3"
-                    :branch "public"
-                    :build ""
-                    :date "2022-03-04"
-                    :bytes 47185551360
-                    :executables {"eldenring.exe" "e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9"}
-                    :depots [{:depot-id 1245621
-                             :manifest-gid "8390693081119963338"}
-                            {:depot-id 1245622
-                             :manifest-gid "2847596183749286173"}
-                            {:depot-id 1245623
-                             :manifest-gid "4829371648293764829"}
-                            {:depot-id 1245624
-                             :manifest-gid "2484355486124511110"}]}]}
+]}
         {:appid 1716740
          :title "Starfield"
          :studio "Bethesda Game Studios"
