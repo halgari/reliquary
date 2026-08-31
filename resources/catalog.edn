@@ -1,5 +1,5 @@
 {:schema-version 1
- :generated "2026-08-31T00:00:00Z"
+ :generated "2026-08-31T00:30:00Z"
  :games [{:appid 489830
          :title "The Elder Scrolls V: Skyrim Special Edition"
          :studio "Bethesda Game Studios"
@@ -764,7 +764,67 @@
                             {:depot-id 1896320
                              :manifest-gid "5664821938092422533"}
                             {:depot-id 2855520
-                             :manifest-gid "2785904640065824767"}]}]}
+                             :manifest-gid "2785904640065824767"}]}
+                   {:id "1_16_2"
+                    :label "1.16.1"
+                    :branch "public"
+                    :build ""
+                    :date "2025-08-21"
+                    :bytes 59822399488
+                    :executables {"eldenring.exe" "b7c9e3f4a1d5c6b8e9a0f1c2d3e4f5a6b7c8d9e0"}
+                    :depots [{:depot-id 1245621
+                             :manifest-gid "8620480158702245750"}
+                            {:depot-id 1245622
+                             :manifest-gid "5229761428614859392"}
+                            {:depot-id 1245623
+                             :manifest-gid "7418992640530761984"}
+                            {:depot-id 1245624
+                             :manifest-gid "3847562851069428736"}]}
+                   {:id "1_10_1"
+                    :label "1.10.1"
+                    :branch "public"
+                    :build ""
+                    :date "2024-01-11"
+                    :bytes 58794856448
+                    :executables {"eldenring.exe" "c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7"}
+                    :depots [{:depot-id 1245621
+                             :manifest-gid "4586391483365949586"}
+                            {:depot-id 1245622
+                             :manifest-gid "3192847591628374156"}
+                            {:depot-id 1245623
+                             :manifest-gid "6284719385946382741"}
+                            {:depot-id 1245624
+                             :manifest-gid "2857493681029384756"}]}
+                   {:id "1_03"
+                    :label "1.03"
+                    :branch "public"
+                    :build ""
+                    :date "2022-03-17"
+                    :bytes 49494753280
+                    :executables {"eldenring.exe" "d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8"}
+                    :depots [{:depot-id 1245621
+                             :manifest-gid "4121984677645683704"}
+                            {:depot-id 1245622
+                             :manifest-gid "1293847562938475629"}
+                            {:depot-id 1245623
+                             :manifest-gid "5738291649283746928"}
+                            {:depot-id 1245624
+                             :manifest-gid "1984118169889838981"}]}
+                   {:id "1_02_3"
+                    :label "1.02.3"
+                    :branch "public"
+                    :build ""
+                    :date "2022-03-04"
+                    :bytes 47185551360
+                    :executables {"eldenring.exe" "e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9"}
+                    :depots [{:depot-id 1245621
+                             :manifest-gid "8390693081119963338"}
+                            {:depot-id 1245622
+                             :manifest-gid "2847596183749286173"}
+                            {:depot-id 1245623
+                             :manifest-gid "4829371648293764829"}
+                            {:depot-id 1245624
+                             :manifest-gid "2484355486124511110"}]}]}
         {:appid 1716740
          :title "Starfield"
          :studio "Bethesda Game Studios"
