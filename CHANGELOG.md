@@ -5,6 +5,15 @@ Notable changes per release. Newest first.
 The top section is published as the GitHub release notes and the Nexus file
 description. It is written for someone deciding whether to update.
 
+## 1.0.1 - 2026-08-31
+
+### Added
+
+- **ELDEN RING support.** Reliquary now archives versions 1.17 (current),
+  1.16.1, and 1.10.1 of FromSoftware's ELDEN RING, complete with depot metadata
+  for all platform-specific and localization files. Download and switch between
+  versions the same way you do with The Elder Scrolls and Fallout.
+
 ## 1.0.0 - 2026-08-21
 
 First release out of beta. Downloading a chosen version and switching an
